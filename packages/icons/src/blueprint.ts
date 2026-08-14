@@ -1,4 +1,14 @@
-import { isIconName, type IconName } from "./index.js";
+import { isIconName, type Icon, type IconName } from "./index.js";
+
+export interface BlueprintIcon {
+    type: "blueprint";
+    name: string;
+    color: string;
+}
+
+export interface BlueprintIconMetadata extends Record<string, unknown> {
+    foundry: BlueprintIcon;
+}
 
 const blueprintAliases = {
     add: "plus",
@@ -68,4 +78,34 @@ export function fromBlueprintIconName(value: string): IconName | undefined {
         return normalized;
     }
     return blueprintAliases[normalized as keyof typeof blueprintAliases];
+}
+
+export function fromBlueprintIcon(source: BlueprintIcon): Icon {
+    return {
+        name: fromBlueprintIconName(source.name),
+        metadata: {
+            foundry: { ...source },
+        } satisfies BlueprintIconMetadata,
+    };
+}
+
+export function toBlueprintIcon(icon: Icon): BlueprintIcon | undefined {
+    const source = icon.metadata?.foundry;
+    if (
+        typeof source !== "object" ||
+        source === null ||
+        !("type" in source) ||
+        source.type !== "blueprint" ||
+        !("name" in source) ||
+        typeof source.name !== "string" ||
+        !("color" in source) ||
+        typeof source.color !== "string"
+    ) {
+        return undefined;
+    }
+    return {
+        type: source.type,
+        name: source.name,
+        color: source.color,
+    };
 }

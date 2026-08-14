@@ -14,6 +14,32 @@ export default {
             }),
         },
         {
+            name: "Icon",
+            description:
+                "A portable icon descriptor with optional provider metadata for lossless round trips.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "name",
+                        displayName: "Name",
+                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
+                        description: "Optional renderer-independent icon name.",
+                    },
+                    {
+                        name: "metadata",
+                        displayName: "Metadata",
+                        type: o.optional({
+                            type: o.map({
+                                keyType: o.string({}),
+                                valueType: o.unknown({}),
+                            }),
+                        }),
+                        description: "Namespaced source-provider metadata.",
+                    },
+                ],
+            }),
+        },
+        {
             name: "Deprecation",
             type: o.struct({
                 fields: [
@@ -592,8 +618,8 @@ export default {
                     {
                         name: "icon",
                         displayName: "Icon",
-                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
-                        description: "Optional renderer-independent icon name.",
+                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        description: "Optional portable icon descriptor.",
                     },
                     {
                         name: "properties",
@@ -929,8 +955,8 @@ export default {
                     {
                         name: "icon",
                         displayName: "Icon",
-                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
-                        description: "Optional renderer-independent icon name.",
+                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        description: "Optional portable icon descriptor.",
                     },
                     {
                         name: "parameters",

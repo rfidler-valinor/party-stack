@@ -46,7 +46,16 @@ describe("convertFoundryMetaObjectType", () => {
             name: "Employee",
             primaryKey: "id",
             title: "fullName",
-            icon: "user",
+            icon: {
+                name: "user",
+                metadata: {
+                    foundry: {
+                        type: "blueprint",
+                        name: "person",
+                        color: "#2d72d2",
+                    },
+                },
+            },
         });
         expect(result.properties).toEqual([
             expect.objectContaining({
@@ -61,7 +70,7 @@ describe("convertFoundryMetaObjectType", () => {
         ]);
     });
 
-    it("omits unknown Blueprint icons instead of inventing a semantic match", () => {
+    it("preserves unknown Blueprint icons without inventing a semantic match", () => {
         const source = objectType();
         source.icon = {
             type: "blueprint",
@@ -77,6 +86,14 @@ describe("convertFoundryMetaObjectType", () => {
                 implementsInterfaces2: {},
                 sharedPropertyTypeMapping: {},
             } as ObjectTypeFullMetadata).icon
-        ).toBeUndefined();
+        ).toEqual({
+            metadata: {
+                foundry: {
+                    type: "blueprint",
+                    name: "vendor-only-icon",
+                    color: "#000000",
+                },
+            },
+        });
     });
 });

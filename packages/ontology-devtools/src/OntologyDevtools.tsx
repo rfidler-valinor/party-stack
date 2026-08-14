@@ -993,7 +993,7 @@ function ObjectTable({
                 <h2 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-lg ps:font-semibold">
                     <OntologyIcon
                         className="ps:size-5 ps:flex-none ps:text-rose-400"
-                        name={objectType.icon ?? "circle-stack"}
+                        name={objectType.icon?.name ?? "circle-stack"}
                     />
                     {objectType.pluralDisplayName}
                 </h2>
@@ -1327,7 +1327,7 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                         >
                             <OntologyIcon
                                 className="ps:size-4 ps:flex-none"
-                                name={objectType.icon ?? "circle-stack"}
+                                name={objectType.icon?.name ?? "circle-stack"}
                             />
                             <span className="ps:truncate">{objectType.pluralDisplayName}</span>
                         </button>
@@ -1452,7 +1452,7 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
                             <h3 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-sm ps:font-semibold">
                                 <OntologyIcon
                                     className="ps:size-4 ps:flex-none ps:text-rose-400"
-                                    name={objectType.icon ?? "circle-stack"}
+                                    name={objectType.icon?.name ?? "circle-stack"}
                                 />
                                 {objectType.displayName}
                             </h3>

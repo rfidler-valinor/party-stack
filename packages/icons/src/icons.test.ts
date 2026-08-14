@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fromBlueprintIconName } from "./blueprint.js";
+import { fromBlueprintIcon, fromBlueprintIconName, toBlueprintIcon } from "./blueprint.js";
 import { createExpoSymbolResolver, getExpoSymbol } from "./expo.js";
 import { getHeroIconSource } from "./heroicons.js";
 import { iconNames, isIconName } from "./index.js";
@@ -26,6 +26,19 @@ describe("runtime mappings", () => {
         expect(fromBlueprintIconName("issue")).toBe("ticket");
         expect(fromBlueprintIconName("folder-open")).toBe("folder-open");
         expect(fromBlueprintIconName("UNKNOWN_VENDOR_ICON")).toBeUndefined();
+    });
+
+    it("preserves the complete Blueprint payload for a lossless round trip", () => {
+        const source = {
+            type: "blueprint",
+            name: "UNKNOWN_VENDOR_ICON",
+            color: "#2d72d2",
+        } as const;
+        const icon = fromBlueprintIcon(source);
+
+        expect(icon.name).toBeUndefined();
+        expect(icon.metadata).toEqual({ foundry: source });
+        expect(toBlueprintIcon(icon)).toEqual(source);
     });
 
     it("returns Expo platform symbols without importing Expo or React", () => {

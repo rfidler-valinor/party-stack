@@ -339,6 +339,17 @@ export function isIconName(value: string): value is IconName {
     return iconNameSet.has(value);
 }
 
+/**
+ * Portable icon descriptor.
+ *
+ * `name` drives normal rendering. `metadata` preserves provider-specific
+ * source data for lossless round trips and can be ignored by renderers.
+ */
+export interface Icon {
+    name?: IconName;
+    metadata?: Record<string, unknown>;
+}
+
 export interface IconSource {
     /** SVG child markup, suitable for rendering inside an `svg` element. */
     body: string;

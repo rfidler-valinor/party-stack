@@ -329,6 +329,14 @@ export type IconName =
     | "x-circle"
     | "x-mark";
 
+/** A portable icon descriptor with optional provider metadata for lossless round trips. */
+export type Icon = {
+    /** Optional renderer-independent icon name. */
+    name?: IconName;
+    /** Namespaced source-provider metadata. */
+    metadata?: Record<string, unknown>;
+};
+
 export type Deprecation = {
     message: string;
 };
@@ -557,8 +565,8 @@ export type ObjectTypeDef = {
     primaryKey: string;
     /** The optional property name used as the human-readable title for an object. */
     title?: string;
-    /** Optional renderer-independent icon name. */
-    icon?: IconName;
+    /** Optional portable icon descriptor. */
+    icon?: Icon;
     /** The object type's propertieo. */
     properties: Array<PropertyDef>;
     /** Optional description. */
@@ -673,8 +681,8 @@ export type ActionTypeDef = {
     name: string;
     /** Human-readable name. */
     displayName: string;
-    /** Optional renderer-independent icon name. */
-    icon?: IconName;
+    /** Optional portable icon descriptor. */
+    icon?: Icon;
     /** The action type's parametero. */
     parameters: Array<ActionParameterDef>;
     /** The action type's local logic stepo. */
