@@ -52,6 +52,7 @@ import {
     type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
+import type { IconName } from "@party-stack/icons";
 import type {
     AttachmentMetadata,
     LiveOntology,
@@ -62,7 +63,6 @@ import type {
     ObjectTypeDef,
     TypeDef,
 } from "@party-stack/ontology";
-import type { IconName } from "@party-stack/icons";
 import type * as v from "@party-stack/ontology/values";
 import type { TanStackDevtoolsReactPlugin } from "@tanstack/react-devtools";
 import "./styles.css";

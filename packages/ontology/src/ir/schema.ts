@@ -1,6 +1,6 @@
+import { iconNames } from "@party-stack/icons";
 import { o } from "./generated/builders.js";
 import type { OntologyIR } from "./generated/types.js";
-import { iconNames } from "@party-stack/icons";
 
 export default {
     types: [

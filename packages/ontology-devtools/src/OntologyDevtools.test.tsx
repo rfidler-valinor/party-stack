@@ -80,13 +80,20 @@ describe("createOntologyDevtoolsPlugin", () => {
 describe("OntologyIcon", () => {
     it("renders standard icon SVG source without a React icon package", () => {
         const icon = OntologyIcon({ name: "ticket", className: "object-icon" });
+        const props = icon?.props as
+            | {
+                  className: string;
+                  dangerouslySetInnerHTML: { __html: string };
+                  viewBox: string;
+              }
+            | undefined;
 
         expect(isValidElement(icon)).toBe(true);
-        expect(icon?.props).toMatchObject({
+        expect(props).toMatchObject({
             className: "object-icon",
             viewBox: "0 0 24 24",
         });
-        expect(icon?.props.dangerouslySetInnerHTML.__html).toContain('stroke="currentColor"');
+        expect(props?.dangerouslySetInnerHTML.__html).toContain('stroke="currentColor"');
     });
 });
 

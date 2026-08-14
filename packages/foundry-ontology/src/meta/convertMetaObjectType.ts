@@ -1,5 +1,5 @@
-import type { MetaObjectProperty, MetaObjectType } from "@party-stack/ontology";
 import { fromBlueprintIconName } from "@party-stack/icons/blueprint";
+import type { MetaObjectProperty, MetaObjectType } from "@party-stack/ontology";
 import { convertFoundryObjectPropertyType } from "./convertMetaTypeDef.js";
 import type { ObjectTypeFullMetadata, PropertyV2 } from "@osdk/foundry.ontologies";
 
@@ -12,7 +12,7 @@ export function convertFoundryMetaObjectType(metadata: ObjectTypeFullMetadata): 
         pluralDisplayName: objectType.pluralDisplayName,
         primaryKey: objectType.primaryKey,
         title: objectType.titleProperty,
-        icon: fromBlueprintIconName(objectType.icon.name),
+        icon: objectType.icon ? fromBlueprintIconName(objectType.icon.name) : undefined,
         description: objectType.description,
         properties: Object.entries(objectType.properties).map(([name, property]) =>
             convertFoundryObjectProperty(name, property)
