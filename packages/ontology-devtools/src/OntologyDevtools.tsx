@@ -28,6 +28,7 @@ import {
     ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
 import NumberFlow from "@number-flow/react";
+import { getHeroIconSource } from "@party-stack/icons/heroicons";
 import { createReactPlugin } from "@tanstack/devtools-utils/react";
 import { useLiveInfiniteQuery, useLiveQuery } from "@tanstack/react-db";
 import {
@@ -61,20 +62,17 @@ import type {
     ObjectTypeDef,
     TypeDef,
 } from "@party-stack/ontology";
+import type { IconName } from "@party-stack/icons";
 import type * as v from "@party-stack/ontology/values";
 import type { TanStackDevtoolsReactPlugin } from "@tanstack/react-devtools";
 import "./styles.css";
 
-export interface OntologyDevtoolsPanelProps<
-    Ontology extends OntologyDefinition = OntologyDefinition,
-> {
+export interface OntologyDevtoolsPanelProps<Ontology extends OntologyDefinition = OntologyDefinition> {
     ontology: LiveOntology<Ontology>;
     theme?: "light" | "dark";
 }
 
-export interface OntologyDevtoolsPluginOptions<
-    Ontology extends OntologyDefinition = OntologyDefinition,
-> {
+export interface OntologyDevtoolsPluginOptions<Ontology extends OntologyDefinition = OntologyDefinition> {
     ontology: LiveOntology<Ontology>;
     id?: string;
     name?: TanStackDevtoolsReactPlugin["name"];
@@ -85,6 +83,19 @@ export interface OntologyDevtoolsChromeProps {
     theme: "light" | "dark";
 }
 
+export function OntologyIcon({ className, name }: { className?: string; name: IconName }) {
+    const source = getHeroIconSource(name);
+    if (!source) return null;
+
+    return (
+        <svg
+            aria-hidden="true"
+            className={className}
+            dangerouslySetInnerHTML={{ __html: source.body }}
+            viewBox={source.viewBox}
+        />
+    );
+}
 
 function PartyStackLogo({ theme }: OntologyDevtoolsChromeProps) {
     const id = useId().replaceAll(":", "");
@@ -209,19 +220,14 @@ export function OntologyDevtoolsTrigger({ theme }: OntologyDevtoolsChromeProps) 
     );
 }
 
-export function ontologyDevtoolsTrigger(
-    _element: HTMLElement,
-    { theme }: OntologyDevtoolsChromeProps
-) {
+export function ontologyDevtoolsTrigger(_element: HTMLElement, { theme }: OntologyDevtoolsChromeProps) {
     return <OntologyDevtoolsTrigger theme={theme} />;
 }
 
 function OutboxPanel({ children, theme }: { children: ReactNode; theme: "light" | "dark" }) {
     return (
         <div className={`ps-outbox-root ps-theme-${theme}`}>
-            <div className="ps-outbox">
-                {children}
-            </div>
+            <div className="ps-outbox">{children}</div>
         </div>
     );
 }
@@ -465,9 +471,7 @@ type OutboxActivity = "idle" | "draining" | "paused";
 
 export function getOutboxActivity(entries: OntologyOutboxEntry[]): OutboxActivity {
     if (entries.length === 0) return "idle";
-    const head = entries.reduce((first, entry) =>
-        entry.sequence < first.sequence ? entry : first
-    );
+    const head = entries.reduce((first, entry) => (entry.sequence < first.sequence ? entry : first));
     if (head.status === "failed") return "paused";
     return "draining";
 }
@@ -700,8 +704,7 @@ export function timestampPreview(value: unknown): { display: string; exact: stri
     } else if (
         typeof value === "object" &&
         "epochMilliseconds" in value &&
-        (typeof value.epochMilliseconds === "number" ||
-            typeof value.epochMilliseconds === "bigint")
+        (typeof value.epochMilliseconds === "number" || typeof value.epochMilliseconds === "bigint")
     ) {
         epochMilliseconds = Number(value.epochMilliseconds);
     } else if (typeof value === "string") {
@@ -724,13 +727,7 @@ function isAttachment(value: unknown): value is v.attachment {
     return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
 }
 
-function AttachmentPreview({
-    attachment,
-    ontology,
-}: {
-    attachment: v.attachment;
-    ontology: LiveOntology;
-}) {
+function AttachmentPreview({ attachment, ontology }: { attachment: v.attachment; ontology: LiveOntology }) {
     const [preview, setPreview] = useState<{
         metadata: AttachmentMetadata;
         src?: string;
@@ -808,14 +805,7 @@ function PropertyValuePreview({
 }) {
     const resolved = resolvedType(ir, type);
     if (resolved.kind === "optional") {
-        return (
-            <PropertyValuePreview
-                ir={ir}
-                ontology={ontology}
-                type={resolved.value.type}
-                value={value}
-            />
-        );
+        return <PropertyValuePreview ir={ir} ontology={ontology} type={resolved.value.type} value={value} />;
     }
     if (resolved.kind === "geopoint" && isGeopoint(value)) {
         return <GeopointPreview value={value} />;
@@ -843,11 +833,7 @@ function PropertyValuePreview({
             return (
                 <div className="ps:flex ps:items-center ps:gap-1.5">
                     {attachments.slice(0, 3).map((attachment) => (
-                        <AttachmentPreview
-                            attachment={attachment}
-                            key={attachment.id}
-                            ontology={ontology}
-                        />
+                        <AttachmentPreview attachment={attachment} key={attachment.id} ontology={ontology} />
                     ))}
                     {attachments.length > 3 ? (
                         <span className="ps:text-zinc-500">+{attachments.length - 3}</span>
@@ -889,11 +875,7 @@ function defaultColumnSize(ir: OntologyIR, type: TypeDef): number {
     }
 }
 
-export function moveColumn(
-    columnOrder: string[],
-    sourceId: string,
-    targetId: string
-): string[] {
+export function moveColumn(columnOrder: string[], sourceId: string, targetId: string): string[] {
     const sourceIndex = columnOrder.indexOf(sourceId);
     const targetIndex = columnOrder.indexOf(targetId);
     if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
@@ -925,33 +907,25 @@ function ObjectTable({
     const [draggedColumnId, setDraggedColumnId] = useState<string>();
     const [dragOverColumnId, setDragOverColumnId] = useState<string>();
     const selectedSort = sorting[0];
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-    } = useLiveInfiniteQuery(
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useLiveInfiniteQuery(
         (query) => {
             const from = query.from({ row: collection });
             const primaryKey = objectType.primaryKey;
             if (selectedSort && selectedSort.id !== primaryKey) {
                 return from
                     .orderBy(
-                        ({ row }) =>
-                            (row as Record<string, unknown>)[selectedSort.id] as string | number,
+                        ({ row }) => (row as Record<string, unknown>)[selectedSort.id] as string | number,
                         selectedSort.desc ? "desc" : "asc"
                     )
                     .orderBy(
-                        ({ row }) =>
-                            (row as Record<string, unknown>)[primaryKey] as string | number,
+                        ({ row }) => (row as Record<string, unknown>)[primaryKey] as string | number,
                         "asc"
                     )
                     .select(({ row }) => row as Record<string, unknown>);
             }
             return from
                 .orderBy(
-                    ({ row }) =>
-                        (row as Record<string, unknown>)[primaryKey] as string | number,
+                    ({ row }) => (row as Record<string, unknown>)[primaryKey] as string | number,
                     selectedSort?.desc ? "desc" : "asc"
                 )
                 .select(({ row }) => row as Record<string, unknown>);
@@ -1016,7 +990,13 @@ function ObjectTable({
     return (
         <div className="ps:flex ps:min-h-0 ps:min-w-0 ps:flex-1 ps:flex-col ps:overflow-hidden">
             <div className="ps:flex ps:flex-none ps:items-center ps:border-b ps:border-zinc-500/20 ps:px-4 ps:py-2">
-                <h2 className="ps:m-0 ps:text-lg ps:font-semibold">{objectType.pluralDisplayName}</h2>
+                <h2 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-lg ps:font-semibold">
+                    <OntologyIcon
+                        className="ps:size-5 ps:flex-none ps:text-rose-400"
+                        name={objectType.icon ?? "circle-stack"}
+                    />
+                    {objectType.pluralDisplayName}
+                </h2>
                 <div className="ps:ml-auto ps:flex ps:items-center ps:gap-1.5">
                     <button
                         className="ps:inline-flex ps:items-center ps:gap-1.5 ps:rounded-md ps:border-0 ps:bg-transparent ps:px-2 ps:py-1.5 ps:text-xs ps:text-zinc-400 ps:hover:bg-zinc-500/10 ps:hover:text-current ps:disabled:opacity-40"
@@ -1036,11 +1016,7 @@ function ObjectTable({
                             Columns
                         </Menu.Trigger>
                         <Menu.Portal>
-                            <Menu.Positioner
-                                align="end"
-                                className="ps:z-[100001]"
-                                sideOffset={6}
-                            >
+                            <Menu.Positioner align="end" className="ps:z-[100001]" sideOffset={6}>
                                 <Menu.Popup className="ps:min-w-48 ps:rounded-lg ps:border ps:border-zinc-700 ps:bg-zinc-900 ps:p-1.5 ps:text-xs ps:text-zinc-200 ps:shadow-2xl">
                                     <Menu.Group>
                                         <Menu.GroupLabel className="ps:px-2 ps:py-1.5 ps:text-[10px] ps:font-bold ps:tracking-wider ps:text-zinc-500 ps:uppercase">
@@ -1050,8 +1026,7 @@ function ObjectTable({
                                             <Menu.CheckboxItem
                                                 aria-label={
                                                     objectType.properties.find(
-                                                        (property) =>
-                                                            property.name === column.id
+                                                        (property) => property.name === column.id
                                                     )?.displayName ?? column.id
                                                 }
                                                 checked={column.getIsVisible()}
@@ -1065,8 +1040,7 @@ function ObjectTable({
                                                 key={column.id}
                                                 label={
                                                     objectType.properties.find(
-                                                        (property) =>
-                                                            property.name === column.id
+                                                        (property) => property.name === column.id
                                                     )?.displayName ?? column.id
                                                 }
                                                 onCheckedChange={(checked) => {
@@ -1083,24 +1057,14 @@ function ObjectTable({
                                                 }}
                                                 onDragStart={(event) => {
                                                     event.dataTransfer.effectAllowed = "move";
-                                                    event.dataTransfer.setData(
-                                                        "text/plain",
-                                                        column.id
-                                                    );
+                                                    event.dataTransfer.setData("text/plain", column.id);
                                                     setDraggedColumnId(column.id);
                                                 }}
                                                 onDrop={(event) => {
                                                     event.preventDefault();
-                                                    if (
-                                                        draggedColumnId &&
-                                                        draggedColumnId !== column.id
-                                                    ) {
+                                                    if (draggedColumnId && draggedColumnId !== column.id) {
                                                         setColumnOrder((current) =>
-                                                            moveColumn(
-                                                                current,
-                                                                draggedColumnId,
-                                                                column.id
-                                                            )
+                                                            moveColumn(current, draggedColumnId, column.id)
                                                         );
                                                     }
                                                     setDraggedColumnId(undefined);
@@ -1109,8 +1073,7 @@ function ObjectTable({
                                                 onKeyDown={(event) => {
                                                     if (
                                                         !event.altKey ||
-                                                        (event.key !== "ArrowUp" &&
-                                                            event.key !== "ArrowDown")
+                                                        (event.key !== "ArrowUp" && event.key !== "ArrowDown")
                                                     ) {
                                                         return;
                                                     }
@@ -1122,11 +1085,7 @@ function ObjectTable({
                                                     const target = allColumns[targetIndex];
                                                     if (target) {
                                                         setColumnOrder((current) =>
-                                                            moveColumn(
-                                                                current,
-                                                                column.id,
-                                                                target.id
-                                                            )
+                                                            moveColumn(current, column.id, target.id)
                                                         );
                                                     }
                                                 }}
@@ -1138,10 +1097,7 @@ function ObjectTable({
                                                         event.stopPropagation();
                                                     }}
                                                 >
-                                                    <Bars2Icon
-                                                        aria-hidden
-                                                        className="ps:size-3.5"
-                                                    />
+                                                    <Bars2Icon aria-hidden className="ps:size-3.5" />
                                                 </span>
                                                 <span className="ps:grid ps:size-4 ps:place-items-center ps:rounded ps:border ps:border-zinc-600">
                                                     {column.getIsVisible() ? (
@@ -1185,125 +1141,124 @@ function ObjectTable({
                                 ))}
                             </colgroup>
                             <thead className="ps-object-table-header">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => {
-                                        const direction = header.column.getIsSorted();
-                                        return (
-                                            <th
-                                                className="ps:relative ps:border-b ps:border-zinc-500/30 ps:bg-zinc-950/95 ps:px-4 ps:py-3 ps:font-semibold ps:whitespace-nowrap ps:backdrop-blur ps:in-[.ps-theme-light]:bg-stone-50/95"
-                                                key={header.id}
-                                            >
-                                                {header.isPlaceholder ? null : (
-                                                    <button
-                                                        className="ps:flex ps:w-full ps:items-center ps:gap-2 ps:border-0 ps:bg-transparent ps:p-0 ps:text-left ps:text-inherit ps:font-inherit ps:hover:text-rose-400"
-                                                        title={`Sort by ${header.column.id}`}
-                                                        type="button"
-                                                        onClick={header.column.getToggleSortingHandler()}
-                                                    >
-                                                        {flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                        {direction === "asc" ? (
-                                                            <ChevronUpIcon
-                                                                aria-hidden
-                                                                className="ps:size-3.5 ps:flex-none ps:text-rose-400"
-                                                            />
-                                                        ) : direction === "desc" ? (
-                                                            <ChevronDownIcon
-                                                                aria-hidden
-                                                                className="ps:size-3.5 ps:flex-none ps:text-rose-400"
-                                                            />
-                                                        ) : (
-                                                            <ChevronUpDownIcon
-                                                                aria-hidden
-                                                                className="ps:size-3.5 ps:flex-none ps:text-zinc-600"
-                                                            />
-                                                        )}
-                                                        <span className="ps:sr-only">
-                                                            {direction === "asc"
-                                                                ? "Sorted ascending"
-                                                                : direction === "desc"
-                                                                  ? "Sorted descending"
-                                                                  : "Not sorted"}
-                                                        </span>
-                                                    </button>
-                                                )}
-                                                {header.column.getCanResize() ? (
-                                                    <button
-                                                        aria-label={`Resize ${header.column.id} column`}
-                                                        aria-orientation="vertical"
-                                                        aria-valuemax={header.column.columnDef.maxSize}
-                                                        aria-valuemin={header.column.columnDef.minSize}
-                                                        aria-valuenow={header.column.getSize()}
-                                                        className={
-                                                            header.column.getIsResizing()
-                                                                ? "ps:absolute ps:top-0 ps:right-0 ps:z-20 ps:h-full ps:w-1 ps:cursor-col-resize ps:touch-none ps:border-0 ps:bg-transparent ps:p-0"
-                                                                : resizingColumn
-                                                                  ? "ps:pointer-events-none ps:invisible ps:absolute ps:top-0 ps:right-0 ps:h-full ps:w-1 ps:border-0 ps:bg-transparent ps:p-0"
-                                                                : "ps:absolute ps:top-0 ps:right-0 ps:h-full ps:w-1 ps:cursor-col-resize ps:touch-none ps:border-0 ps:bg-transparent ps:p-0 ps:hover:bg-rose-400/70 ps:focus-visible:bg-rose-400/70 ps:focus:outline-none"
-                                                        }
-                                                        disabled={
-                                                            resizingColumn !== undefined &&
-                                                            !header.column.getIsResizing()
-                                                        }
-                                                        role="separator"
-                                                        tabIndex={0}
-                                                        type="button"
-                                                        onDoubleClick={() => {
-                                                            header.column.resetSize();
-                                                        }}
-                                                        onKeyDown={(event) => {
-                                                            if (
-                                                                event.key !== "ArrowLeft" &&
-                                                                event.key !== "ArrowRight"
-                                                            ) {
-                                                                return;
+                                {table.getHeaderGroups().map((headerGroup) => (
+                                    <tr key={headerGroup.id}>
+                                        {headerGroup.headers.map((header) => {
+                                            const direction = header.column.getIsSorted();
+                                            return (
+                                                <th
+                                                    className="ps:relative ps:border-b ps:border-zinc-500/30 ps:bg-zinc-950/95 ps:px-4 ps:py-3 ps:font-semibold ps:whitespace-nowrap ps:backdrop-blur ps:in-[.ps-theme-light]:bg-stone-50/95"
+                                                    key={header.id}
+                                                >
+                                                    {header.isPlaceholder ? null : (
+                                                        <button
+                                                            className="ps:flex ps:w-full ps:items-center ps:gap-2 ps:border-0 ps:bg-transparent ps:p-0 ps:text-left ps:text-inherit ps:font-inherit ps:hover:text-rose-400"
+                                                            title={`Sort by ${header.column.id}`}
+                                                            type="button"
+                                                            onClick={header.column.getToggleSortingHandler()}
+                                                        >
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                            {direction === "asc" ? (
+                                                                <ChevronUpIcon
+                                                                    aria-hidden
+                                                                    className="ps:size-3.5 ps:flex-none ps:text-rose-400"
+                                                                />
+                                                            ) : direction === "desc" ? (
+                                                                <ChevronDownIcon
+                                                                    aria-hidden
+                                                                    className="ps:size-3.5 ps:flex-none ps:text-rose-400"
+                                                                />
+                                                            ) : (
+                                                                <ChevronUpDownIcon
+                                                                    aria-hidden
+                                                                    className="ps:size-3.5 ps:flex-none ps:text-zinc-600"
+                                                                />
+                                                            )}
+                                                            <span className="ps:sr-only">
+                                                                {direction === "asc"
+                                                                    ? "Sorted ascending"
+                                                                    : direction === "desc"
+                                                                      ? "Sorted descending"
+                                                                      : "Not sorted"}
+                                                            </span>
+                                                        </button>
+                                                    )}
+                                                    {header.column.getCanResize() ? (
+                                                        <button
+                                                            aria-label={`Resize ${header.column.id} column`}
+                                                            aria-orientation="vertical"
+                                                            aria-valuemax={header.column.columnDef.maxSize}
+                                                            aria-valuemin={header.column.columnDef.minSize}
+                                                            aria-valuenow={header.column.getSize()}
+                                                            className={
+                                                                header.column.getIsResizing()
+                                                                    ? "ps:absolute ps:top-0 ps:right-0 ps:z-20 ps:h-full ps:w-1 ps:cursor-col-resize ps:touch-none ps:border-0 ps:bg-transparent ps:p-0"
+                                                                    : resizingColumn
+                                                                      ? "ps:pointer-events-none ps:invisible ps:absolute ps:top-0 ps:right-0 ps:h-full ps:w-1 ps:border-0 ps:bg-transparent ps:p-0"
+                                                                      : "ps:absolute ps:top-0 ps:right-0 ps:h-full ps:w-1 ps:cursor-col-resize ps:touch-none ps:border-0 ps:bg-transparent ps:p-0 ps:hover:bg-rose-400/70 ps:focus-visible:bg-rose-400/70 ps:focus:outline-none"
                                                             }
-                                                            event.preventDefault();
-                                                            const delta =
-                                                                event.key === "ArrowRight" ? 10 : -10;
-                                                            const min =
-                                                                header.column.columnDef.minSize ?? 20;
-                                                            const max =
-                                                                header.column.columnDef.maxSize ??
-                                                                Number.MAX_SAFE_INTEGER;
-                                                            setColumnSizing((current) => ({
-                                                                ...current,
-                                                                [header.column.id]: Math.min(
-                                                                    max,
-                                                                    Math.max(
-                                                                        min,
-                                                                        header.column.getSize() +
-                                                                            delta
-                                                                    )
-                                                                ),
-                                                            }));
-                                                        }}
-                                                        onMouseDown={header.getResizeHandler()}
-                                                        onTouchStart={header.getResizeHandler()}
-                                                    />
-                                                ) : null}
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
+                                                            disabled={
+                                                                resizingColumn !== undefined &&
+                                                                !header.column.getIsResizing()
+                                                            }
+                                                            role="separator"
+                                                            tabIndex={0}
+                                                            type="button"
+                                                            onDoubleClick={() => {
+                                                                header.column.resetSize();
+                                                            }}
+                                                            onKeyDown={(event) => {
+                                                                if (
+                                                                    event.key !== "ArrowLeft" &&
+                                                                    event.key !== "ArrowRight"
+                                                                ) {
+                                                                    return;
+                                                                }
+                                                                event.preventDefault();
+                                                                const delta =
+                                                                    event.key === "ArrowRight" ? 10 : -10;
+                                                                const min =
+                                                                    header.column.columnDef.minSize ?? 20;
+                                                                const max =
+                                                                    header.column.columnDef.maxSize ??
+                                                                    Number.MAX_SAFE_INTEGER;
+                                                                setColumnSizing((current) => ({
+                                                                    ...current,
+                                                                    [header.column.id]: Math.min(
+                                                                        max,
+                                                                        Math.max(
+                                                                            min,
+                                                                            header.column.getSize() + delta
+                                                                        )
+                                                                    ),
+                                                                }));
+                                                            }}
+                                                            onMouseDown={header.getResizeHandler()}
+                                                            onTouchStart={header.getResizeHandler()}
+                                                        />
+                                                    ) : null}
+                                                </th>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
                             </thead>
                             <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr className="ps:hover:bg-zinc-500/8" key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td
-                                            className="ps:max-w-80 ps:border-b ps:border-zinc-500/15 ps:px-4 ps:py-3 ps:text-[11px] ps:whitespace-nowrap"
-                                            key={cell.id}
-                                        >
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
+                                {table.getRowModel().rows.map((row) => (
+                                    <tr className="ps:hover:bg-zinc-500/8" key={row.id}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <td
+                                                className="ps:max-w-80 ps:border-b ps:border-zinc-500/15 ps:px-4 ps:py-3 ps:text-[11px] ps:whitespace-nowrap"
+                                                key={cell.id}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                         {hasNextPage ? (
@@ -1361,8 +1316,8 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                         <button
                             className={
                                 objectType.name === selected.name
-                                    ? "ps:rounded-lg ps:border-0 ps:bg-rose-500/15 ps:px-2.5 ps:py-2 ps:text-left ps:text-xs ps:font-semibold ps:text-rose-400"
-                                    : "ps:rounded-lg ps:border-0 ps:bg-transparent ps:px-2.5 ps:py-2 ps:text-left ps:text-xs ps:text-inherit ps:hover:bg-zinc-500/10"
+                                    ? "ps:flex ps:items-center ps:gap-2 ps:rounded-lg ps:border-0 ps:bg-rose-500/15 ps:px-2.5 ps:py-2 ps:text-left ps:text-xs ps:font-semibold ps:text-rose-400"
+                                    : "ps:flex ps:items-center ps:gap-2 ps:rounded-lg ps:border-0 ps:bg-transparent ps:px-2.5 ps:py-2 ps:text-left ps:text-xs ps:text-inherit ps:hover:bg-zinc-500/10"
                             }
                             key={objectType.name}
                             type="button"
@@ -1370,7 +1325,11 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                                 setSelectedName(objectType.name);
                             }}
                         >
-                            {objectType.pluralDisplayName}
+                            <OntologyIcon
+                                className="ps:size-4 ps:flex-none"
+                                name={objectType.icon ?? "circle-stack"}
+                            />
+                            <span className="ps:truncate">{objectType.pluralDisplayName}</span>
                         </button>
                     ))}
                 </div>
@@ -1490,7 +1449,13 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
                         style={{ left: x, top: y }}
                     >
                         <header className="ps:border-b ps:border-zinc-500/20 ps:px-3.5 ps:py-3">
-                            <h3 className="ps:m-0 ps:text-sm ps:font-semibold">{objectType.displayName}</h3>
+                            <h3 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-sm ps:font-semibold">
+                                <OntologyIcon
+                                    className="ps:size-4 ps:flex-none ps:text-rose-400"
+                                    name={objectType.icon ?? "circle-stack"}
+                                />
+                                {objectType.displayName}
+                            </h3>
                             <p className="ps:mt-0.5 ps:mb-0 ps:font-mono ps:text-[10px] ps:text-zinc-500">
                                 {objectType.name}
                             </p>
@@ -1530,64 +1495,62 @@ export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
     return (
         <Tooltip.Provider>
             <Tabs.Root
-            className={`ps-devtools ps-theme-${theme} ps:flex ps:h-full ps:min-h-0 ps:w-full ps:min-w-0 ps:flex-col ps:overflow-hidden ps:font-sans ps:text-[13px] ${
-                theme === "dark"
-                    ? "ps:bg-zinc-950 ps:text-stone-200"
-                    : "ps:bg-stone-50 ps:text-stone-800"
-            }`}
-            defaultValue="outbox"
-            style={{ contain: "inline-size" }}
-        >
-            <Tabs.List
-                aria-label="Ontology devtools views"
-                className="ps:flex ps:flex-none ps:items-center ps:gap-1 ps:border-b ps:border-zinc-500/20 ps:px-4"
-                style={{ height: 40 }}
+                className={`ps-devtools ps-theme-${theme} ps:flex ps:h-full ps:min-h-0 ps:w-full ps:min-w-0 ps:flex-col ps:overflow-hidden ps:font-sans ps:text-[13px] ${
+                    theme === "dark" ? "ps:bg-zinc-950 ps:text-stone-200" : "ps:bg-stone-50 ps:text-stone-800"
+                }`}
+                defaultValue="outbox"
+                style={{ contain: "inline-size" }}
             >
-                {ontologyViews.map((view) => {
-                    const Icon = view.icon;
-                    return (
-                        <Tabs.Tab
-                            className="ps:group ps:flex ps:h-full ps:items-center ps:gap-1.5 ps:border-x-0 ps:border-t-0 ps:border-b-2 ps:border-transparent ps:bg-transparent ps:px-3 ps:text-xs ps:font-medium ps:text-zinc-500 ps:hover:text-current ps:data-[active]:border-rose-400 ps:data-[active]:font-semibold ps:data-[active]:text-rose-400"
-                            key={view.id}
-                            value={view.id}
-                        >
-                            <Icon
-                                aria-hidden
-                                className="ps:flex-none"
-                                style={{ height: 16, width: 16 }}
-                            />
-                            <span>{view.label}</span>
-                            {view.id === "outbox" ? (
-                                <>
-                                    <span
-                                        className={`ps:inline-flex ps:min-w-5 ps:items-center ps:justify-center ps:rounded-full ps:px-1.5 ps:py-0.5 ps:text-center ps:text-[10px] ps:leading-none ps:transition-colors ${outboxBadgeClass(
-                                            outboxActivity
-                                        )}`}
-                                        title={`${outboxEntries.length} outbox entries · ${outboxActivityLabel(
-                                            outboxActivity
-                                        )}`}
-                                    >
-                                        <NumberFlow
-                                            className="ps:tabular-nums"
-                                            isolate
-                                            value={outboxEntries.length}
-                                        />
-                                    </span>
-                                </>
-                            ) : null}
-                        </Tabs.Tab>
-                    );
-                })}
-            </Tabs.List>
-            <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="outbox">
-                <OutboxRows outbox={ontology.outbox} theme={theme} />
-            </Tabs.Panel>
-            <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="schema">
-                <SchemaView ir={ontology.ir} />
-            </Tabs.Panel>
-            <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="objects">
-                <ObjectsView ontology={ontology as LiveOntology} />
-            </Tabs.Panel>
+                <Tabs.List
+                    aria-label="Ontology devtools views"
+                    className="ps:flex ps:flex-none ps:items-center ps:gap-1 ps:border-b ps:border-zinc-500/20 ps:px-4"
+                    style={{ height: 40 }}
+                >
+                    {ontologyViews.map((view) => {
+                        const Icon = view.icon;
+                        return (
+                            <Tabs.Tab
+                                className="ps:group ps:flex ps:h-full ps:items-center ps:gap-1.5 ps:border-x-0 ps:border-t-0 ps:border-b-2 ps:border-transparent ps:bg-transparent ps:px-3 ps:text-xs ps:font-medium ps:text-zinc-500 ps:hover:text-current ps:data-[active]:border-rose-400 ps:data-[active]:font-semibold ps:data-[active]:text-rose-400"
+                                key={view.id}
+                                value={view.id}
+                            >
+                                <Icon
+                                    aria-hidden
+                                    className="ps:flex-none"
+                                    style={{ height: 16, width: 16 }}
+                                />
+                                <span>{view.label}</span>
+                                {view.id === "outbox" ? (
+                                    <>
+                                        <span
+                                            className={`ps:inline-flex ps:min-w-5 ps:items-center ps:justify-center ps:rounded-full ps:px-1.5 ps:py-0.5 ps:text-center ps:text-[10px] ps:leading-none ps:transition-colors ${outboxBadgeClass(
+                                                outboxActivity
+                                            )}`}
+                                            title={`${outboxEntries.length} outbox entries · ${outboxActivityLabel(
+                                                outboxActivity
+                                            )}`}
+                                        >
+                                            <NumberFlow
+                                                className="ps:tabular-nums"
+                                                isolate
+                                                value={outboxEntries.length}
+                                            />
+                                        </span>
+                                    </>
+                                ) : null}
+                            </Tabs.Tab>
+                        );
+                    })}
+                </Tabs.List>
+                <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="outbox">
+                    <OutboxRows outbox={ontology.outbox} theme={theme} />
+                </Tabs.Panel>
+                <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="schema">
+                    <SchemaView ir={ontology.ir} />
+                </Tabs.Panel>
+                <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="objects">
+                    <ObjectsView ontology={ontology as LiveOntology} />
+                </Tabs.Panel>
             </Tabs.Root>
         </Tooltip.Provider>
     );
@@ -1608,8 +1571,6 @@ export function createOntologyDevtoolsPlugin<Ontology extends OntologyDefinition
 
     return {
         ...createPlugin(),
-        name:
-            name ??
-            ((_element, { theme }) => <OntologyDevtoolsPluginName theme={theme} />),
+        name: name ?? ((_element, { theme }) => <OntologyDevtoolsPluginName theme={theme} />),
     };
 }

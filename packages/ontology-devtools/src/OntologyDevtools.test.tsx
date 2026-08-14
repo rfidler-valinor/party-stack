@@ -7,6 +7,7 @@ import {
     layoutSchema,
     moveColumn,
     OntologyDevtoolsPanel,
+    OntologyIcon,
     OntologyDevtoolsPluginName,
     ontologyDevtoolsTrigger,
     OntologyDevtoolsTrigger,
@@ -76,6 +77,19 @@ describe("createOntologyDevtoolsPlugin", () => {
     });
 });
 
+describe("OntologyIcon", () => {
+    it("renders standard icon SVG source without a React icon package", () => {
+        const icon = OntologyIcon({ name: "ticket", className: "object-icon" });
+
+        expect(isValidElement(icon)).toBe(true);
+        expect(icon?.props).toMatchObject({
+            className: "object-icon",
+            viewBox: "0 0 24 24",
+        });
+        expect(icon?.props.dangerouslySetInnerHTML.__html).toContain('stroke="currentColor"');
+    });
+});
+
 describe("layoutSchema", () => {
     it("places every object type on the graph canvas", () => {
         const ir: OntologyIR = {
@@ -134,9 +148,7 @@ describe("property presentation", () => {
                 },
             })
         ).toBe("List of Attachment (optional)");
-        expect(typeDisplayName(ir, { kind: "ref", value: { name: "EventTime" } })).toBe(
-            "EventTime"
-        );
+        expect(typeDisplayName(ir, { kind: "ref", value: { name: "EventTime" } })).toBe("EventTime");
     });
 
     it("formats timestamps for display while retaining the exact value", () => {
@@ -148,9 +160,7 @@ describe("property presentation", () => {
 });
 
 describe("getOutboxActivity", () => {
-    function entry(
-        overrides: Partial<OntologyOutboxEntry> = {}
-    ): OntologyOutboxEntry {
+    function entry(overrides: Partial<OntologyOutboxEntry> = {}): OntologyOutboxEntry {
         return {
             id: "entry",
             sequence: 1,
@@ -172,9 +182,7 @@ describe("getOutboxActivity", () => {
     it("derives idle, draining, and blocked states", () => {
         expect(getOutboxActivity([])).toBe("idle");
         expect(getOutboxActivity([entry()])).toBe("draining");
-        expect(
-            getOutboxActivity([entry({ nextAttemptAt: Date.now() + 60_000 })])
-        ).toBe("draining");
+        expect(getOutboxActivity([entry({ nextAttemptAt: Date.now() + 60_000 })])).toBe("draining");
         expect(getOutboxActivity([entry({ status: "executing" })])).toBe("draining");
         expect(
             getOutboxActivity([

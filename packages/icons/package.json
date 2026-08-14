@@ -1,0 +1,40 @@
+{
+    "name": "@party-stack/icons",
+    "version": "0.1.0",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "default": "./lib/index.js"
+        },
+        "./blueprint": {
+            "types": "./lib/blueprint.d.ts",
+            "default": "./lib/blueprint.js"
+        },
+        "./expo": {
+            "types": "./lib/expo.d.ts",
+            "default": "./lib/expo.js"
+        },
+        "./heroicons": {
+            "types": "./lib/heroicons.d.ts",
+            "default": "./lib/heroicons.js"
+        }
+    },
+    "files": [
+        "lib"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@iconify-json/heroicons": "^1.2.3"
+    },
+    "devDependencies": {
+        "@bobbyfidz/universal-build-config": "^0.1.1",
+        "eslint": "^9.25.0",
+        "typescript": "~5.8.3",
+        "vitest": "^3.1.1"
+    }
+}

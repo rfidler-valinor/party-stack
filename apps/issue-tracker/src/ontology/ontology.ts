@@ -10,6 +10,7 @@ export default defineOntology({
             pluralDisplayName: "Issues",
             primaryKey: "issueId",
             title: "issueTitle",
+            icon: "ticket",
             properties: [
                 {
                     name: "issueCompletedAt",
@@ -93,6 +94,7 @@ export default defineOntology({
             pluralDisplayName: "Projects",
             primaryKey: "projectId",
             title: "projectTitle",
+            icon: "folder",
             properties: [
                 {
                     name: "projectUpdatedAt",
@@ -157,6 +159,7 @@ export default defineOntology({
         {
             name: "createIssue",
             displayName: "Create Issue",
+            icon: "plus-circle",
             parameters: [
                 {
                     name: "completedAt",
@@ -325,6 +328,7 @@ export default defineOntology({
         {
             name: "createProject",
             displayName: "Create Project",
+            icon: "plus-circle",
             parameters: [
                 {
                     name: "color",
@@ -420,6 +424,7 @@ export default defineOntology({
         {
             name: "deleteIssue",
             displayName: "Delete Issue",
+            icon: "trash",
             parameters: [
                 {
                     name: "issue",
@@ -442,6 +447,7 @@ export default defineOntology({
         {
             name: "deleteProject",
             displayName: "Delete Project",
+            icon: "trash",
             parameters: [
                 {
                     name: "project",
@@ -464,6 +470,7 @@ export default defineOntology({
         {
             name: "updateIssue",
             displayName: "Update Issue",
+            icon: "pencil-square",
             parameters: [
                 {
                     name: "completedAt",
@@ -621,6 +628,7 @@ export default defineOntology({
         {
             name: "updateProject",
             displayName: "Update Project",
+            icon: "pencil-square",
             parameters: [
                 {
                     name: "color",

@@ -4,7 +4,7 @@ import { generateOntology } from "./ontology.js";
 import type { OntologyIR } from "../ir/index.js";
 
 describe("generateOntology", () => {
-    it("preserves object title property metadata", () => {
+    it("preserves object and action presentation metadata", () => {
         const ontology: OntologyIR = {
             types: [],
             objectTypes: [
@@ -14,6 +14,7 @@ describe("generateOntology", () => {
                     pluralDisplayName: "Employees",
                     primaryKey: "id",
                     title: "name",
+                    icon: "user",
                     properties: [
                         { name: "id", displayName: "ID", type: o.string({}) },
                         { name: "name", displayName: "Name", type: o.string({}) },
@@ -21,10 +22,21 @@ describe("generateOntology", () => {
                 },
             ],
             linkTypes: [],
-            actionTypes: [],
+            actionTypes: [
+                {
+                    name: "createEmployee",
+                    displayName: "Create employee",
+                    icon: "user-plus",
+                    parameters: [],
+                    logic: [],
+                },
+            ],
             queryFunctionTypes: [],
         };
 
-        expect(generateOntology(ontology)).toContain('title: "name"');
+        const generated = generateOntology(ontology);
+        expect(generated).toContain('title: "name"');
+        expect(generated).toContain('icon: "user"');
+        expect(generated).toContain('icon: "user-plus"');
     });
 });

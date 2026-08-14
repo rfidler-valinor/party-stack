@@ -38,6 +38,7 @@
         "@bobbyfidz/panic": "^0.1.0",
         "@next/env": "^16.1.6",
         "@party-stack/blobs": "workspace:*",
+        "@party-stack/icons": "workspace:^",
         "@party-stack/runtime": "workspace:*",
         "@tanstack/db-sqlite-persistence-core": "^0.2.6",
         "change-case": "^5.4.4",

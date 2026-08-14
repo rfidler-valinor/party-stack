@@ -1,8 +1,18 @@
 import { o } from "./generated/builders.js";
 import type { OntologyIR } from "./generated/types.js";
+import { iconNames } from "@party-stack/icons";
 
 export default {
     types: [
+        {
+            name: "IconName",
+            description: "A renderer-independent icon name from @party-stack/icons.",
+            type: o.string({
+                constraint: o.StringConstraint.enum({
+                    options: iconNames.map((value) => ({ value })),
+                }),
+            }),
+        },
         {
             name: "Deprecation",
             type: o.struct({
@@ -580,6 +590,12 @@ export default {
                             "The optional property name used as the human-readable title for an object.",
                     },
                     {
+                        name: "icon",
+                        displayName: "Icon",
+                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
+                        description: "Optional renderer-independent icon name.",
+                    },
+                    {
                         name: "properties",
                         displayName: "Properties",
                         type: o.list({ elementType: o.ref({ name: "PropertyDef" }) }),
@@ -909,6 +925,12 @@ export default {
                         displayName: "Display name",
                         type: o.string({}),
                         description: "Human-readable name.",
+                    },
+                    {
+                        name: "icon",
+                        displayName: "Icon",
+                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
+                        description: "Optional renderer-independent icon name.",
                     },
                     {
                         name: "parameters",
