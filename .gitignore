@@ -40,3 +40,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Icon lab embedding scratch
+apps/icon-lab/.tmp-embeds
