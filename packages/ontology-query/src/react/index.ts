@@ -1,6 +1,5 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
-import type { LiveOntology } from "@party-stack/ontology";
 import {
     fragment,
     readFragmentData,
@@ -8,7 +7,12 @@ import {
     type FragmentRef,
     type OntologyFragment,
 } from "../fragments/index.js";
-import { includeQuery, type SelectionNode } from "../query/index.js";
+import {
+    includeQuery,
+    type ApplyIncludeQueryOptions,
+    type SelectionNode,
+} from "../query/index.js";
+import type { AnyLiveOntology } from "../ontologyTypes.js";
 import type { InitialQueryBuilder } from "@tanstack/db";
 
 export { fragment, readFragmentData, stitchFragments };
@@ -28,17 +32,13 @@ export function useFragment<Selection extends SelectionNode>(
     );
 }
 
-/** Opaque TanStack builder chain returned by includeQuery.buildLive. */
-type BuiltIncludeQuery = ReturnType<ReturnType<typeof includeQuery>["buildLive"]>;
-
 export type UseStitchedQueryOptions = {
     /** Extra selection fields beyond stitched fragments. */
     extra?: SelectionNode;
     /**
-     * Optional refinements (where / orderBy) applied after includes are joined.
-     * Receives the TanStack builder returned by `buildLive`.
+     * Refine after joins / before select (where, orderBy, …).
      */
-    refine?: (query: BuiltIncludeQuery) => BuiltIncludeQuery;
+    refine?: ApplyIncludeQueryOptions["refine"];
     deps?: unknown[];
 };
 
@@ -56,7 +56,7 @@ export type UseStitchedQueryResult = {
  * rows into the GraphQL-like selection shape, and return fragment refs.
  */
 export function useStitchedQuery<TypeName extends string>(
-    ontology: LiveOntology,
+    ontology: AnyLiveOntology,
     type: TypeName,
     fragments: ReadonlyArray<OntologyFragment<TypeName, SelectionNode>>,
     options: UseStitchedQueryOptions = {}
@@ -77,10 +77,7 @@ export function useStitchedQuery<TypeName extends string>(
 
     const refine = options.refine;
     const live = useLiveQuery(
-        (q: InitialQueryBuilder) => {
-            const built = plan.buildLive(q);
-            return refine ? refine(built) : built;
-        },
+        (q: InitialQueryBuilder) => plan.buildLive(q, { refine }),
         [plan, refine, ...(options.deps ?? [])]
     );
 

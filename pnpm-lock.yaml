@@ -53,6 +53,9 @@ importers:
       '@party-stack/ontology-devtools':
         specifier: workspace:*
         version: link:../../packages/ontology-devtools
+      '@party-stack/ontology-query':
+        specifier: workspace:*
+        version: link:../../packages/ontology-query
       '@party-stack/remote-ontology':
         specifier: workspace:^
         version: link:../../packages/remote-ontology
@@ -10877,6 +10880,24 @@ snapshots:
       - utf-8-validate
       - vite
 
+  '@vitest/browser@3.2.4(vite@7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0))(vitest@3.2.4)':
+    dependencies:
+      '@testing-library/dom': 10.4.1
+      '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
+      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0))
+      '@vitest/utils': 3.2.4
+      magic-string: 0.30.21
+      sirv: 3.0.2
+      tinyrainbow: 2.0.0
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0)
+      ws: 8.20.0
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
+    optional: true
+
   '@vitest/browser@3.2.4(vitest@3.2.4)':
     dependencies:
       '@testing-library/dom': 10.4.1
@@ -10886,7 +10907,7 @@ snapshots:
       magic-string: 0.30.21
       sirv: 3.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@26.1.2)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0)
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
@@ -15888,7 +15909,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 24.10.1
-      '@vitest/browser': 3.2.4(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(vite@7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0))(vitest@3.2.4)
       jsdom: 27.2.0
     transitivePeerDependencies:
       - jiti
@@ -15976,7 +15997,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 26.1.2
-      '@vitest/browser': 3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.20.6)(yaml@2.9.0))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(vitest@3.2.4)
       jsdom: 27.2.0
     transitivePeerDependencies:
       - jiti

@@ -26,11 +26,13 @@ import {
     useLiveQuery,
 } from "@tanstack/react-db";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
     createOntologyDevtoolsPlugin,
     ontologyDevtoolsTrigger,
 } from "@party-stack/ontology-devtools";
+import { includeQuery } from "@party-stack/ontology-query";
+import { useFragment, useStitchedQuery } from "@party-stack/ontology-query/react";
 import type { AttachmentMetadata } from "@party-stack/ontology";
 import {
     useEffect,
@@ -47,6 +49,11 @@ import type {
     Project,
     UpdateIssueParameters,
 } from "../ontology/generated/types";
+import {
+    IssueBoardExtraSelection,
+    IssueDetailsFragment,
+    KanbanCardFragment,
+} from "../query-demo/fragments";
 import {
     getIssueTrackerCollections,
     type BackendKind,
@@ -886,14 +893,38 @@ function IssueDetails({
     const updateIssue = useAction(ontology.actions.updateIssue);
     const deleteIssue = useAction(ontology.actions.deleteIssue);
     const [editing, setEditing] = useState(false);
-    const { data: issue } = useLiveQuery(
-        (q) =>
-            q
-                .from({ Issue: ontology.objects.Issue })
-                .where(({ Issue }) => eq(Issue.issueId, issueId))
-                .findOne(),
-        [issueId]
+
+    // Demo: nested include via link (`project`) instead of projects.find()
+    const detailsPlan = useMemo(
+        () =>
+            includeQuery(ontology, {
+                from: "Issue",
+                select: IssueDetailsFragment.selection,
+            }),
+        [ontology]
     );
+    const { data: detailRows } = useLiveQuery(
+        (q) =>
+            detailsPlan.buildLive(q, {
+                refine: (query) =>
+                    query.where(({ Issue }: { Issue: { issueId: string } }) =>
+                        eq(Issue.issueId, issueId)
+                    ),
+            }),
+        [detailsPlan, issueId]
+    );
+    const nestedIssue = useMemo(() => {
+        const rows = (detailRows ?? []) as Array<Record<string, unknown>>;
+        return detailsPlan.nest(rows)[0] ?? null;
+    }, [detailRows, detailsPlan]);
+    const fragmentData = useFragment(IssueDetailsFragment, nestedIssue);
+    const issue = fragmentData as (Issue & {
+        project?: {
+            projectId?: string;
+            projectTitle?: string;
+            projectColor?: string;
+        } | null;
+    }) | null;
 
     if (!issue) {
         return (
@@ -903,9 +934,9 @@ function IssueDetails({
         );
     }
 
-    const project = projects.find(
-        (item) => item.projectId === issue.projectId
-    );
+    const project =
+        issue.project ??
+        projects.find((item) => item.projectId === issue.projectId);
 
     function saveIssue(values: {
         title: string;
@@ -1070,6 +1101,11 @@ function IssueDetails({
 type IssueRow = Issue & {
     projectTitle?: string;
     projectColor?: string;
+    /** Nested include from KanbanCardFragment — preferred over flat fields. */
+    project?: {
+        projectTitle?: string;
+        projectColor?: string;
+    } | null;
 };
 
 type CommandIssue = {
@@ -1087,6 +1123,27 @@ function KanbanCard({
     onDelete: () => void;
     onOpen: () => void;
 }) {
+    const data = useFragment(KanbanCardFragment, issue as unknown as Record<string, unknown>);
+    const card = data ?? issue;
+    const project =
+        (card.project as
+            | { projectTitle?: string; projectColor?: string }
+            | null
+            | undefined) ?? {
+            projectTitle: issue.projectTitle,
+            projectColor: issue.projectColor,
+        };
+    const issueId = String(card.issueId ?? issue.issueId);
+    const issueTitle = String(card.issueTitle ?? issue.issueTitle);
+    const issueDescription = String(
+        card.issueDescription ?? issue.issueDescription ?? ""
+    );
+    const issueStatus = String(card.issueStatus ?? issue.issueStatus);
+    const issueUpdatedAt = card.issueUpdatedAt ?? issue.issueUpdatedAt;
+    const issueAttachments =
+        (card.issueAttachments as Issue["issueAttachments"] | undefined) ??
+        issue.issueAttachments;
+
     const {
         attributes,
         isDragging,
@@ -1094,9 +1151,9 @@ function KanbanCard({
         setNodeRef,
         transform,
     } = useDraggable({
-        id: issue.issueId,
+        id: issueId,
         data: {
-            status: issue.issueStatus,
+            status: issueStatus,
         },
     });
 
@@ -1133,7 +1190,7 @@ function KanbanCard({
             >
                 <div className="flex items-start gap-2">
                     <button
-                        aria-label={`Drag ${issue.issueTitle}`}
+                        aria-label={`Drag ${issueTitle}`}
                         className="drag-handle mt-0.5 rounded bg-slate-100 p-1 text-slate-500 outline-none hover:bg-slate-200 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-indigo-500"
                         onClick={(event) => event.stopPropagation()}
                         type="button"
@@ -1144,52 +1201,52 @@ function KanbanCard({
                     </button>
                     <div className="min-w-0 flex-1 text-left">
                         <p className="mb-1 font-mono text-[11px] text-slate-400">
-                            {formatIssueIdentifier(issue.issueId)}
+                            {formatIssueIdentifier(issueId)}
                         </p>
                         <h3
                             className={`text-sm font-medium leading-5 ${
-                                issue.issueStatus === "Completed"
+                                issueStatus === "Completed"
                                     ? "text-slate-400 line-through"
                                     : "text-slate-800"
                             }`}
                         >
-                            {issue.issueTitle}
+                            {issueTitle}
                         </h3>
-                        {issue.issueDescription && (
+                        {issueDescription && (
                             <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">
-                                {issue.issueDescription}
+                                {issueDescription}
                             </p>
                         )}
                     </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2 pl-7">
-                    {issue.projectTitle && (
+                    {project?.projectTitle && (
                         <span className="flex min-w-0 items-center gap-1.5 rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
                             <span
                                 className="size-1.5 shrink-0 rounded-sm"
                                 style={{
                                     backgroundColor:
-                                        issue.projectColor ||
+                                        project.projectColor ||
                                         "#94a3b8",
                                 }}
                             />
                             <span className="truncate">
-                                {issue.projectTitle}
+                                {project.projectTitle}
                             </span>
                         </span>
                     )}
                     <span className="ml-auto flex shrink-0 items-center gap-2">
-                        {issue.issueAttachments?.length > 0 && (
+                        {issueAttachments?.length > 0 && (
                             <span className="flex items-center gap-1 text-[10px] text-slate-400">
                                 <Icon
                                     className="size-3"
                                     name="attachment"
                                 />
-                                {issue.issueAttachments.length}
+                                {issueAttachments.length}
                             </span>
                         )}
                         <span className="text-[10px] text-slate-400">
-                            {formatDate(issue.issueUpdatedAt)}
+                            {formatDate(issueUpdatedAt)}
                         </span>
                     </span>
                 </div>
@@ -1642,44 +1699,41 @@ export function IssueTracker({
         [ontology]
     );
 
-    const { data: issues, isLoading: issuesLoading } = useLiveQuery(
-        (q) =>
-            q
-                .from({ Issue: ontology.objects.Issue })
-                .where(({ Issue }) =>
-                    ilike(Issue.issueTitle, `${search}%`)
-                )
-                .where(({ Issue }) =>
-                    selectedProjectId
-                        ? eq(Issue.projectId, selectedProjectId)
-                        : ilike(Issue.issueTitle, "%")
-                )
-                .where(({ Issue }) =>
-                    statusFilter !== "All"
-                        ? eq(Issue.issueStatus, statusFilter)
-                        : ilike(Issue.issueStatus, "%")
-                )
-                .leftJoin(
-                    { Project: ontology.objects.Project },
-                    ({ Issue, Project }) =>
-                        eq(Issue.projectId, Project.projectId)
-                )
-                .select(({ Issue, Project }) => ({
-                    issueId: Issue.issueId,
-                    issueTitle: Issue.issueTitle,
-                    issueDescription: Issue.issueDescription,
-                    issueStatus: Issue.issueStatus,
-                    issueUpdatedAt: Issue.issueUpdatedAt,
-                    issueCreatedAt: Issue.issueCreatedAt,
-                    issueCompletedAt: Issue.issueCompletedAt,
-                    issueAttachments: Issue.issueAttachments,
-                    projectId: Issue.projectId,
-                    projectTitle: Project.projectTitle,
-                    projectColor: Project.projectColor,
-                }))
-                .orderBy(({ Issue }) => Issue.issueUpdatedAt, "desc"),
-        [ontology, search, selectedProjectId, statusFilter]
+    // Board query: stitch KanbanCardFragment (+ extras) into one include that
+    // follows Issue → project via IR link metadata instead of a hand-written join.
+    const stitchedIssues = useStitchedQuery(
+        ontology,
+        "Issue",
+        [KanbanCardFragment],
+        {
+            extra: IssueBoardExtraSelection,
+            refine: (q) =>
+                q
+                    .where(({ Issue }: { Issue: { issueTitle: string } }) =>
+                        ilike(Issue.issueTitle, `${search}%`)
+                    )
+                    .where(
+                        ({ Issue }: { Issue: { projectId: string; issueTitle: string } }) =>
+                            selectedProjectId
+                                ? eq(Issue.projectId, selectedProjectId)
+                                : ilike(Issue.issueTitle, "%")
+                    )
+                    .where(
+                        ({ Issue }: { Issue: { issueStatus: string } }) =>
+                            statusFilter !== "All"
+                                ? eq(Issue.issueStatus, statusFilter)
+                                : ilike(Issue.issueStatus, "%")
+                    )
+                    .orderBy(
+                        ({ Issue }: { Issue: { issueUpdatedAt: unknown } }) =>
+                            Issue.issueUpdatedAt,
+                        "desc"
+                    ),
+            deps: [search, selectedProjectId, statusFilter],
+        }
     );
+    const issues = stitchedIssues.data as unknown as IssueRow[];
+    const issuesLoading = stitchedIssues.isLoading;
 
     const selectedProject = projects.find(
         (project) => project.projectId === selectedProjectId
@@ -1921,6 +1975,12 @@ export function IssueTracker({
                             <option value="foundry">Foundry</option>
                             <option value="sqlite">SQLite</option>
                         </FormSelect>
+                        <Link
+                            className="mt-2 block rounded-md px-1 py-1 text-[11px] text-indigo-600 hover:bg-slate-200/60"
+                            to="/query-lab"
+                        >
+                            Query lab →
+                        </Link>
                     </label>
                 </aside>
 

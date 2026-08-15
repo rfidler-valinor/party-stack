@@ -1,5 +1,5 @@
 import { eq, type InitialQueryBuilder } from "@tanstack/db";
-import type { LiveOntology } from "@party-stack/ontology";
+import type { AnyLiveOntology } from "../ontologyTypes.js";
 import type { CompiledIncludeQuery, SelectionNode } from "./selection.js";
 
 type QueryTables = Record<string, Record<string, unknown> | undefined>;
@@ -7,6 +7,15 @@ type QueryTables = Record<string, Record<string, unknown> | undefined>;
 function columnKey(rootAlias: string, alias: string, field: string): string {
     return alias === rootAlias ? field : `${alias}__${field}`;
 }
+
+export type ApplyIncludeQueryOptions = {
+    /**
+     * Refine the query after joins are applied but before the flat select
+     * (where / orderBy / limit live here).
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack builder chain is opaque across joins
+    refine?: (query: any) => any;
+};
 
 /**
  * Apply a compiled include plan onto a TanStack DB query builder.
@@ -17,8 +26,9 @@ function columnKey(rootAlias: string, alias: string, field: string): string {
  */
 export function applyIncludeQuery(
     q: InitialQueryBuilder,
-    ontology: LiveOntology,
-    compiled: CompiledIncludeQuery
+    ontology: AnyLiveOntology,
+    compiled: CompiledIncludeQuery,
+    options: ApplyIncludeQueryOptions = {}
 ) {
     const rootCollection = ontology.objects[compiled.rootObjectType];
     if (!rootCollection) {
@@ -46,6 +56,11 @@ export function applyIncludeQuery(
                 toTable?.[toKey] as never
             );
         });
+    }
+
+    if (options.refine) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- opaque TanStack builder
+        query = options.refine(query);
     }
 
     return query.select((tables: QueryTables) => {
