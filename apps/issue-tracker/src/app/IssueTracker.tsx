@@ -1067,7 +1067,18 @@ function IssueDetails({
     );
 }
 
-type IssueRow = Issue & {
+type IssueRow = Pick<
+    Issue,
+    | "issueId"
+    | "issueTitle"
+    | "issueDescription"
+    | "issueStatus"
+    | "issueUpdatedAt"
+    | "issueCreatedAt"
+    | "issueCompletedAt"
+    | "issueAttachments"
+    | "projectId"
+> & {
     projectTitle?: string;
     projectColor?: string;
 };

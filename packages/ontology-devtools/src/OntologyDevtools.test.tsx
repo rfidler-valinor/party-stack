@@ -88,7 +88,14 @@ describe("OntologyIcon", () => {
             props: {
                 className: "object-icon",
                 name: "ticket",
+                style: undefined,
             },
+        });
+    });
+
+    it("tints the icon with the ontology color when one is defined", () => {
+        expect(OntologyIcon({ name: "ticket", color: "#2D72D2" })).toMatchObject({
+            props: { style: { color: "#2D72D2" } },
         });
     });
 });

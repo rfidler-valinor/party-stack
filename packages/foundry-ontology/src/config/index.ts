@@ -17,6 +17,8 @@ export interface FoundryOntologyClientOpts {
     foundryOntologyRid: string;
     foundryClientId: string;
     foundryRedirectUrl: string;
+    /** Skips the interactive OAuth flow, which browserless environments cannot complete. */
+    foundryToken?: string;
 }
 
 export interface FoundryOntologyConfigAdapterOpts
@@ -27,14 +29,18 @@ export interface FoundryOntologyConfigAdapterOpts
 export async function createFoundryOntologyClient(
     config: FoundryOntologyClientOpts
 ): Promise<OntologyClient> {
-    const { accessToken } = await performLocalOAuthFlow({
-        issuerUrl: `${config.foundryUrl}/multipass/api`,
-        authorizationUrl: `${config.foundryUrl}/multipass/api/oauth2/authorize`,
-        tokenUrl: `${config.foundryUrl}/multipass/api/oauth2/token`,
-        clientId: config.foundryClientId,
-        redirectUrl: config.foundryRedirectUrl,
-        scopes: DEFAULT_FOUNDRY_SCOPES,
-    });
+    const accessToken =
+        config.foundryToken ??
+        (
+            await performLocalOAuthFlow({
+                issuerUrl: `${config.foundryUrl}/multipass/api`,
+                authorizationUrl: `${config.foundryUrl}/multipass/api/oauth2/authorize`,
+                tokenUrl: `${config.foundryUrl}/multipass/api/oauth2/token`,
+                clientId: config.foundryClientId,
+                redirectUrl: config.foundryRedirectUrl,
+                scopes: DEFAULT_FOUNDRY_SCOPES,
+            })
+        ).accessToken;
 
     return createOntologyClient({
         baseUrl: config.foundryUrl,
@@ -43,12 +49,17 @@ export async function createFoundryOntologyClient(
     });
 }
 
-function getDefaultEnvValue(key: string): string {
-    const value =
+function findEnvValue(key: string): string | undefined {
+    return (
         process.env[key] ??
         process.env[`NEXT_PUBLIC_${key}`] ??
         process.env[`VITE_PUBLIC_${key}`] ??
-        process.env[`EXPO_PUBLIC_${key}`];
+        process.env[`EXPO_PUBLIC_${key}`]
+    );
+}
+
+function getDefaultEnvValue(key: string): string {
+    const value = findEnvValue(key);
     invariant(value);
     return value;
 }
@@ -57,11 +68,17 @@ export const foundryOntologyConfigAdapter: OntologyConfigAdapter<
     FoundryOntologyConfigAdapterOpts | undefined
 > = {
     createAdapter: async (opts) => {
+        const foundryToken = opts?.foundryToken ?? findEnvValue("FOUNDRY_TOKEN");
         const client = await createFoundryOntologyClient({
             foundryUrl: opts?.foundryUrl ?? getDefaultEnvValue("FOUNDRY_URL"),
             foundryOntologyRid: opts?.foundryOntologyRid ?? getDefaultEnvValue("FOUNDRY_ONTOLOGY_RID"),
-            foundryClientId: opts?.foundryClientId ?? getDefaultEnvValue("FOUNDRY_CLIENT_ID"),
-            foundryRedirectUrl: opts?.foundryRedirectUrl ?? getDefaultEnvValue("FOUNDRY_REDIRECT_URL"),
+            foundryClientId:
+                opts?.foundryClientId ??
+                (foundryToken ? "" : getDefaultEnvValue("FOUNDRY_CLIENT_ID")),
+            foundryRedirectUrl:
+                opts?.foundryRedirectUrl ??
+                (foundryToken ? "" : getDefaultEnvValue("FOUNDRY_REDIRECT_URL")),
+            foundryToken,
         });
         return createFoundryMetaOntologyBackendAdapter({ client });
     },

@@ -10,7 +10,15 @@ export default defineOntology({
             pluralDisplayName: "Issues",
             primaryKey: "issueId",
             title: "issueTitle",
-            icon: { name: "ticket" },
+            icon: {
+                name: "ticket",
+                meta: {
+                    blueprint: {
+                        name: "issue",
+                    },
+                },
+            },
+            color: "#2D72D2",
             properties: [
                 {
                     name: "issueCompletedAt",
@@ -39,11 +47,21 @@ export default defineOntology({
                     description: "Stable system-generated identifier for an issue.",
                 },
                 {
+                    name: "createdBy",
+                    displayName: "Created by",
+                    type: o.string({}),
+                },
+                {
                     name: "issueTitle",
                     displayName: "Issue Title",
                     type: o.string({}),
                     description:
                         "Short, human-readable summary used to identify the issue in lists and workflows.",
+                },
+                {
+                    name: "assignee",
+                    displayName: "Assignee",
+                    type: o.string({}),
                 },
                 {
                     name: "issueAttachments",
@@ -94,7 +112,15 @@ export default defineOntology({
             pluralDisplayName: "Projects",
             primaryKey: "projectId",
             title: "projectTitle",
-            icon: { name: "folder" },
+            icon: {
+                name: "project",
+                meta: {
+                    blueprint: {
+                        name: "projects",
+                    },
+                },
+            },
+            color: "#2D72D2",
             properties: [
                 {
                     name: "projectUpdatedAt",
@@ -159,7 +185,6 @@ export default defineOntology({
         {
             name: "createIssue",
             displayName: "Create Issue",
-            icon: { name: "plus-circle" },
             parameters: [
                 {
                     name: "completedAt",
@@ -192,6 +217,13 @@ export default defineOntology({
                     description: "Optional files that support or explain the issue.",
                 },
                 {
+                    name: "createdBy",
+                    displayName: "Created by",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
                     name: "project",
                     displayName: "Project",
                     type: o.optional({
@@ -208,6 +240,13 @@ export default defineOntology({
                         type: o.string({}),
                     }),
                     description: "Detailed context or requirements for the issue.",
+                },
+                {
+                    name: "assignee",
+                    displayName: "Assignee",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                 },
                 {
                     name: "title",
@@ -290,9 +329,21 @@ export default defineOntology({
                             }),
                         },
                         {
+                            property: ["createdBy"],
+                            value: o.Expression.contextReference({
+                                path: ["userId"],
+                            }),
+                        },
+                        {
                             property: ["issueTitle"],
                             value: o.Expression.valueReference({
                                 path: ["title"],
+                            }),
+                        },
+                        {
+                            property: ["assignee"],
+                            value: o.Expression.valueReference({
+                                path: ["assignee"],
                             }),
                         },
                         {
@@ -328,7 +379,6 @@ export default defineOntology({
         {
             name: "createProject",
             displayName: "Create Project",
-            icon: { name: "plus-circle" },
             parameters: [
                 {
                     name: "color",
@@ -424,7 +474,6 @@ export default defineOntology({
         {
             name: "deleteIssue",
             displayName: "Delete Issue",
-            icon: { name: "delete" },
             parameters: [
                 {
                     name: "issue",
@@ -447,7 +496,6 @@ export default defineOntology({
         {
             name: "deleteProject",
             displayName: "Delete Project",
-            icon: { name: "delete" },
             parameters: [
                 {
                     name: "project",
@@ -470,7 +518,6 @@ export default defineOntology({
         {
             name: "updateIssue",
             displayName: "Update Issue",
-            icon: { name: "edit" },
             parameters: [
                 {
                     name: "completedAt",
@@ -527,6 +574,13 @@ export default defineOntology({
                         }),
                     }),
                     description: "Optional project used to group the issue.",
+                },
+                {
+                    name: "assignee",
+                    displayName: "Assignee",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                 },
                 {
                     name: "title",
@@ -602,6 +656,12 @@ export default defineOntology({
                             }),
                         },
                         {
+                            property: ["assignee"],
+                            value: o.Expression.valueReference({
+                                path: ["assignee"],
+                            }),
+                        },
+                        {
                             property: ["issueAttachments"],
                             value: o.Expression.valueReference({
                                 path: ["attachments"],
@@ -628,7 +688,6 @@ export default defineOntology({
         {
             name: "updateProject",
             displayName: "Update Project",
-            icon: { name: "edit" },
             parameters: [
                 {
                     name: "color",

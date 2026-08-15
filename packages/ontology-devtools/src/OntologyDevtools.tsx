@@ -83,8 +83,39 @@ export interface OntologyDevtoolsChromeProps {
     theme: "light" | "dark";
 }
 
-export function OntologyIcon({ className, name }: { className?: string; name: IconName }) {
-    return <LucideIcon aria-hidden="true" className={className} name={name} />;
+export function OntologyIcon({
+    className,
+    color,
+    name,
+}: {
+    className?: string;
+    color?: string;
+    name: IconName;
+}) {
+    return (
+        <LucideIcon
+            aria-hidden="true"
+            className={className}
+            name={name}
+            style={color ? { color } : undefined}
+        />
+    );
+}
+
+function ObjectTypeIcon({
+    className,
+    objectType,
+}: {
+    className?: string;
+    objectType: ObjectTypeDef;
+}) {
+    return (
+        <OntologyIcon
+            className={className}
+            color={objectType.color}
+            name={objectType.icon?.name ?? "database"}
+        />
+    );
 }
 
 function PartyStackLogo({ theme }: OntologyDevtoolsChromeProps) {
@@ -981,9 +1012,9 @@ function ObjectTable({
         <div className="ps:flex ps:min-h-0 ps:min-w-0 ps:flex-1 ps:flex-col ps:overflow-hidden">
             <div className="ps:flex ps:flex-none ps:items-center ps:border-b ps:border-zinc-500/20 ps:px-4 ps:py-2">
                 <h2 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-lg ps:font-semibold">
-                    <OntologyIcon
+                    <ObjectTypeIcon
                         className="ps:size-5 ps:flex-none ps:text-rose-400"
-                        name={objectType.icon?.name ?? "database"}
+                        objectType={objectType}
                     />
                     {objectType.pluralDisplayName}
                 </h2>
@@ -1315,9 +1346,9 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                                 setSelectedName(objectType.name);
                             }}
                         >
-                            <OntologyIcon
+                            <ObjectTypeIcon
                                 className="ps:size-4 ps:flex-none"
-                                name={objectType.icon?.name ?? "database"}
+                                objectType={objectType}
                             />
                             <span className="ps:truncate">{objectType.pluralDisplayName}</span>
                         </button>
@@ -1440,9 +1471,9 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
                     >
                         <header className="ps:border-b ps:border-zinc-500/20 ps:px-3.5 ps:py-3">
                             <h3 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-sm ps:font-semibold">
-                                <OntologyIcon
+                                <ObjectTypeIcon
                                     className="ps:size-4 ps:flex-none ps:text-rose-400"
-                                    name={objectType.icon?.name ?? "database"}
+                                    objectType={objectType}
                                 />
                                 {objectType.displayName}
                             </h3>
