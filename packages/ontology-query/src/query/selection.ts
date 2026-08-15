@@ -2,14 +2,15 @@ import type { OntologyIR } from "@party-stack/ontology";
 import { resolveLink } from "../links/resolveLink.js";
 
 /**
- * Declarative selection / include trees over the ontology graph.
- *
- * Property fields are requested with `true`. Link fields nest another
- * selection. This is the shared IR for both the include query compiler and
- * Relay-style fragments.
+ * Normalized selection IR shared by fragments and query compilation.
+ * Callers construct it with `fields(...)` and `related(...)`; they do not
+ * author this representation directly.
  */
-export type SelectionNode = {
-    [field: string]: true | SelectionNode;
+export type SelectionNode<Data = Record<string, unknown>> = {
+    fields: string[];
+    relations: Record<string, SelectionNode>;
+    /** Type-only result carried through fragment/query inference. */
+    readonly __data?: Data;
 };
 
 export type IncludeQuerySpec = {
@@ -18,6 +19,187 @@ export type IncludeQuerySpec = {
     /** Nested property + link selection. */
     select: SelectionNode;
 };
+
+export type OntologyQueryDefinition = {
+    objectTypes: Record<string, Record<string, unknown>>;
+    linkTypes: Record<
+        string,
+        Record<string, { target: string; cardinality: "one" | "many" }>
+    >;
+};
+
+export type ObjectTypeName<Ontology extends OntologyQueryDefinition> = Extract<
+    keyof Ontology["objectTypes"],
+    string
+>;
+
+export type ObjectFieldName<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+> = Extract<keyof Ontology["objectTypes"][TypeName], string>;
+
+export type LinkName<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+> = TypeName extends keyof Ontology["linkTypes"]
+    ? Extract<keyof Ontology["linkTypes"][TypeName], string>
+    : never;
+
+type LinkDefinition<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+    Link extends LinkName<Ontology, TypeName>,
+> = Ontology["linkTypes"][TypeName][Link] extends {
+    target: infer Target extends ObjectTypeName<Ontology>;
+    cardinality: infer Cardinality extends "one" | "many";
+}
+    ? { target: Target; cardinality: Cardinality }
+    : never;
+
+export type LinkTarget<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+    Link extends LinkName<Ontology, TypeName>,
+> = LinkDefinition<Ontology, TypeName, Link>["target"];
+
+export type SelectionPiece<Data extends Record<string, unknown>> =
+    | {
+          kind: "fields";
+          fields: string[];
+          readonly __data?: Data;
+      }
+    | {
+          kind: "related";
+          link: string;
+          selection: SelectionNode;
+          readonly __data?: Data;
+      };
+
+export type SelectionBuildResult =
+    | SelectionPiece<Record<string, unknown>>
+    | ReadonlyArray<SelectionPiece<Record<string, unknown>>>;
+
+type PieceData<Piece> = Piece extends SelectionPiece<infer Data> ? Data : never;
+type UnionToIntersection<Union> = (
+    Union extends unknown ? (value: Union) => void : never
+) extends (value: infer Intersection) => void
+    ? Intersection
+    : never;
+export type SelectionData<Result extends SelectionBuildResult> = Result extends ReadonlyArray<
+    infer Piece
+>
+    ? UnionToIntersection<PieceData<Piece>>
+    : PieceData<Result>;
+
+type RelatedData<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+    Link extends LinkName<Ontology, TypeName>,
+    ChildData extends Record<string, unknown>,
+> = LinkDefinition<Ontology, TypeName, Link>["cardinality"] extends "many"
+    ? { [Key in Link]: ChildData[] }
+    : { [Key in Link]: ChildData | null };
+
+export type SelectionBuilder<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+> = {
+    fields: <
+        const Names extends ReadonlyArray<ObjectFieldName<Ontology, TypeName>>,
+    >(
+        ...names: Names
+    ) => SelectionPiece<Pick<Ontology["objectTypes"][TypeName], Names[number]>>;
+    related: <
+        Link extends LinkName<Ontology, TypeName>,
+        Result extends SelectionBuildResult,
+    >(
+        link: Link,
+        build: (
+            selection: SelectionBuilder<Ontology, LinkTarget<Ontology, TypeName, Link>>
+        ) => Result
+    ) => SelectionPiece<
+        RelatedData<Ontology, TypeName, Link, SelectionData<Result>>
+    >;
+};
+
+function createBuilder<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+>(): SelectionBuilder<Ontology, TypeName> {
+    return {
+        fields: (...names) => ({
+            kind: "fields",
+            fields: [...names],
+        }),
+        related: (link, build) => ({
+            kind: "related",
+            link,
+            selection: normalizeSelection(
+                build(
+                    createBuilder<
+                        Ontology,
+                        LinkTarget<Ontology, TypeName, typeof link>
+                    >()
+                )
+            ),
+        }),
+    } as SelectionBuilder<Ontology, TypeName>;
+}
+
+function normalizeSelection<Result extends SelectionBuildResult>(
+    result: Result
+): SelectionNode<SelectionData<Result>> {
+    const pieces: ReadonlyArray<SelectionPiece<Record<string, unknown>>> =
+        Array.isArray(result)
+            ? (result as ReadonlyArray<SelectionPiece<Record<string, unknown>>>)
+            : [result as SelectionPiece<Record<string, unknown>>];
+    const fields = new Set<string>();
+    const relations: Record<string, SelectionNode> = {};
+    for (const piece of pieces) {
+        if (piece.kind === "fields") {
+            for (const field of piece.fields) fields.add(field);
+        } else {
+            relations[piece.link] = relations[piece.link]
+                ? mergeSelectionNodes(relations[piece.link]!, piece.selection)
+                : piece.selection;
+        }
+    }
+    return {
+        fields: [...fields],
+        relations,
+    } as SelectionNode<SelectionData<Result>>;
+}
+
+/**
+ * Create ontology-bound selection helpers. Both field names and relation names
+ * (including nested relation targets/cardinality) come from generated ontology
+ * types.
+ */
+export function createSelectionFactory<Ontology extends OntologyQueryDefinition>() {
+    return function select<
+        TypeName extends ObjectTypeName<Ontology>,
+        Result extends SelectionBuildResult,
+    >(
+        _type: TypeName,
+        build: (selection: SelectionBuilder<Ontology, TypeName>) => Result
+    ): SelectionNode<SelectionData<Result>> {
+        return normalizeSelection(build(createBuilder<Ontology, TypeName>()));
+    };
+}
+
+export function mergeSelectionNodes(...selections: SelectionNode[]): SelectionNode {
+    const fields = new Set<string>();
+    const relations: Record<string, SelectionNode> = {};
+    for (const selection of selections) {
+        for (const field of selection.fields) fields.add(field);
+        for (const [link, child] of Object.entries(selection.relations)) {
+            relations[link] = relations[link]
+                ? mergeSelectionNodes(relations[link], child)
+                : child;
+        }
+    }
+    return { fields: [...fields], relations };
+}
 
 export type CompiledJoin = {
     /** Alias used in the TanStack query (usually the link name, uniquified). */
@@ -40,10 +222,6 @@ export type CompiledIncludeQuery = {
     /** Original selection tree (for nesting results / fragments). */
     select: SelectionNode;
 };
-
-function isLinkSelection(value: true | SelectionNode): value is SelectionNode {
-    return value !== true;
-}
 
 function ensureField(fieldsByAlias: Record<string, string[]>, alias: string, field: string): void {
     fieldsByAlias[alias] ??= [];
@@ -83,15 +261,14 @@ export function compileIncludeQuery(ir: OntologyIR, spec: IncludeQuerySpec): Com
         }
         const propertyNames = new Set(objectDef.properties.map((property) => property.name));
 
-        for (const [field, value] of Object.entries(selection)) {
-            if (!isLinkSelection(value)) {
-                if (!propertyNames.has(field)) {
-                    throw new Error(`Unknown property "${field}" on "${objectType}".`);
-                }
-                ensureField(fieldsByAlias, alias, field);
-                continue;
+        for (const field of selection.fields) {
+            if (!propertyNames.has(field)) {
+                throw new Error(`Unknown property "${field}" on "${objectType}".`);
             }
+            ensureField(fieldsByAlias, alias, field);
+        }
 
+        for (const [field, value] of Object.entries(selection.relations)) {
             const link = resolveLink(ir, objectType, field);
             const joinAlias = uniquify(field);
             fieldsByAlias[joinAlias] ??= [];

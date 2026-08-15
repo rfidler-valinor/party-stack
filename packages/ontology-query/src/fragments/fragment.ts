@@ -1,53 +1,65 @@
-import type { SelectionNode } from "../query/selection.js";
+import {
+    createSelectionFactory,
+    type ObjectTypeName,
+    type OntologyQueryDefinition,
+    type SelectionBuildResult,
+    type SelectionBuilder,
+    type SelectionData,
+    type SelectionNode,
+} from "../query/selection.js";
 
 /**
  * A Relay-inspired fragment: a named selection over an ontology object type.
  * Components declare these; pages stitch them into one include query.
  */
 export type OntologyFragment<
+    Ontology extends OntologyQueryDefinition = OntologyQueryDefinition,
     TypeName extends string = string,
-    Selection extends SelectionNode = SelectionNode,
+    Data extends Record<string, unknown> = Record<string, unknown>,
 > = {
     readonly $$typeof: "OntologyFragment";
     readonly name: string;
     readonly type: TypeName;
-    readonly selection: Selection;
+    readonly selection: SelectionNode<Data>;
+    /** Type-only ontology identity; prevents cross-ontology fragment stitching. */
+    readonly __ontology?: Ontology;
 };
 
-export type FragmentRef<F> =
-    F extends OntologyFragment<string, infer Selection> ? InferSelection<Selection> : never;
+export type FragmentRef<F> = F extends OntologyFragment<
+    OntologyQueryDefinition,
+    string,
+    infer Data
+>
+    ? Data
+    : never;
 
 /**
- * Infer the nested data shape from a selection node.
- * Link fields become nested objects (or arrays when callers mark them as many
- * via runtime nesting — typing defaults to object | null for prototype simplicity).
- */
-export type InferSelection<Selection extends SelectionNode> = {
-    [K in keyof Selection]: Selection[K] extends SelectionNode
-        ? InferSelection<Selection[K]> | null | Array<InferSelection<Selection[K]>>
-        : unknown;
-};
-
-/**
- * Declare a fragment over an ontology object type.
+ * Create an ontology-bound fragment factory. This makes invalid fields, links,
+ * nested target fields, and cross-ontology fragment use compile-time errors.
  *
  * @example
- * const KanbanCardFragment = fragment("KanbanCard", "Issue", {
- *   issueId: true,
- *   issueTitle: true,
- *   project: { projectTitle: true, projectColor: true },
- * });
+ * const fragment = createFragmentFactory<IssueTrackerOntology>();
+ * const KanbanCardFragment = fragment("KanbanCard", "Issue", ({ fields, related }) => [
+ *   fields("issueId", "issueTitle"),
+ *   related("project", ({ fields }) => fields("projectTitle", "projectColor")),
+ * ]);
  */
-export function fragment<TypeName extends string, Selection extends SelectionNode>(
-    name: string,
-    type: TypeName,
-    selection: Selection
-): OntologyFragment<TypeName, Selection> {
-    return {
-        $$typeof: "OntologyFragment",
-        name,
-        type,
-        selection,
+export function createFragmentFactory<Ontology extends OntologyQueryDefinition>() {
+    const select = createSelectionFactory<Ontology>();
+    return function fragment<
+        TypeName extends ObjectTypeName<Ontology>,
+        Result extends SelectionBuildResult,
+    >(
+        name: string,
+        type: TypeName,
+        build: (selection: SelectionBuilder<Ontology, TypeName>) => Result
+    ): OntologyFragment<Ontology, TypeName, SelectionData<Result>> {
+        return {
+            $$typeof: "OntologyFragment",
+            name,
+            type,
+            selection: select(type, build),
+        };
     };
 }
 

@@ -2,9 +2,7 @@
 
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import {
-    fromObject,
-    includeQuery,
-    leftJoinLink,
+    createOntologyRelations,
     ontologyQuery,
     resolveLink,
 } from "@party-stack/ontology-query";
@@ -17,7 +15,6 @@ import {
 import {
     KanbanCardFragment,
     IssueBoardFragments,
-    ProjectWithIssuesFragment,
 } from "./fragments";
 
 /**
@@ -28,6 +25,18 @@ export function QueryLab() {
     const collections = getIssueTrackerCollections();
     const [backendKind, setBackendKind] = useState<BackendKind>("sqlite");
     const ontology = collections[backendKind];
+    const relations = useMemo(
+        () => createOntologyRelations(ontology),
+        [ontology]
+    );
+    const issueProject = useMemo(
+        () => relations.related("Issue", "project"),
+        [relations]
+    );
+    const projectIssues = useMemo(
+        () => relations.related("Project", "issues"),
+        [relations]
+    );
 
     const resolved = useMemo(() => {
         try {
@@ -42,23 +51,24 @@ export function QueryLab() {
         }
     }, [ontology]);
 
-    // Idea A — helper leftJoinLink on a TanStack query
+    // Idea A — relation descriptor inside an otherwise-normal TanStack query.
     const ideaA = useLiveQuery(
-        (q) => {
-            const base = fromObject(q, ontology, "Issue");
-            return leftJoinLink(base, ontology, "Issue", "project").select(
-                (tables: {
-                    Issue: { issueId: string; issueTitle: string };
-                    project: { projectTitle?: string; projectColor?: string };
-                }) => ({
-                    issueId: tables.Issue.issueId,
-                    issueTitle: tables.Issue.issueTitle,
-                    projectTitle: tables.project?.projectTitle,
-                    projectColor: tables.project?.projectColor,
-                })
-            );
-        },
-        [ontology]
+        (q) =>
+            q
+                .from({ Issue: ontology.objects.Issue })
+                .leftJoin(
+                    { project: issueProject.collection },
+                    issueProject.on("Issue", "project")
+                )
+                .where(({ Issue }) => eq(Issue.issueStatus, "Open"))
+                .orderBy(({ Issue }) => Issue.issueUpdatedAt, "desc")
+                .select(({ Issue, project }) => ({
+                    issueId: Issue.issueId,
+                    issueTitle: Issue.issueTitle,
+                    projectTitle: project?.projectTitle,
+                    projectColor: project?.projectColor,
+                })),
+        [ontology, issueProject]
     );
 
     // Idea B — fluent ontologyQuery builder
@@ -66,14 +76,7 @@ export function QueryLab() {
         () =>
             ontologyQuery(ontology)
                 .from("Issue")
-                .select({
-                    issueId: true,
-                    issueTitle: true,
-                    project: {
-                        projectTitle: true,
-                        projectColor: true,
-                    },
-                }),
+                .select(KanbanCardFragment.selection),
         [ontology]
     );
     const ideaBLive = useLiveQuery(
@@ -85,22 +88,27 @@ export function QueryLab() {
         [ideaBPlan, ideaBLive.data]
     );
 
-    // Idea C — declarative includeQuery + Project.issues (MANY)
-    const ideaCPlan = useMemo(
-        () =>
-            includeQuery(ontology, {
-                from: "Project",
-                select: ProjectWithIssuesFragment.selection,
-            }),
-        [ontology]
-    );
-    const ideaCLive = useLiveQuery(
-        (q) => ideaCPlan.buildLive(q),
-        [ideaCPlan]
-    );
-    const ideaC = useMemo(
-        () => ideaCPlan.nest((ideaCLive.data ?? []) as Array<Record<string, unknown>>),
-        [ideaCPlan, ideaCLive.data]
+    // Idea C — correlated MANY include compiled to TanStack IncludesSubquery.
+    const { data: ideaC } = useLiveQuery(
+        (q) =>
+            q
+                .from({ Project: ontology.objects.Project })
+                .orderBy(({ Project }) => Project.projectTitle)
+                .select(({ Project }) => ({
+                    projectId: Project.projectId,
+                    projectTitle: Project.projectTitle,
+                    projectColor: Project.projectColor,
+                    issues: projectIssues.toArray(q, Project, (child) =>
+                        child
+                            .orderBy(({ related }) => related.issueTitle)
+                            .select(({ related }) => ({
+                                issueId: related.issueId,
+                                issueTitle: related.issueTitle,
+                                issueStatus: related.issueStatus,
+                            }))
+                    ),
+                })),
+        [ontology, projectIssues]
     );
 
     // Fragments — page stitches KanbanCardFragment; child uses useFragment
@@ -165,21 +173,21 @@ export function QueryLab() {
                 </section>
 
                 <DemoSection
-                    code={`leftJoinLink(fromObject(q, ontology, "Issue"), ontology, "Issue", "project")`}
+                    code={`q.from({ Issue }).leftJoin({ project: related("Issue", "project").collection }, relation.on("Issue", "project")).where(…).orderBy(…).select(…)`}
                     rows={(ideaA.data ?? []).slice(0, 5)}
-                    title="Idea A — leftJoinLink helper"
+                    title="Idea A — related descriptor in a normal TanStack query"
                 />
 
                 <DemoSection
-                    code={`ontologyQuery(ontology).from("Issue").select({ issueId, project: { … } })`}
+                    code={`ontologyQuery(ontology).from("Issue").select(KanbanCardFragment.selection)`}
                     rows={ideaB.slice(0, 5)}
-                    title="Idea B — fluent include builder (nested)"
+                    title="Idea B — compiler spike (full design in spec)"
                 />
 
                 <DemoSection
-                    code={`includeQuery(ontology, { from: "Project", select: { issues: { … } } })`}
-                    rows={ideaC.slice(0, 5)}
-                    title="Idea C — Project.issues (MANY, grouped)"
+                    code={`projectIssues.toArray(q, Project, child => child.where(…).orderBy(…).select(…))`}
+                    rows={(ideaC ?? []).slice(0, 5)}
+                    title="Idea C — native correlated Project.issues include"
                 />
 
                 <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

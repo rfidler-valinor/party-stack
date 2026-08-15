@@ -126,12 +126,11 @@ function projectSelection(
 ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
 
-    for (const [field, value] of Object.entries(selection)) {
-        if (value === true) {
-            result[field] = readField(compiled, row, alias, field);
-            continue;
-        }
+    for (const field of selection.fields) {
+        result[field] = readField(compiled, row, alias, field);
+    }
 
+    for (const [field, value] of Object.entries(selection.relations)) {
         const join = compiled.joins.find(
             (entry) => entry.fromAlias === alias && entry.linkName === field
         );
@@ -161,12 +160,11 @@ function projectSelectionGroup(
     const first = rows[0]!;
     const result: Record<string, unknown> = {};
 
-    for (const [field, value] of Object.entries(selection)) {
-        if (value === true) {
-            result[field] = readField(compiled, first, alias, field);
-            continue;
-        }
+    for (const field of selection.fields) {
+        result[field] = readField(compiled, first, alias, field);
+    }
 
+    for (const [field, value] of Object.entries(selection.relations)) {
         const join = compiled.joins.find(
             (entry) => entry.fromAlias === alias && entry.linkName === field
         );

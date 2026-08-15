@@ -1,7 +1,7 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
 import {
-    fragment,
+    createFragmentFactory,
     readFragmentData,
     stitchFragments,
     type FragmentRef,
@@ -10,24 +10,26 @@ import {
 import {
     includeQuery,
     type ApplyIncludeQueryOptions,
+    type ObjectTypeName,
+    type OntologyQueryDefinition,
     type SelectionNode,
 } from "../query/index.js";
 import type { AnyLiveOntology } from "../ontologyTypes.js";
 import type { InitialQueryBuilder } from "@tanstack/db";
 
-export { fragment, readFragmentData, stitchFragments };
+export { createFragmentFactory, readFragmentData, stitchFragments };
 export type { FragmentRef, OntologyFragment };
 
 /**
  * Read a fragment from parent query data (Relay `useFragment` analogue).
  * Performs shallow data masking so the component only sees declared fields.
  */
-export function useFragment<Selection extends SelectionNode>(
-    fragmentDef: OntologyFragment<string, Selection>,
+export function useFragment<Fragment extends OntologyFragment>(
+    fragmentDef: Fragment,
     fragmentRef: Record<string, unknown> | null | undefined
-): ReturnType<typeof readFragmentData<Selection>> {
+): FragmentRef<Fragment> | null {
     return useMemo(
-        () => readFragmentData(fragmentDef, fragmentRef),
+        () => readFragmentData(fragmentDef, fragmentRef) as FragmentRef<Fragment> | null,
         [fragmentDef, fragmentRef]
     );
 }
@@ -55,10 +57,15 @@ export type UseStitchedQueryResult = {
  * Page-level hook: stitch fragments into one include query, run it live, nest
  * rows into the GraphQL-like selection shape, and return fragment refs.
  */
-export function useStitchedQuery<TypeName extends string>(
+export function useStitchedQuery<
+    Ontology extends OntologyQueryDefinition,
+    TypeName extends ObjectTypeName<Ontology>,
+>(
     ontology: AnyLiveOntology,
     type: TypeName,
-    fragments: ReadonlyArray<OntologyFragment<TypeName, SelectionNode>>,
+    fragments: ReadonlyArray<
+        OntologyFragment<Ontology, TypeName, Record<string, unknown>>
+    >,
     options: UseStitchedQueryOptions = {}
 ): UseStitchedQueryResult {
     const extra = options.extra;

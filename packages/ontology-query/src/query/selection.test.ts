@@ -1,7 +1,32 @@
 import { o, type OntologyIR } from "@party-stack/ontology";
 import { describe, expect, it } from "vitest";
 import { nestIncludeRows } from "./applyIncludeQuery.js";
-import { compileIncludeQuery } from "./selection.js";
+import { compileIncludeQuery, createSelectionFactory } from "./selection.js";
+
+type TestOntology = {
+    objectTypes: {
+        Issue: { issueId: string; issueTitle: string; projectId: string };
+        Project: { projectId: string; projectTitle: string; projectColor: string };
+    };
+    linkTypes: {
+        Issue: { project: { target: "Project"; cardinality: "one" } };
+        Project: { issues: { target: "Issue"; cardinality: "many" } };
+    };
+};
+
+const select = createSelectionFactory<TestOntology>();
+const issueWithProject = select("Issue", ({ fields, related }) => [
+    fields("issueId", "issueTitle"),
+    related("project", ({ fields: projectFields }) =>
+        projectFields("projectTitle", "projectColor")
+    ),
+]);
+const projectWithIssues = select("Project", ({ fields, related }) => [
+    fields("projectId", "projectTitle"),
+    related("issues", ({ fields: issueFields }) =>
+        issueFields("issueId", "issueTitle")
+    ),
+]);
 
 const ir: OntologyIR = {
     types: [],
@@ -46,14 +71,7 @@ describe("compileIncludeQuery", () => {
     it("plans a left join for Issue → project", () => {
         const compiled = compileIncludeQuery(ir, {
             from: "Issue",
-            select: {
-                issueId: true,
-                issueTitle: true,
-                project: {
-                    projectTitle: true,
-                    projectColor: true,
-                },
-            },
+            select: issueWithProject,
         });
 
         expect(compiled.rootAlias).toBe("Issue");
@@ -79,14 +97,7 @@ describe("compileIncludeQuery", () => {
     it("plans Project → issues as many", () => {
         const compiled = compileIncludeQuery(ir, {
             from: "Project",
-            select: {
-                projectId: true,
-                projectTitle: true,
-                issues: {
-                    issueId: true,
-                    issueTitle: true,
-                },
-            },
+            select: projectWithIssues,
         });
         expect(compiled.joins[0]?.cardinality).toBe("many");
     });
@@ -96,11 +107,7 @@ describe("nestIncludeRows", () => {
     it("nests to-one project links", () => {
         const compiled = compileIncludeQuery(ir, {
             from: "Issue",
-            select: {
-                issueId: true,
-                issueTitle: true,
-                project: { projectTitle: true, projectColor: true },
-            },
+            select: issueWithProject,
         });
 
         const nested = nestIncludeRows(compiled, [
@@ -129,11 +136,7 @@ describe("nestIncludeRows", () => {
     it("groups to-many issues under a project", () => {
         const compiled = compileIncludeQuery(ir, {
             from: "Project",
-            select: {
-                projectId: true,
-                projectTitle: true,
-                issues: { issueId: true, issueTitle: true },
-            },
+            select: projectWithIssues,
         });
 
         const nested = nestIncludeRows(compiled, [

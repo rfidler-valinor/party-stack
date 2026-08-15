@@ -1,78 +1,81 @@
 # `@party-stack/ontology-query`
 
-Prototype APIs for **typed link following** and **Relay-style fragments** on top of
-live ontology collections (TanStack DB).
+Prototype APIs for **typed link following** and **Relay-style fragments** on top
+of live ontology collections (TanStack DB).
 
-This package explores a few shapes — keep what feels good, discard the rest.
+Design rule: ontology helpers add relationship knowledge to normal TanStack
+queries. They do not replace TanStack's query language or runtime.
 
-## 1. Following links (joins / includes)
+## Related data in a normal TanStack query
 
-Ontology IR already describes links (`linkTypes`). Today apps hand-write
-`leftJoin` on foreign keys. These helpers derive joins from IR instead.
-
-### Idea A — helpers on TanStack queries
+Generated ontology types constrain the object/link names and target collection.
+Runtime ontology IR supplies the foreign-key predicate:
 
 ```ts
-import { fromObject, leftJoinLink } from "@party-stack/ontology-query";
+import { createOntologyRelations } from "@party-stack/ontology-query";
+
+const { related } = createOntologyRelations(ontology);
+const project = related("Issue", "project");
 
 useLiveQuery((q) =>
-  leftJoinLink(fromObject(q, ontology, "Issue"), ontology, "Issue", "project")
+  q.from({ Issue: ontology.objects.Issue })
+    .leftJoin(
+      { project: project.collection },
+      project.on("Issue", "project"),
+    )
+    .where(({ Issue }) => eq(Issue.issueStatus, "Open"))
+    .orderBy(({ Issue }) => Issue.issueUpdatedAt, "desc")
     .select(({ Issue, project }) => ({
       issueId: Issue.issueId,
-      projectTitle: project.projectTitle,
+      projectTitle: project?.projectTitle,
     }))
 );
 ```
 
-### Idea B — fluent builder
+The result is still a normal `QueryBuilder`, so joins, filters, aggregations,
+grouping, having, ordering, pagination, subqueries, and arbitrary projections
+remain available.
+
+To-many nested data uses TanStack's correlated includes:
 
 ```ts
-import { ontologyQuery } from "@party-stack/ontology-query";
+const issues = related("Project", "issues");
 
-const q = ontologyQuery(ontology)
-  .from("Issue")
-  .select({
-    issueId: true,
-    issueTitle: true,
-    project: { projectTitle: true, projectColor: true },
-  });
-
-useLiveQuery((builder) => q.buildLive(builder));
-const nested = q.nest(flatRows);
+q.from({ Project: ontology.objects.Project }).select(({ Project }) => ({
+  projectId: Project.projectId,
+  issues: issues.toArray(q, Project, (child) =>
+    child
+      .where(({ related }) => eq(related.issueStatus, "Open"))
+      .orderBy(({ related }) => related.issueUpdatedAt, "desc")
+      .select(({ related }) => ({
+        issueId: related.issueId,
+        issueTitle: related.issueTitle,
+      })),
+  ),
+}));
 ```
 
-### Idea C — declarative include spec
+This produces native TanStack `IncludesSubquery` IR. `one(...)` materializes the
+singleton form.
 
-```ts
-import { includeQuery } from "@party-stack/ontology-query";
+## Typed fragments (without `{ field: true }`)
 
-const plan = includeQuery(ontology, {
-  from: "Issue",
-  select: {
-    issueId: true,
-    project: { projectTitle: true },
-  },
-});
-```
-
-`compileIncludeQuery` walks the selection tree, resolves each link via IR, and
-emits join plans. ONE links nest as objects; MANY links group into arrays.
-
-## 2. Relay-style fragments
-
-Components declare a fragment (selection over an object type). Pages stitch
-fragments into one include query and pass opaque-ish refs down. `useFragment`
-masks parent data to the fragment contract.
-
-```ts
-import { fragment } from "@party-stack/ontology-query";
+```tsx
+import { createFragmentFactory } from "@party-stack/ontology-query";
 import { useFragment, useStitchedQuery } from "@party-stack/ontology-query/react";
+import type { IssueTrackerOntology } from "./ontology/generated/types";
 
-const KanbanCardFragment = fragment("KanbanCard", "Issue", {
-  issueId: true,
-  issueTitle: true,
-  project: { projectTitle: true, projectColor: true },
-});
+const fragment = createFragmentFactory<IssueTrackerOntology>();
+const KanbanCardFragment = fragment(
+  "KanbanCard",
+  "Issue",
+  ({ fields, related }) => [
+    fields("issueId", "issueTitle"),
+    related("project", ({ fields }) =>
+      fields("projectTitle", "projectColor"),
+    ),
+  ],
+);
 
 function Board({ ontology }) {
   const { data } = useStitchedQuery(ontology, "Issue", [KanbanCardFragment]);
@@ -85,10 +88,14 @@ function KanbanCard({ issue }) {
 }
 ```
 
-No GraphQL runtime or Relay compiler — the fragment is a typed selection object
-that compiles to the same include/join layer.
+The generated ontology owns field/link/target/cardinality typing. Invalid fields
+or links fail at compile time, and fragment result types preserve ontology
+property types.
 
-## Status
+## Fluent compiler experiment
 
-Prototype for the issue-tracker demo. Expect API churn; link typing is
-stringly-typed against IR at runtime (stronger codegen can come later).
+The earlier `.from().select()` spike is not the proposed final surface. The
+complete design—including multiple relations, filters, aggregations,
+`groupBy`/`having`, ordering, pagination, subqueries, and compilation to normal
+TanStack query IR—is in
+`specs/2026-08-15-ontology-query/README.md`.
