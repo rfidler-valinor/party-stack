@@ -66,6 +66,38 @@ export type BlogOntology = {
         Post: Post;
         Comment: Comment;
     };
+    linkTypes: {
+        Author: {
+            posts: {
+                target: "Post";
+                cardinality: "many";
+            };
+            comment: {
+                target: "Comment";
+                cardinality: "one";
+            };
+        };
+        Post: {
+            author: {
+                target: "Author";
+                cardinality: "one";
+            };
+            comments: {
+                target: "Comment";
+                cardinality: "many";
+            };
+        };
+        Comment: {
+            post: {
+                target: "Post";
+                cardinality: "one";
+            };
+            author: {
+                target: "Author";
+                cardinality: "many";
+            };
+        };
+    };
     actionTypes: {
         createPost: {
             parameters: CreatePostParameters;

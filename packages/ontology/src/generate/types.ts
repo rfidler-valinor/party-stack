@@ -231,6 +231,75 @@ function addOntologyAggregateType(
     ];
 
     properties.push({
+        name: "linkTypes",
+        type:
+            ir.linkTypes.length === 0
+                ? "Record<never, never>"
+                : Writers.objectType({
+                      properties: ir.objectTypes
+                          .map((objectType) => {
+                              const links = ir.linkTypes.flatMap((linkType) => {
+                                  if (linkType.source.objectType === objectType.name) {
+                                      return [
+                                          {
+                                              name: renderPropertyName(linkType.target.name),
+                                              type: Writers.objectType({
+                                                  properties: [
+                                                      {
+                                                          name: "target",
+                                                          type: JSON.stringify(
+                                                              linkType.target.objectType
+                                                          ),
+                                                      },
+                                                      {
+                                                          name: "cardinality",
+                                                          type:
+                                                              linkType.cardinality === "one"
+                                                                  ? '"many"'
+                                                                  : '"one"',
+                                                      },
+                                                  ],
+                                              }),
+                                          },
+                                      ];
+                                  }
+                                  if (linkType.target.objectType === objectType.name) {
+                                      return [
+                                          {
+                                              name: renderPropertyName(linkType.source.name),
+                                              type: Writers.objectType({
+                                                  properties: [
+                                                      {
+                                                          name: "target",
+                                                          type: JSON.stringify(
+                                                              linkType.source.objectType
+                                                          ),
+                                                      },
+                                                      {
+                                                          name: "cardinality",
+                                                          type: JSON.stringify(
+                                                              linkType.cardinality
+                                                          ),
+                                                      },
+                                                  ],
+                                              }),
+                                          },
+                                      ];
+                                  }
+                                  return [];
+                              });
+                              return links.length === 0
+                                  ? undefined
+                                  : {
+                                        name: renderPropertyName(objectType.name),
+                                        type: Writers.objectType({ properties: links }),
+                                    };
+                          })
+                          .filter((property) => property !== undefined),
+                  }),
+    });
+
+    properties.push({
         name: "actionTypes",
         type:
             ir.actionTypes.length === 0

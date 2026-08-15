@@ -394,6 +394,28 @@ export type MetaOntology = {
         ActionType: ActionType;
         QueryFunctionType: QueryFunctionType;
     };
+    linkTypes: {
+        ObjectType: {
+            outgoingLinkTypes: {
+                target: "LinkType";
+                cardinality: "many";
+            };
+            incomingLinkTypes: {
+                target: "LinkType";
+                cardinality: "many";
+            };
+        };
+        LinkType: {
+            source: {
+                target: "ObjectType";
+                cardinality: "one";
+            };
+            target: {
+                target: "ObjectType";
+                cardinality: "one";
+            };
+        };
+    };
     actionTypes: Record<never, never>;
     queryFunctionTypes: Record<never, never>;
 };

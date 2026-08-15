@@ -85,6 +85,20 @@ export type IssueTrackerOntology = {
         Issue: Issue;
         Project: Project;
     };
+    linkTypes: {
+        Issue: {
+            project: {
+                target: "Project";
+                cardinality: "one";
+            };
+        };
+        Project: {
+            issues: {
+                target: "Issue";
+                cardinality: "many";
+            };
+        };
+    };
     actionTypes: {
         createIssue: {
             parameters: CreateIssueParameters;
