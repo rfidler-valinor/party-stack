@@ -424,7 +424,7 @@ export default defineOntology({
         {
             name: "deleteIssue",
             displayName: "Delete Issue",
-            icon: { name: "trash" },
+            icon: { name: "delete" },
             parameters: [
                 {
                     name: "issue",
@@ -447,7 +447,7 @@ export default defineOntology({
         {
             name: "deleteProject",
             displayName: "Delete Project",
-            icon: { name: "trash" },
+            icon: { name: "delete" },
             parameters: [
                 {
                     name: "project",
@@ -470,7 +470,7 @@ export default defineOntology({
         {
             name: "updateIssue",
             displayName: "Update Issue",
-            icon: { name: "pencil-square" },
+            icon: { name: "edit" },
             parameters: [
                 {
                     name: "completedAt",
@@ -628,7 +628,7 @@ export default defineOntology({
         {
             name: "updateProject",
             displayName: "Update Project",
-            icon: { name: "pencil-square" },
+            icon: { name: "edit" },
             parameters: [
                 {
                     name: "color",

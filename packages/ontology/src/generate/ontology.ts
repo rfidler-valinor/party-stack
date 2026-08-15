@@ -274,6 +274,10 @@ function renderObjectType(objectType: ObjectTypeDef): string {
             value: objectType.icon ? renderPlainValue(objectType.icon) : undefined,
         },
         {
+            name: "color",
+            value: objectType.color ? renderPlainValue(objectType.color) : undefined,
+        },
+        {
             name: "properties",
             value: withWriter((writer) =>
                 writeArray(
@@ -324,6 +328,10 @@ function renderActionType(actionType: ActionTypeDef, ctx?: RenderContext): strin
         { name: "name", value: renderPlainValue(actionType.name) },
         { name: "displayName", value: renderPlainValue(actionType.displayName) },
         { name: "icon", value: actionType.icon ? renderPlainValue(actionType.icon) : undefined },
+        {
+            name: "color",
+            value: actionType.color ? renderPlainValue(actionType.color) : undefined,
+        },
         {
             name: "parameters",
             value: withWriter((writer) =>

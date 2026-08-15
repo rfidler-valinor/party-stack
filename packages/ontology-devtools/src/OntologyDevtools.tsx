@@ -3,32 +3,32 @@ import { Menu } from "@base-ui/react/menu";
 import { Tabs } from "@base-ui/react/tabs";
 import { Tooltip } from "@base-ui/react/tooltip";
 import {
-    ArrowPathIcon,
-    Bars2Icon,
-    CalendarDaysIcon,
-    CheckIcon,
-    CheckCircleIcon,
-    ChevronDownIcon,
-    ChevronUpIcon,
-    ChevronUpDownIcon,
-    CircleStackIcon,
-    ClockIcon,
-    CodeBracketSquareIcon,
-    HashtagIcon,
-    InboxStackIcon,
-    LinkIcon,
-    ListBulletIcon,
-    MapIcon,
-    MapPinIcon,
-    PaperClipIcon,
-    QuestionMarkCircleIcon,
-    ShareIcon,
-    Squares2X2Icon,
-    TrashIcon,
-    ViewColumnsIcon,
-} from "@heroicons/react/24/outline";
+    RefreshCw as ArrowPathIcon,
+    GripVertical as Bars2Icon,
+    CalendarDays as CalendarDaysIcon,
+    Check as CheckIcon,
+    CircleCheck as CheckCircleIcon,
+    ChevronDown as ChevronDownIcon,
+    ChevronUp as ChevronUpIcon,
+    ChevronsUpDown as ChevronUpDownIcon,
+    Database as CircleStackIcon,
+    Clock as ClockIcon,
+    SquareCode as CodeBracketSquareIcon,
+    Hash as HashtagIcon,
+    Inbox as InboxStackIcon,
+    Link as LinkIcon,
+    List as ListBulletIcon,
+    Map as MapIcon,
+    MapPin as MapPinIcon,
+    Paperclip as PaperClipIcon,
+    CircleQuestionMark as QuestionMarkCircleIcon,
+    Share2 as ShareIcon,
+    Grid2X2 as Squares2X2Icon,
+    Trash2 as TrashIcon,
+    Columns3 as ViewColumnsIcon,
+} from "lucide-react";
 import NumberFlow from "@number-flow/react";
-import { getHeroIconSource } from "@party-stack/icons/heroicons";
+import { LucideIcon } from "@party-stack/icons-lucide/react";
 import { createReactPlugin } from "@tanstack/devtools-utils/react";
 import { useLiveInfiniteQuery, useLiveQuery } from "@tanstack/react-db";
 import {
@@ -84,17 +84,7 @@ export interface OntologyDevtoolsChromeProps {
 }
 
 export function OntologyIcon({ className, name }: { className?: string; name: IconName }) {
-    const source = getHeroIconSource(name);
-    if (!source) return null;
-
-    return (
-        <svg
-            aria-hidden="true"
-            className={className}
-            dangerouslySetInnerHTML={{ __html: source.body }}
-            viewBox={source.viewBox}
-        />
-    );
+    return <LucideIcon aria-hidden="true" className={className} name={name} />;
 }
 
 function PartyStackLogo({ theme }: OntologyDevtoolsChromeProps) {
@@ -993,7 +983,7 @@ function ObjectTable({
                 <h2 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-lg ps:font-semibold">
                     <OntologyIcon
                         className="ps:size-5 ps:flex-none ps:text-rose-400"
-                        name={objectType.icon?.name ?? "circle-stack"}
+                        name={objectType.icon?.name ?? "database"}
                     />
                     {objectType.pluralDisplayName}
                 </h2>
@@ -1327,7 +1317,7 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                         >
                             <OntologyIcon
                                 className="ps:size-4 ps:flex-none"
-                                name={objectType.icon?.name ?? "circle-stack"}
+                                name={objectType.icon?.name ?? "database"}
                             />
                             <span className="ps:truncate">{objectType.pluralDisplayName}</span>
                         </button>
@@ -1452,7 +1442,7 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
                             <h3 className="ps:m-0 ps:flex ps:items-center ps:gap-2 ps:text-sm ps:font-semibold">
                                 <OntologyIcon
                                     className="ps:size-4 ps:flex-none ps:text-rose-400"
-                                    name={objectType.icon?.name ?? "circle-stack"}
+                                    name={objectType.icon?.name ?? "database"}
                                 />
                                 {objectType.displayName}
                             </h3>

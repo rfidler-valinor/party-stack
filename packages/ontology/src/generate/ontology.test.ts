@@ -15,15 +15,14 @@ describe("generateOntology", () => {
                     primaryKey: "id",
                     title: "name",
                     icon: {
-                        name: "user",
-                        metadata: {
-                            foundry: {
-                                type: "blueprint",
+                        name: "person",
+                        meta: {
+                            blueprint: {
                                 name: "person",
-                                color: "#2d72d2",
                             },
                         },
                     },
+                    color: "#2d72d2",
                     properties: [
                         { name: "id", displayName: "ID", type: o.string({}) },
                         { name: "name", displayName: "Name", type: o.string({}) },
@@ -35,7 +34,8 @@ describe("generateOntology", () => {
                 {
                     name: "createEmployee",
                     displayName: "Create employee",
-                    icon: { name: "user-plus" },
+                    icon: { name: "plus-circle" },
+                    color: "#15b371",
                     parameters: [],
                     logic: [],
                 },
@@ -45,9 +45,9 @@ describe("generateOntology", () => {
 
         const generated = generateOntology(ontology);
         expect(generated).toContain('title: "name"');
-        expect(generated).toContain('name: "user"');
         expect(generated).toContain('name: "person"');
         expect(generated).toContain('color: "#2d72d2"');
-        expect(generated).toContain('name: "user-plus"');
+        expect(generated).toContain('name: "plus-circle"');
+        expect(generated).toContain('color: "#15b371"');
     });
 });

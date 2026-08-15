@@ -47,15 +47,14 @@ describe("convertFoundryMetaObjectType", () => {
             primaryKey: "id",
             title: "fullName",
             icon: {
-                name: "user",
-                metadata: {
-                    foundry: {
-                        type: "blueprint",
+                name: "person",
+                meta: {
+                    blueprint: {
                         name: "person",
-                        color: "#2d72d2",
                     },
                 },
             },
+            color: "#2d72d2",
         });
         expect(result.properties).toEqual([
             expect.objectContaining({
@@ -85,15 +84,16 @@ describe("convertFoundryMetaObjectType", () => {
                 implementsInterfaces: [],
                 implementsInterfaces2: {},
                 sharedPropertyTypeMapping: {},
-            } as ObjectTypeFullMetadata).icon
-        ).toEqual({
-            metadata: {
-                foundry: {
-                    type: "blueprint",
-                    name: "vendor-only-icon",
-                    color: "#000000",
+            } as ObjectTypeFullMetadata)
+        ).toMatchObject({
+            icon: {
+                meta: {
+                    blueprint: {
+                        name: "vendor-only-icon",
+                    },
                 },
             },
+            color: "#000000",
         });
     });
 });
