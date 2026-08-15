@@ -17,8 +17,8 @@ import type {
     MappingAuditFile,
     MappingPairScore,
     IconProvider,
-} from "../src/lib/types";
-import { averageVectors, cosineSimilarity, l2Normalize } from "../src/lib/math";
+} from "../src/shared/types";
+import { averageVectors, cosineSimilarity, l2Normalize } from "../src/shared/math";
 
 env.allowLocalModels = false;
 env.useBrowserCache = false;

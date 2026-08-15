@@ -10,7 +10,7 @@ import { lucideDynamicIconImports } from "@lucide/icons/dynamic";
 import { icons as materialSymbols } from "@iconify-json/material-symbols";
 import { createRequire } from "node:module";
 import { salesforceUtilityIconNames } from "./salesforce-map";
-import type { CatalogFile, CatalogIcon, IconProvider } from "../src/lib/types";
+import type { CatalogFile, CatalogIcon, IconProvider } from "../src/shared/types";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

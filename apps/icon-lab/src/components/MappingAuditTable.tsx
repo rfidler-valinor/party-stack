@@ -1,4 +1,4 @@
-import type { MappingAuditFile } from "../lib/types";
+import type { MappingAuditFile } from "../shared/types";
 
 export function MappingAuditTable({
     audit,

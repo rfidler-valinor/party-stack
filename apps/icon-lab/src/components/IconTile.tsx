@@ -1,4 +1,4 @@
-import type { CatalogIcon } from "../lib/types";
+import type { CatalogIcon } from "../shared/types";
 
 export function IconTile({ icon, size = 48 }: { icon: CatalogIcon; size?: number }) {
     if (icon.hasSvg && icon.svgPath) {

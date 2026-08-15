@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { IconProvider } from "../lib/types";
+import type { IconProvider } from "../shared/types";
 
 export interface ScatterPoint {
     id: string;

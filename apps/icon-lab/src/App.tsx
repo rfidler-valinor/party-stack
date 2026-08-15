@@ -5,8 +5,8 @@ import type {
     MappingAuditFile,
     CatalogIcon,
     IconProvider,
-} from "./lib/types";
-import { cosineSimilarity, projectTo2d } from "./lib/math";
+} from "./shared/types";
+import { cosineSimilarity, projectTo2d } from "./shared/math";
 import { IconTile } from "./components/IconTile";
 import { EmbeddingScatter } from "./components/EmbeddingScatter";
 import { MappingAuditTable } from "./components/MappingAuditTable";
