@@ -1,14 +1,37 @@
+import { useEffect, useState } from "react";
 import type { CatalogIcon } from "../shared/types";
+import { getIconAssetUrl } from "../shared/iconArchives";
 
 export function IconTile({ icon, size = 48 }: { icon: CatalogIcon; size?: number }) {
-    if (icon.hasSvg && icon.svgPath) {
+    const [assetUrl, setAssetUrl] = useState<string>();
+
+    useEffect(() => {
+        let cancelled = false;
+        setAssetUrl(undefined);
+        getIconAssetUrl(icon)
+            .then((url) => {
+                if (!cancelled) {
+                    setAssetUrl(url);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setAssetUrl(undefined);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [icon]);
+
+    if (assetUrl) {
         return (
             <div
                 className="flex items-center justify-center rounded-lg bg-[#f8fafc]"
                 style={{ width: size + 24, height: size + 24 }}
             >
                 <img
-                    src={`/icons/${icon.svgPath}`}
+                    src={assetUrl}
                     alt={icon.name}
                     width={size}
                     height={size}

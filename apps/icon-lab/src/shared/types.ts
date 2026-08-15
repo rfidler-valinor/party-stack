@@ -11,10 +11,14 @@ export interface CatalogIcon {
     name: string;
     /** Universal concept this icon is mapped to, if any. */
     concept?: string;
-    /** Relative path under /icons, when a rasterizable SVG exists. */
-    svgPath?: string;
-    /** Inline SVG used when not written to disk as a separate concern. */
-    hasSvg: boolean;
+    /** All existing concepts using this asset (providers may intentionally reuse glyphs). */
+    concepts?: string[];
+    /** Asset stored inside a compact provider archive. */
+    asset?: {
+        archive: string;
+        path: string;
+        format: "svg" | "png";
+    };
     /** True when we only have a name (no redistributable glyph). */
     textOnly?: boolean;
     /** Synonyms / alternate labels used for text embedding. */
@@ -26,21 +30,30 @@ export interface CatalogFile {
     providers: IconProvider[];
     concepts: string[];
     icons: CatalogIcon[];
+    archives: Partial<
+        Record<
+            IconProvider,
+            {
+                path: string;
+                iconCount: number;
+                bytes: number;
+                source: string;
+                version: string;
+                license: string;
+            }
+        >
+    >;
 }
 
-export interface EmbeddingRecord {
-    id: string;
-    /** L2-normalized multimodal vector (image+text average when both exist). */
-    vector: number[];
-    dims: number;
-    modality: "multimodal" | "text" | "image";
-}
-
-export interface EmbeddingsFile {
+/** Metadata for vectors stored as contiguous signed int8 values. */
+export interface EmbeddingIndexFile {
     generatedAt: string;
     model: string;
     dims: number;
-    embeddings: EmbeddingRecord[];
+    quantization: "per-vector-symmetric-int8";
+    dataPath: string;
+    ids: string[];
+    modalities: Array<"multimodal" | "text" | "image">;
 }
 
 export interface MappingPairScore {
@@ -59,4 +72,28 @@ export interface MappingAuditFile {
         minScore: number;
         pairCount: number;
     }>;
+}
+
+export interface DraftMapping {
+    concept: string;
+    blueprintId: string;
+    status: "existing" | "generated";
+    providers: Partial<
+        Record<
+            IconProvider,
+            {
+                id: string;
+                name: string;
+                score: number;
+            }
+        >
+    >;
+    meanScore: number;
+    minScore: number;
+}
+
+export interface DraftMappingsFile {
+    generatedAt: string;
+    anchorProvider: "blueprint";
+    mappings: DraftMapping[];
 }

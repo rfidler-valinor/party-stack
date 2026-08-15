@@ -8,7 +8,7 @@ import type { IconName } from "@party-stack/icons";
 export const salesforceUtilityIconNames = {
     activity: "activity",
     add: "add",
-    airplane: "travel_and_places",
+    airplane: "plane",
     alarm: "clock",
     alert: "warning",
     archive: "archive",

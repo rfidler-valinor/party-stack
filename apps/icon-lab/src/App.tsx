@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
     CatalogFile,
-    EmbeddingsFile,
+    EmbeddingIndexFile,
     MappingAuditFile,
     CatalogIcon,
     IconProvider,
+    DraftMappingsFile,
 } from "./shared/types";
-import { cosineSimilarity, projectTo2d } from "./shared/math";
+import { projectTo2d } from "./shared/math";
+import { loadEmbeddingStore, type QuantizedEmbeddingStore } from "./shared/embeddings";
 import { IconTile } from "./components/IconTile";
 import { EmbeddingScatter } from "./components/EmbeddingScatter";
 import { MappingAuditTable } from "./components/MappingAuditTable";
+import { DraftMappingBrowser } from "./components/DraftMappingBrowser";
 
-type Tab = "concepts" | "audit" | "map" | "neighbors";
+type Tab = "draft" | "concepts" | "audit" | "map" | "neighbors";
 
 const PROVIDER_LABEL: Record<IconProvider, string> = {
     blueprint: "Blueprint / Foundry",
@@ -31,10 +34,11 @@ const PROVIDER_COLOR: Record<IconProvider, string> = {
 
 export function App() {
     const [catalog, setCatalog] = useState<CatalogFile | null>(null);
-    const [embeddings, setEmbeddings] = useState<EmbeddingsFile | null>(null);
+    const [embeddingStore, setEmbeddingStore] = useState<QuantizedEmbeddingStore | null>(null);
     const [audit, setAudit] = useState<MappingAuditFile | null>(null);
+    const [draft, setDraft] = useState<DraftMappingsFile | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [tab, setTab] = useState<Tab>("concepts");
+    const [tab, setTab] = useState<Tab>("draft");
     const [query, setQuery] = useState("");
     const [selectedConcept, setSelectedConcept] = useState<string | null>(null);
     const [neighborSeed, setNeighborSeed] = useState<string | null>(null);
@@ -43,27 +47,31 @@ export function App() {
         let cancelled = false;
         (async () => {
             try {
-                const [catalogRes, embeddingsRes, auditRes] = await Promise.all([
+                const [catalogRes, embeddingsRes, auditRes, draftRes] = await Promise.all([
                     fetch("/data/catalog.json"),
-                    fetch("/data/embeddings.json"),
+                    fetch("/data/embeddings-index.json"),
                     fetch("/data/mapping-audit.json"),
+                    fetch("/data/draft-mappings.json"),
                 ]);
-                if (!catalogRes.ok || !embeddingsRes.ok || !auditRes.ok) {
+                if (!catalogRes.ok || !embeddingsRes.ok || !auditRes.ok || !draftRes.ok) {
                     throw new Error(
                         "Missing generated data. Run `pnpm icons:prepare` in apps/icon-lab."
                     );
                 }
-                const [catalogJson, embeddingsJson, auditJson] = await Promise.all([
+                const [catalogJson, embeddingsJson, auditJson, draftJson] = await Promise.all([
                     catalogRes.json() as Promise<CatalogFile>,
-                    embeddingsRes.json() as Promise<EmbeddingsFile>,
+                    embeddingsRes.json() as Promise<EmbeddingIndexFile>,
                     auditRes.json() as Promise<MappingAuditFile>,
+                    draftRes.json() as Promise<DraftMappingsFile>,
                 ]);
+                const store = await loadEmbeddingStore(embeddingsJson);
                 if (cancelled) {
                     return;
                 }
                 setCatalog(catalogJson);
-                setEmbeddings(embeddingsJson);
+                setEmbeddingStore(store);
                 setAudit(auditJson);
+                setDraft(draftJson);
                 setSelectedConcept(catalogJson.concepts[0] ?? null);
                 setNeighborSeed(
                     catalogJson.icons.find((icon) => icon.concept === catalogJson.concepts[0])?.id ??
@@ -80,23 +88,14 @@ export function App() {
         };
     }, []);
 
-    const embeddingById = useMemo(() => {
-        const map = new Map<string, number[]>();
-        for (const item of embeddings?.embeddings ?? []) {
-            map.set(item.id, item.vector);
-        }
-        return map;
-    }, [embeddings]);
-
     const iconsByConcept = useMemo(() => {
         const map = new Map<string, CatalogIcon[]>();
         for (const icon of catalog?.icons ?? []) {
-            if (!icon.concept) {
-                continue;
+            for (const concept of icon.concepts ?? (icon.concept ? [icon.concept] : [])) {
+                const list = map.get(concept) ?? [];
+                list.push(icon);
+                map.set(concept, list);
             }
-            const list = map.get(icon.concept) ?? [];
-            list.push(icon);
-            map.set(icon.concept, list);
         }
         return map;
     }, [catalog]);
@@ -116,16 +115,15 @@ export function App() {
     }, [catalog, audit, query]);
 
     const neighbors = useMemo(() => {
-        if (!neighborSeed || !catalog || !embeddingById.has(neighborSeed)) {
+        if (!neighborSeed || !catalog || !embeddingStore?.has(neighborSeed)) {
             return [];
         }
-        const seed = embeddingById.get(neighborSeed)!;
         const seedIcon = catalog.icons.find((icon) => icon.id === neighborSeed);
         return catalog.icons
-            .filter((icon) => icon.id !== neighborSeed && embeddingById.has(icon.id))
+            .filter((icon) => icon.id !== neighborSeed && embeddingStore.has(icon.id))
             .map((icon) => ({
                 icon,
-                score: cosineSimilarity(seed, embeddingById.get(icon.id)!),
+                score: embeddingStore.similarity(neighborSeed, icon.id),
             }))
             .sort((a, b) => b.score - a.score)
             .slice(0, 24)
@@ -133,14 +131,14 @@ export function App() {
                 ...row,
                 sameProvider: row.icon.provider === seedIcon?.provider,
             }));
-    }, [neighborSeed, catalog, embeddingById]);
+    }, [neighborSeed, catalog, embeddingStore]);
 
     const scatterPoints = useMemo(() => {
-        if (!catalog || !embeddings) {
+        if (!catalog || !embeddingStore) {
             return [];
         }
-        const mapped = catalog.icons.filter((icon) => icon.concept && embeddingById.has(icon.id));
-        const vectors = mapped.map((icon) => embeddingById.get(icon.id)!);
+        const mapped = catalog.icons.filter((icon) => icon.concept && embeddingStore.has(icon.id));
+        const vectors = mapped.map((icon) => embeddingStore.vector(icon.id));
         const projected = projectTo2d(vectors);
         return mapped.map((icon, index) => ({
             id: icon.id,
@@ -151,7 +149,7 @@ export function App() {
             y: projected[index]!.y,
             color: PROVIDER_COLOR[icon.provider],
         }));
-    }, [catalog, embeddings, embeddingById]);
+    }, [catalog, embeddingStore]);
 
     if (error) {
         return (
@@ -162,7 +160,7 @@ export function App() {
         );
     }
 
-    if (!catalog || !embeddings || !audit) {
+    if (!catalog || !embeddingStore || !audit || !draft) {
         return (
             <main className="mx-auto max-w-3xl px-6 py-16">
                 <h1 className="text-3xl font-semibold tracking-tight">Icon Lab</h1>
@@ -191,14 +189,15 @@ export function App() {
                     <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
                         <div>{catalog.icons.length} icons indexed</div>
                         <div>
-                            {embeddings.embeddings.length} embeddings · {embeddings.dims}d ·{" "}
-                            {embeddings.model.replace("Xenova/", "")}
+                            {embeddingStore.index.ids.length} embeddings · {embeddingStore.index.dims}d ·{" "}
+                            {embeddingStore.index.model.replace("Xenova/", "")}
                         </div>
                     </div>
                 </div>
                 <nav className="mx-auto flex max-w-7xl gap-1 px-6 pb-3">
                     {(
                         [
+                            ["draft", `Blueprint draft · ${draft.mappings.length}`],
                             ["concepts", "Universal set"],
                             ["audit", "Mapping audit"],
                             ["map", "Embedding map"],
@@ -222,6 +221,8 @@ export function App() {
             </header>
 
             <main className="mx-auto max-w-7xl px-6 py-6">
+                {tab === "draft" && <DraftMappingBrowser catalog={catalog} draft={draft} />}
+
                 {tab === "concepts" && (
                     <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
                         <aside className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 backdrop-blur">
