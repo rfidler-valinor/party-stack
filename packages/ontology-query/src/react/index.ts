@@ -61,9 +61,10 @@ export function useStitchedQuery<TypeName extends string>(
     fragments: ReadonlyArray<OntologyFragment<TypeName, SelectionNode>>,
     options: UseStitchedQueryOptions = {}
 ): UseStitchedQueryResult {
+    const extra = options.extra;
     const stitched = useMemo(
-        () => stitchFragments(type, fragments, options.extra),
-        [type, fragments, options.extra]
+        () => stitchFragments(type, fragments, extra),
+        [type, fragments, extra]
     );
 
     const plan = useMemo(
@@ -76,9 +77,12 @@ export function useStitchedQuery<TypeName extends string>(
     );
 
     const refine = options.refine;
+    const deps = options.deps ?? [];
     const live = useLiveQuery(
         (q: InitialQueryBuilder) => plan.buildLive(q, { refine }),
-        [plan, refine, ...(options.deps ?? [])]
+        // Intentionally omit `refine` identity — callers should pass stable
+        // callbacks (useCallback) or put changing inputs in `deps`.
+        [plan, ...deps]
     );
 
     const data = useMemo(() => {

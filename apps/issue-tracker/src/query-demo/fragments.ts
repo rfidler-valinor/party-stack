@@ -18,6 +18,9 @@ export const KanbanCardFragment = fragment("KanbanCard", "Issue", {
     },
 });
 
+/** Stable list for page-level stitching (avoid re-creating arrays each render). */
+export const IssueBoardFragments = [KanbanCardFragment] as const;
+
 /** Extra fields the board needs for mutations / filtering beyond the card UI. */
 export const IssueBoardExtraSelection = {
     issueCreatedAt: true,

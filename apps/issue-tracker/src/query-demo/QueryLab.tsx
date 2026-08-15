@@ -9,13 +9,14 @@ import {
     resolveLink,
 } from "@party-stack/ontology-query";
 import { useFragment, useStitchedQuery } from "@party-stack/ontology-query/react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     getIssueTrackerCollections,
     type BackendKind,
 } from "../app/collections";
 import {
     KanbanCardFragment,
+    IssueBoardFragments,
     ProjectWithIssuesFragment,
 } from "./fragments";
 
@@ -103,11 +104,16 @@ export function QueryLab() {
     );
 
     // Fragments — page stitches KanbanCardFragment; child uses useFragment
-    const stitched = useStitchedQuery(ontology, "Issue", [KanbanCardFragment], {
-        refine: (q) =>
+    const refineOpenIssues = useCallback(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (q: any) =>
             q.where(({ Issue }: { Issue: { issueStatus: string } }) =>
                 eq(Issue.issueStatus, "Open")
             ),
+        []
+    );
+    const stitched = useStitchedQuery(ontology, "Issue", IssueBoardFragments, {
+        refine: refineOpenIssues,
         deps: [ontology],
     });
 

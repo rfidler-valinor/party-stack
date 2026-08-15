@@ -35,6 +35,7 @@ import { includeQuery } from "@party-stack/ontology-query";
 import { useFragment, useStitchedQuery } from "@party-stack/ontology-query/react";
 import type { AttachmentMetadata } from "@party-stack/ontology";
 import {
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -51,6 +52,7 @@ import type {
 } from "../ontology/generated/types";
 import {
     IssueBoardExtraSelection,
+    IssueBoardFragments,
     IssueDetailsFragment,
     KanbanCardFragment,
 } from "../query-demo/fragments";
@@ -1701,34 +1703,39 @@ export function IssueTracker({
 
     // Board query: stitch KanbanCardFragment (+ extras) into one include that
     // follows Issue → project via IR link metadata instead of a hand-written join.
+    const refineIssues = useCallback(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack builder after joins
+        (q: any) =>
+            q
+                .where(({ Issue }: { Issue: { issueTitle: string } }) =>
+                    ilike(Issue.issueTitle, `${search}%`)
+                )
+                .where(
+                    ({ Issue }: { Issue: { projectId: string; issueTitle: string } }) =>
+                        selectedProjectId
+                            ? eq(Issue.projectId, selectedProjectId)
+                            : ilike(Issue.issueTitle, "%")
+                )
+                .where(
+                    ({ Issue }: { Issue: { issueStatus: string } }) =>
+                        statusFilter !== "All"
+                            ? eq(Issue.issueStatus, statusFilter)
+                            : ilike(Issue.issueStatus, "%")
+                )
+                .orderBy(
+                    ({ Issue }: { Issue: { issueUpdatedAt: unknown } }) =>
+                        Issue.issueUpdatedAt,
+                    "desc"
+                ),
+        [search, selectedProjectId, statusFilter]
+    );
     const stitchedIssues = useStitchedQuery(
         ontology,
         "Issue",
-        [KanbanCardFragment],
+        IssueBoardFragments,
         {
             extra: IssueBoardExtraSelection,
-            refine: (q) =>
-                q
-                    .where(({ Issue }: { Issue: { issueTitle: string } }) =>
-                        ilike(Issue.issueTitle, `${search}%`)
-                    )
-                    .where(
-                        ({ Issue }: { Issue: { projectId: string; issueTitle: string } }) =>
-                            selectedProjectId
-                                ? eq(Issue.projectId, selectedProjectId)
-                                : ilike(Issue.issueTitle, "%")
-                    )
-                    .where(
-                        ({ Issue }: { Issue: { issueStatus: string } }) =>
-                            statusFilter !== "All"
-                                ? eq(Issue.issueStatus, statusFilter)
-                                : ilike(Issue.issueStatus, "%")
-                    )
-                    .orderBy(
-                        ({ Issue }: { Issue: { issueUpdatedAt: unknown } }) =>
-                            Issue.issueUpdatedAt,
-                        "desc"
-                    ),
+            refine: refineIssues,
             deps: [search, selectedProjectId, statusFilter],
         }
     );
