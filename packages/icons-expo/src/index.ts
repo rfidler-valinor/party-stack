@@ -1,5 +1,5 @@
-import type { AndroidSymbol, SFSymbol } from "expo-symbols";
 import type { IconName } from "@party-stack/icons";
+import type { AndroidSymbol, SFSymbol } from "expo-symbols";
 
 export interface ExpoSymbol {
     ios: SFSymbol;

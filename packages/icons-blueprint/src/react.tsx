@@ -1,5 +1,5 @@
-import { getBlueprintIconSource, IconSize } from "./index.js";
 import type { IconName } from "@party-stack/icons";
+import { getBlueprintIconSource, IconSize } from "./index.js";
 import type { SVGProps } from "react";
 
 export interface BlueprintIconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {

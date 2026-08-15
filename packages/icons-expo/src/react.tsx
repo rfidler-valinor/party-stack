@@ -1,6 +1,6 @@
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { getExpoSymbol } from "./index.js";
 import type { IconName } from "@party-stack/icons";
+import { getExpoSymbol } from "./index.js";
 
 export interface ExpoIconProps extends Omit<SymbolViewProps, "name"> {
     name: IconName;

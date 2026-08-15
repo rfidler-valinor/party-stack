@@ -1,6 +1,6 @@
+import { LucideIcon } from "@party-stack/icons-lucide/react";
 import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
-import { LucideIcon } from "@party-stack/icons-lucide/react";
 import type { LiveOntology, OntologyIR, OntologyOutboxEntry } from "@party-stack/ontology";
 import {
     createOntologyDevtoolsPlugin,

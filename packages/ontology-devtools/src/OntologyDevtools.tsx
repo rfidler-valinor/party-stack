@@ -2,6 +2,20 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
 import { Tabs } from "@base-ui/react/tabs";
 import { Tooltip } from "@base-ui/react/tooltip";
+import NumberFlow from "@number-flow/react";
+import { LucideIcon } from "@party-stack/icons-lucide/react";
+import { createReactPlugin } from "@tanstack/devtools-utils/react";
+import { useLiveInfiniteQuery, useLiveQuery } from "@tanstack/react-db";
+import {
+    createColumnHelper,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
+    type ColumnOrderState,
+    type ColumnSizingState,
+    type SortingState,
+    type VisibilityState,
+} from "@tanstack/react-table";
 import {
     RefreshCw as ArrowPathIcon,
     GripVertical as Bars2Icon,
@@ -27,20 +41,6 @@ import {
     Trash2 as TrashIcon,
     Columns3 as ViewColumnsIcon,
 } from "lucide-react";
-import NumberFlow from "@number-flow/react";
-import { LucideIcon } from "@party-stack/icons-lucide/react";
-import { createReactPlugin } from "@tanstack/devtools-utils/react";
-import { useLiveInfiniteQuery, useLiveQuery } from "@tanstack/react-db";
-import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-    type ColumnOrderState,
-    type ColumnSizingState,
-    type SortingState,
-    type VisibilityState,
-} from "@tanstack/react-table";
 import {
     useEffect,
     useId,
