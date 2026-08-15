@@ -42,6 +42,8 @@ const remoteServer = createRemoteOntologyServer<
                 "projectId",
                 "issueCreatedAt",
                 "issueDescription",
+                "createdBy",
+                "assignee",
             ],
             Project: [
                 "projectUpdatedAt",
