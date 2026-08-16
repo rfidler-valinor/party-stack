@@ -18,6 +18,26 @@
             "cache": false,
             "persistent": true
         },
+        "icons:archive": {
+            "inputs": ["scripts/extract-assets.ts", "icon-sources.json", "package.json"],
+            "outputs": ["public/icon-sets/**", "public/data/catalog.json"]
+        },
+        "icons:embed": {
+            "env": ["SF_SYMBOLS_ASSET_DIR"],
+            "inputs": [
+                "scripts/generate-embeddings.ts",
+                "src/shared/math.ts",
+                "src/shared/types.ts",
+                "public/data/catalog.json",
+                "public/icon-sets/**"
+            ],
+            "outputs": [
+                "public/data/embeddings.i8",
+                "public/data/embeddings-index.json",
+                "public/data/draft-mappings.json",
+                "public/data/mapping-audit.json"
+            ]
+        },
         "//#lint-versions": {
             "inputs": ["**/package.json"]
         }

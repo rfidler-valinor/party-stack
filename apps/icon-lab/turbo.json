@@ -1,0 +1,14 @@
+{
+    "extends": ["//"],
+    "tasks": {
+        "dev": {
+            "dependsOn": ["icons:embed"],
+            "cache": false,
+            "persistent": true
+        },
+        "dist": {
+            "dependsOn": ["icons:embed"],
+            "outputs": ["dist/**"]
+        }
+    }
+}

@@ -17,9 +17,9 @@ Local workshop for building and validating the provider-neutral `@party-stack/ic
 ## Compact storage
 
 The browser loads one normalized zip per redistributable provider from `public/icon-sets/`.
-There are no thousands of loose SVG files in git. Embeddings are per-vector int8-quantized
-in `public/data/embeddings.i8`, with IDs and modalities in
-`public/data/embeddings-index.json`.
+There are no thousands of loose SVG files in git. Provider archives and `catalog.json` are
+committed; multimodal embeddings are **not** — they are produced by the Turbo
+`icons:embed` task into `public/data/embeddings.i8` (+ index, draft mappings, and audit).
 
 `icon-sources.json` records the package, source tarball URL, version, homepage, and
 license for every provider. The archive script resolves installed versions so a package
@@ -29,13 +29,15 @@ update automatically records the new tarball URL.
 
 ```bash
 pnpm install --filter @party-stack/icon-lab
-pnpm --filter @party-stack/icon-lab icons:archive   # rebuild full provider zips
-pnpm --filter @party-stack/icon-lab icons:prepare   # archive + embed + draft mappings
-pnpm --filter @party-stack/icon-lab icons:update    # update all sources, then prepare
-pnpm --filter @party-stack/icon-lab dev             # http://localhost:5179
+pnpm turbo icons:archive --filter @party-stack/icon-lab   # rebuild full provider zips
+pnpm turbo icons:embed --filter @party-stack/icon-lab     # CLIP + draft mappings (cached)
+pnpm --filter @party-stack/icon-lab icons:update          # update sources, then prepare
+pnpm turbo watch build dev --filter @party-stack/icon-lab # embeds first, then http://localhost:5179
 ```
 
-Generated archives and data are committed so the lab works without re-running CLIP.
+`dev` / `dist` depend on `icons:embed`, so Turbo regenerates embeddings when catalog or
+archives change and restores them from cache otherwise. Provider zips stay committed;
+only the CLIP outputs are generated locally. CI `build` / `lint` / `test` do not run CLIP.
 
 ## SF Symbols glyphs
 

@@ -10,10 +10,10 @@
         "lint": "eslint",
         "test": "vitest run src",
         "icons:archive": "tsx scripts/extract-assets.ts",
-        "icons:extract": "pnpm icons:archive",
+        "icons:extract": "tsx scripts/extract-assets.ts",
         "icons:embed": "tsx scripts/generate-embeddings.ts",
-        "icons:prepare": "pnpm icons:archive && pnpm icons:embed",
-        "icons:update": "pnpm update --latest @blueprintjs/icons @iconify-json/material-symbols @lucide/icons @salesforce-ux/icons sf-symbols-typescript && pnpm icons:prepare"
+        "icons:prepare": "tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts",
+        "icons:update": "pnpm update --latest @blueprintjs/icons @iconify-json/material-symbols @lucide/icons @salesforce-ux/icons sf-symbols-typescript && tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts"
     },
     "dependencies": {
         "@party-stack/icons": "workspace:*",
