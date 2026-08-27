@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { convertFoundryMetaObjectType } from "./convertMetaObjectType.js";
-import type {
-    ObjectTypeFullMetadata,
-    ObjectTypeV2,
-} from "@osdk/foundry.ontologies";
+import type { ObjectTypeFullMetadata, ObjectTypeV2 } from "@osdk/foundry.ontologies";
 
 function objectType(): ObjectTypeV2 {
     return {
@@ -14,6 +11,7 @@ function objectType(): ObjectTypeV2 {
         description: "An employee",
         primaryKey: "id",
         titleProperty: "fullName",
+        icon: { type: "blueprint", name: "person", color: "#2d72d2" },
         properties: {
             id: {
                 dataType: { type: "string" },
@@ -48,6 +46,15 @@ describe("convertFoundryMetaObjectType", () => {
             name: "Employee",
             primaryKey: "id",
             title: "fullName",
+            icon: {
+                name: "person",
+                meta: {
+                    blueprint: {
+                        name: "person",
+                    },
+                },
+            },
+            color: "#2d72d2",
         });
         expect(result.properties).toEqual([
             expect.objectContaining({
@@ -60,5 +67,33 @@ describe("convertFoundryMetaObjectType", () => {
                 displayName: "Full name",
             }),
         ]);
+    });
+
+    it("preserves unknown Blueprint icons without inventing a semantic match", () => {
+        const source = objectType();
+        source.icon = {
+            type: "blueprint",
+            name: "vendor-only-icon",
+            color: "#000000",
+        };
+
+        expect(
+            convertFoundryMetaObjectType({
+                objectType: source,
+                linkTypes: [],
+                implementsInterfaces: [],
+                implementsInterfaces2: {},
+                sharedPropertyTypeMapping: {},
+            } as ObjectTypeFullMetadata)
+        ).toMatchObject({
+            icon: {
+                meta: {
+                    blueprint: {
+                        name: "vendor-only-icon",
+                    },
+                },
+            },
+            color: "#000000",
+        });
     });
 });

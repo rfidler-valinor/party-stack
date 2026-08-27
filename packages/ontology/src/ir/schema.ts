@@ -1,8 +1,43 @@
+import { iconNames } from "@party-stack/icons";
 import { o } from "./generated/builders.js";
 import type { OntologyIR } from "./generated/types.js";
 
 export default {
     types: [
+        {
+            name: "IconName",
+            description: "A renderer-independent icon name from @party-stack/icons.",
+            type: o.string({
+                constraint: o.StringConstraint.enum({
+                    options: iconNames.map((value) => ({ value })),
+                }),
+            }),
+        },
+        {
+            name: "Icon",
+            description: "A portable icon descriptor with optional provider meta for lossless round trips.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "name",
+                        displayName: "Name",
+                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
+                        description: "Optional renderer-independent icon name.",
+                    },
+                    {
+                        name: "meta",
+                        displayName: "Meta",
+                        type: o.optional({
+                            type: o.map({
+                                keyType: o.string({}),
+                                valueType: o.unknown({}),
+                            }),
+                        }),
+                        description: "Namespaced source-provider meta.",
+                    },
+                ],
+            }),
+        },
         {
             name: "Deprecation",
             type: o.struct({
@@ -580,6 +615,18 @@ export default {
                             "The optional property name used as the human-readable title for an object.",
                     },
                     {
+                        name: "icon",
+                        displayName: "Icon",
+                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        description: "Optional portable icon descriptor.",
+                    },
+                    {
+                        name: "color",
+                        displayName: "Color",
+                        type: o.optional({ type: o.string({}) }),
+                        description: "Optional display color independent of the icon.",
+                    },
+                    {
                         name: "properties",
                         displayName: "Properties",
                         type: o.list({ elementType: o.ref({ name: "PropertyDef" }) }),
@@ -909,6 +956,18 @@ export default {
                         displayName: "Display name",
                         type: o.string({}),
                         description: "Human-readable name.",
+                    },
+                    {
+                        name: "icon",
+                        displayName: "Icon",
+                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        description: "Optional portable icon descriptor.",
+                    },
+                    {
+                        name: "color",
+                        displayName: "Color",
+                        type: o.optional({ type: o.string({}) }),
+                        description: "Optional display color independent of the icon.",
                     },
                     {
                         name: "parameters",

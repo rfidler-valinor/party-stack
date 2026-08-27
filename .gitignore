@@ -40,3 +40,11 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Icon lab generated embeddings (turbo icons:embed)
+apps/icon-lab/.tmp-embeds
+apps/icon-lab/public/data/embeddings.i8
+apps/icon-lab/public/data/embeddings-index.json
+apps/icon-lab/public/data/draft-mappings.json
+apps/icon-lab/public/data/mapping-audit.json
+apps/icon-lab/public/data/embeddings.json

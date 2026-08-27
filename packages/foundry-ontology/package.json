@@ -39,6 +39,7 @@
         "@osdk/foundry.ontologies": "^2.71.0",
         "@party-stack/foundry-client": "workspace:*",
         "@party-stack/foundry-object-set-watcher": "workspace:*",
+        "@party-stack/icons-blueprint": "workspace:^",
         "@party-stack/ontology": "workspace:*",
         "@tanstack/store": "^0.11.0",
         "change-case": "^5.4.4",

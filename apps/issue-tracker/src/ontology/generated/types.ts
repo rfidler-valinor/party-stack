@@ -12,8 +12,10 @@ export type Issue = {
     issueUpdatedAt: v.timestamp;
     /** Stable system-generated identifier for an issue. */
     issueId: string;
+    createdBy: string;
     /** Short, human-readable summary used to identify the issue in lists and workflows. */
     issueTitle: string;
+    assignee: string;
     /** Files that provide supporting material or evidence for the issue. */
     issueAttachments: Array<v.attachment<"image/png" | "image/jpeg">>;
     /** Identifier of the optional project that groups this issue. */
@@ -43,8 +45,10 @@ export type Project = {
 export type CreateIssueParameters = {
     completedAt?: v.timestamp | null;
     attachments?: Array<v.attachment<"image/png" | "image/jpeg">> | null;
+    createdBy?: string | null;
     project?: string | null;
     description?: string | null;
+    assignee?: string | null;
     title: string;
     status: "Open" | "In Progress" | "Waiting" | "Completed";
     "__uuid_0df17cad-fc40-4f4b-b755-dfccb968d615"?: string;
@@ -69,6 +73,7 @@ export type UpdateIssueParameters = {
     issue: string;
     description?: string | null;
     project?: string | null;
+    assignee?: string | null;
     title: string;
     status: "Open" | "In Progress" | "Waiting" | "Completed";
     __now?: v.timestamp;

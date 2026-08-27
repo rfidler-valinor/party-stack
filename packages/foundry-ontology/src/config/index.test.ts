@@ -1,6 +1,38 @@
 import { o, type OntologyIR } from "@party-stack/ontology";
-import { describe, expect, it } from "vitest";
-import { foundryOntologyConfigAdapter } from "./index.js";
+import { describe, expect, it, vi } from "vitest";
+import { createFoundryOntologyClient, foundryOntologyConfigAdapter } from "./index.js";
+
+vi.mock("@bobbyfidz/local-oauth-flow", () => ({
+    performLocalOAuthFlow: vi.fn(() => Promise.resolve({ accessToken: "oauth-token" })),
+}));
+
+describe("createFoundryOntologyClient", () => {
+    it("uses a supplied token instead of the interactive OAuth flow", async () => {
+        const { performLocalOAuthFlow } = await import("@bobbyfidz/local-oauth-flow");
+
+        const client = await createFoundryOntologyClient({
+            foundryUrl: "https://foundry.example.com",
+            foundryOntologyRid: "ri.ontology.main.ontology.example",
+            foundryClientId: "",
+            foundryRedirectUrl: "",
+            foundryToken: "provided-token",
+        });
+
+        expect(performLocalOAuthFlow).not.toHaveBeenCalled();
+        await expect(client.tokenProvider()).resolves.toBe("provided-token");
+    });
+
+    it("falls back to the OAuth flow when no token is supplied", async () => {
+        const client = await createFoundryOntologyClient({
+            foundryUrl: "https://foundry.example.com",
+            foundryOntologyRid: "ri.ontology.main.ontology.example",
+            foundryClientId: "client",
+            foundryRedirectUrl: "http://localhost:8080/callback",
+        });
+
+        await expect(client.tokenProvider()).resolves.toBe("oauth-token");
+    });
+});
 
 describe("foundryOntologyConfigAdapter", () => {
     it("applies targeted attachment constraints after pull", async () => {

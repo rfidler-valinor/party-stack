@@ -4,7 +4,7 @@ import { generateOntology } from "./ontology.js";
 import type { OntologyIR } from "../ir/index.js";
 
 describe("generateOntology", () => {
-    it("preserves object title property metadata", () => {
+    it("preserves object and action presentation metadata", () => {
         const ontology: OntologyIR = {
             types: [],
             objectTypes: [
@@ -14,6 +14,15 @@ describe("generateOntology", () => {
                     pluralDisplayName: "Employees",
                     primaryKey: "id",
                     title: "name",
+                    icon: {
+                        name: "person",
+                        meta: {
+                            blueprint: {
+                                name: "person",
+                            },
+                        },
+                    },
+                    color: "#2d72d2",
                     properties: [
                         { name: "id", displayName: "ID", type: o.string({}) },
                         { name: "name", displayName: "Name", type: o.string({}) },
@@ -21,10 +30,24 @@ describe("generateOntology", () => {
                 },
             ],
             linkTypes: [],
-            actionTypes: [],
+            actionTypes: [
+                {
+                    name: "createEmployee",
+                    displayName: "Create employee",
+                    icon: { name: "plus-circle" },
+                    color: "#15b371",
+                    parameters: [],
+                    logic: [],
+                },
+            ],
             queryFunctionTypes: [],
         };
 
-        expect(generateOntology(ontology)).toContain('title: "name"');
+        const generated = generateOntology(ontology);
+        expect(generated).toContain('title: "name"');
+        expect(generated).toContain('name: "person"');
+        expect(generated).toContain('color: "#2d72d2"');
+        expect(generated).toContain('name: "plus-circle"');
+        expect(generated).toContain('color: "#15b371"');
     });
 });

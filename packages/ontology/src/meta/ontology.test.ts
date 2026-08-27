@@ -4,15 +4,10 @@ import metaOntology from "./ontology.js";
 
 describe("meta ontology runtime fields", () => {
     it("keeps provider identifiers out of portable definitions", () => {
-        const objectType = canonicalOntology.types.find(
-            (type) => type.name === "ObjectTypeDef"
-        );
-        const property = canonicalOntology.types.find(
-            (type) => type.name === "PropertyDef"
-        );
-        const actionType = canonicalOntology.types.find(
-            (type) => type.name === "ActionTypeDef"
-        );
+        const objectType = canonicalOntology.types.find((type) => type.name === "ObjectTypeDef");
+        const property = canonicalOntology.types.find((type) => type.name === "PropertyDef");
+        const actionType = canonicalOntology.types.find((type) => type.name === "ActionTypeDef");
+        const icon = canonicalOntology.types.find((type) => type.name === "Icon");
 
         expect(objectType?.type.kind).toBe("struct");
         expect(property?.type.kind).toBe("struct");
@@ -22,9 +17,7 @@ describe("meta ontology runtime fields", () => {
             property?.type.kind !== "struct" ||
             actionType?.type.kind !== "struct"
         ) {
-            throw new Error(
-                "Expected canonical object, property, and action definitions to be structs."
-            );
+            throw new Error("Expected canonical object, property, and action definitions to be structs.");
         }
 
         expect(objectType.type.value.fields.map(({ name }) => name)).not.toContain("id");
@@ -34,18 +27,24 @@ describe("meta ontology runtime fields", () => {
         });
         expect(property.type.value.fields.map(({ name }) => name)).not.toContain("id");
         expect(actionType.type.value.fields.map(({ name }) => name)).not.toContain("id");
+        expect(objectType.type.value.fields.map(({ name }) => name)).toEqual(
+            expect.arrayContaining(["icon", "color"])
+        );
+        expect(actionType.type.value.fields.map(({ name }) => name)).toEqual(
+            expect.arrayContaining(["icon", "color"])
+        );
+        expect(icon?.type.kind).toBe("struct");
+        if (icon?.type.kind !== "struct") {
+            throw new Error("Expected Icon to be a struct.");
+        }
+        expect(icon.type.value.fields.map(({ name }) => name)).toContain("meta");
+        expect(icon.type.value.fields.map(({ name }) => name)).not.toContain("metadata");
     });
 
     it("requires IDs while preserving the canonical title field in runtime metadata", () => {
-        const objectType = metaOntology.objectTypes.find(
-            (type) => type.name === "ObjectType"
-        );
-        const property = metaOntology.types.find(
-            (type) => type.name === "PropertyDef"
-        );
-        const actionType = metaOntology.objectTypes.find(
-            (type) => type.name === "ActionType"
-        );
+        const objectType = metaOntology.objectTypes.find((type) => type.name === "ObjectType");
+        const property = metaOntology.types.find((type) => type.name === "PropertyDef");
+        const actionType = metaOntology.objectTypes.find((type) => type.name === "ActionType");
 
         expect(objectType?.properties.find(({ name }) => name === "id")?.type).toEqual({
             kind: "string",
