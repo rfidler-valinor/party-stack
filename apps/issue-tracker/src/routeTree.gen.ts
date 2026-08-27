@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as QueryLabRouteImport } from './routes/query-lab'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectId'
 import { Route as ApiRemoteOntologyEndpointRouteImport } from './routes/api.remote-ontology.$endpoint'
 
+const QueryLabRoute = QueryLabRouteImport.update({
+  id: '/query-lab',
+  path: '/query-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -32,40 +38,60 @@ const ApiRemoteOntologyEndpointRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/query-lab': typeof QueryLabRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/remote-ontology/$endpoint': typeof ApiRemoteOntologyEndpointRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/query-lab': typeof QueryLabRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/remote-ontology/$endpoint': typeof ApiRemoteOntologyEndpointRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/query-lab': typeof QueryLabRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/remote-ontology/$endpoint': typeof ApiRemoteOntologyEndpointRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/project/$projectId' | '/api/remote-ontology/$endpoint'
+  fullPaths:
+    | '/'
+    | '/query-lab'
+    | '/project/$projectId'
+    | '/api/remote-ontology/$endpoint'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/project/$projectId' | '/api/remote-ontology/$endpoint'
+  to:
+    | '/'
+    | '/query-lab'
+    | '/project/$projectId'
+    | '/api/remote-ontology/$endpoint'
   id:
     | '__root__'
     | '/'
+    | '/query-lab'
     | '/project/$projectId'
     | '/api/remote-ontology/$endpoint'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  QueryLabRoute: typeof QueryLabRoute
   ProjectProjectIdRoute: typeof ProjectProjectIdRoute
   ApiRemoteOntologyEndpointRoute: typeof ApiRemoteOntologyEndpointRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/query-lab': {
+      id: '/query-lab'
+      path: '/query-lab'
+      fullPath: '/query-lab'
+      preLoaderRoute: typeof QueryLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -92,6 +118,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  QueryLabRoute: QueryLabRoute,
   ProjectProjectIdRoute: ProjectProjectIdRoute,
   ApiRemoteOntologyEndpointRoute: ApiRemoteOntologyEndpointRoute,
 }

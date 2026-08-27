@@ -173,6 +173,64 @@ describe("generateTypes", () => {
         expect(output).not.toContain("ObjectReferenceTypeDef");
     });
 
+    it("generates typed bidirectional link metadata", () => {
+        const ontology: OntologyIR = {
+            types: [],
+            objectTypes: [
+                {
+                    name: "Project",
+                    displayName: "Project",
+                    pluralDisplayName: "Projects",
+                    primaryKey: "projectId",
+                    properties: [
+                        { name: "projectId", displayName: "Project ID", type: o.string({}) },
+                    ],
+                },
+                {
+                    name: "Issue",
+                    displayName: "Issue",
+                    pluralDisplayName: "Issues",
+                    primaryKey: "issueId",
+                    properties: [
+                        { name: "issueId", displayName: "Issue ID", type: o.string({}) },
+                        { name: "projectId", displayName: "Project ID", type: o.string({}) },
+                    ],
+                },
+            ],
+            linkTypes: [
+                {
+                    id: "project-issues",
+                    source: {
+                        objectType: "Project",
+                        name: "project",
+                        displayName: "Project",
+                    },
+                    target: {
+                        objectType: "Issue",
+                        name: "issues",
+                        displayName: "Issues",
+                    },
+                    foreignKey: "projectId",
+                    cardinality: "one",
+                },
+            ],
+            actionTypes: [],
+            queryFunctionTypes: [],
+        };
+
+        const output = generateTypes(ontology, { outputTypeName: "TestOntology" });
+
+        expect(output).toContain("linkTypes: {");
+        expect(output).toContain("Project: {");
+        expect(output).toContain("issues: {");
+        expect(output).toContain('target: "Issue";');
+        expect(output).toContain('cardinality: "many";');
+        expect(output).toContain("Issue: {");
+        expect(output).toContain("project: {");
+        expect(output).toContain('target: "Project";');
+        expect(output).toContain('cardinality: "one";');
+    });
+
     it("generates action parameter types", () => {
         const ontology: OntologyIR = {
             types: [],

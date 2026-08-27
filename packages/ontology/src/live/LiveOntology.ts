@@ -42,6 +42,21 @@ export interface LiveOntologyWrites {
 
 export interface OntologyDefinition {
     objectTypes: Record<string, OntologyObject>;
+    /**
+     * Generated, type-only navigation metadata. LiveOntology uses the runtime
+     * IR for link resolution; query helpers use this map for compile-time
+     * object/link/target/cardinality inference.
+     */
+    linkTypes?: Record<
+        string,
+        Record<
+            string,
+            {
+                target: string;
+                cardinality: "one" | "many";
+            }
+        >
+    >;
     actionTypes: Record<
         string,
         {
