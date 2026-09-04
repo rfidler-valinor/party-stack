@@ -152,6 +152,12 @@ function setPropertyPath(
     for (let index = 0; index < path.length - 1; index++) {
         const segment = path[index]!;
         const next = target[segment];
+        if (next === undefined) {
+            const created: Record<string, unknown> = {};
+            target[segment] = created;
+            target = created;
+            continue;
+        }
         if (
             typeof next !== "object" ||
             next === null ||

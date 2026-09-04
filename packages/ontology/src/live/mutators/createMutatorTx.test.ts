@@ -159,6 +159,47 @@ describe("createMutatorTx", () => {
         await tasks.cleanup();
     });
 
+    it("creates an absent struct while applying a nested sparse update", async () => {
+        const tasks = createCollection(
+            localOnlyCollectionOptions<
+                OntologyObject,
+                string | number
+            >({
+                id: "nested-sparse-tasks",
+                getKey: (task) => task.id as string,
+                initialData: [{ id: "task-1" }],
+            })
+        );
+        await tasks.preload();
+        const transaction = createTransaction({
+            autoCommit: false,
+            mutationFn: () => Promise.resolve(),
+        });
+        void transaction.isPersisted.promise.catch(
+            () => undefined
+        );
+        const tx = createMutatorTx({
+            transaction,
+            objects: { Task: tasks },
+        });
+
+        await tx.mutate.Task!.update("task-1", [
+            {
+                path: ["metadata", "priority"],
+                value: 1,
+            },
+        ]);
+
+        expect(tasks.get("task-1")).toMatchObject({
+            id: "task-1",
+            metadata: {
+                priority: 1,
+            },
+        });
+        transaction.rollback();
+        await tasks.cleanup();
+    });
+
     it("rejects property paths that traverse a list as an object", async () => {
         const tasks = createCollection(
             localOnlyCollectionOptions<
