@@ -122,4 +122,84 @@ describe("createMutatorTx", () => {
         transaction.rollback();
         await tasks.cleanup();
     });
+
+    it("adds a missing top-level property to a sparse object", async () => {
+        const tasks = createCollection(
+            localOnlyCollectionOptions<
+                OntologyObject,
+                string | number
+            >({
+                id: "sparse-tasks",
+                getKey: (task) => task.id as string,
+                initialData: [{ id: "task-1" }],
+            })
+        );
+        await tasks.preload();
+        const transaction = createTransaction({
+            autoCommit: false,
+            mutationFn: () => Promise.resolve(),
+        });
+        void transaction.isPersisted.promise.catch(
+            () => undefined
+        );
+        const tx = createMutatorTx({
+            transaction,
+            objects: { Task: tasks },
+        });
+
+        await tx.mutate.Task!.update("task-1", [
+            { path: ["title"], value: "Added later" },
+        ]);
+
+        expect(tasks.get("task-1")).toEqual({
+            id: "task-1",
+            title: "Added later",
+        });
+        transaction.rollback();
+        await tasks.cleanup();
+    });
+
+    it("rejects property paths that traverse a list as an object", async () => {
+        const tasks = createCollection(
+            localOnlyCollectionOptions<
+                OntologyObject,
+                string | number
+            >({
+                id: "invalid-path-tasks",
+                getKey: (task) => task.id as string,
+                initialData: [
+                    {
+                        id: "task-1",
+                        labels: [],
+                    },
+                ],
+            })
+        );
+        await tasks.preload();
+        const transaction = createTransaction({
+            autoCommit: false,
+            mutationFn: () => Promise.resolve(),
+        });
+        void transaction.isPersisted.promise.catch(
+            () => undefined
+        );
+        const tx = createMutatorTx({
+            transaction,
+            objects: { Task: tasks },
+        });
+
+        await expect(
+            tx.mutate.Task!.update("task-1", [
+                {
+                    path: ["labels", "name"],
+                    value: "invalid",
+                },
+            ])
+        ).rejects.toThrow(
+            'Cannot assign ontology property path "labels.name": "labels" is not a struct object.'
+        );
+
+        transaction.rollback();
+        await tasks.cleanup();
+    });
 });

@@ -605,6 +605,104 @@ describe("Ontology Validation", () => {
                 "Action targets must point directly to an object reference parameter."
             );
         });
+
+        it("should reject property assignments that traverse into list elements as objects", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [
+                    {
+                        name: "Workspace",
+                        displayName: "Workspace",
+                        pluralDisplayName: "Workspaces",
+                        primaryKey: "id",
+                        properties: [
+                            {
+                                name: "id",
+                                displayName: "ID",
+                                type: o.string({}),
+                            },
+                            {
+                                name: "objectTypes",
+                                displayName: "Object types",
+                                type: o.list({
+                                    elementType: o.struct({
+                                        fields: [
+                                            {
+                                                name: "objectTypeRid",
+                                                displayName: "Object type RID",
+                                                type: o.string({}),
+                                            },
+                                        ],
+                                    }),
+                                }),
+                            },
+                        ],
+                    },
+                ],
+                actionTypes: [
+                    {
+                        name: "editWorkspace",
+                        displayName: "Edit workspace",
+                        parameters: [
+                            {
+                                name: "workspace",
+                                displayName: "Workspace",
+                                type: o.objectReference({
+                                    objectType: "Workspace",
+                                }),
+                            },
+                            {
+                                name: "objectTypes",
+                                displayName: "Object types",
+                                type: o.list({
+                                    elementType: o.struct({
+                                        fields: [
+                                            {
+                                                name: "objectTypeRid",
+                                                displayName: "Object type RID",
+                                                type: o.string({}),
+                                            },
+                                        ],
+                                    }),
+                                }),
+                            },
+                        ],
+                        logic: [
+                            o.ActionLogicStep.updateObject({
+                                object: {
+                                    path: [
+                                        "workspace",
+                                    ],
+                                },
+                                values: [
+                                    {
+                                        property: [
+                                            "objectTypes",
+                                            "objectTypeRid",
+                                        ],
+                                        value: o.Expression.valueReference({
+                                            path: [
+                                                "objectTypes",
+                                                "objectTypeRid",
+                                            ],
+                                        }),
+                                    },
+                                ],
+                            }),
+                        ],
+                    },
+                ],
+            };
+
+            const result = validate(ontology);
+            expectErr(result, 2);
+            expect(getErrors(result)).toEqual(
+                expect.arrayContaining([
+                    'Invalid property "objectTypes.objectTypeRid" on object type "Workspace".',
+                    'Invalid value reference path on "objectTypes".',
+                ])
+            );
+        });
     });
 
     describe("Literal Expression", () => {

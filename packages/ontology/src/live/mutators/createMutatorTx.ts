@@ -4,7 +4,6 @@ import {
     type Collection,
     type Transaction,
 } from "@tanstack/db";
-import { set } from "lodash-es";
 import type {
     OntologyMutatorObjects,
     OntologyMutatorTx,
@@ -131,9 +130,42 @@ function applyChanges(
 ): void {
     if (Array.isArray(changes)) {
         for (const change of changes) {
-            set(object, change.path, change.value);
+            setPropertyPath(object, change.path, change.value);
         }
     } else {
         Object.assign(object, changes);
     }
+}
+
+function setPropertyPath(
+    object: Record<string, unknown>,
+    path: string[],
+    value: unknown
+): void {
+    if (path.length === 0) {
+        throw new Error(
+            "Cannot apply an ontology property change with an empty path."
+        );
+    }
+
+    let target = object;
+    for (let index = 0; index < path.length - 1; index++) {
+        const segment = path[index]!;
+        const next = target[segment];
+        if (
+            typeof next !== "object" ||
+            next === null ||
+            Array.isArray(next)
+        ) {
+            const traversed = path
+                .slice(0, index + 1)
+                .join(".");
+            throw new Error(
+                `Cannot assign ontology property path "${path.join(".")}": "${traversed}" is not a struct object.`
+            );
+        }
+        target = next as Record<string, unknown>;
+    }
+
+    target[path.at(-1)!] = value;
 }

@@ -70,6 +70,24 @@ const ir: OntologyIR = {
                     displayName: "Meta",
                     type: o.ref({ name: "NoteMeta" }),
                 },
+                {
+                    name: "summary",
+                    displayName: "Summary",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
+                    name: "entries",
+                    displayName: "Entries",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.ref({
+                                name: "NoteMeta",
+                            }),
+                        }),
+                    }),
+                },
                 { name: "updatedAt", displayName: "Updated at", type: o.timestamp({}) },
             ],
         },
@@ -246,6 +264,56 @@ const ir: OntologyIR = {
             ],
             logic: [],
         },
+        {
+            name: "editNote",
+            displayName: "Edit note",
+            parameters: [
+                {
+                    name: "note",
+                    displayName: "Note",
+                    type: o.objectReference({
+                        objectType: "Note",
+                    }),
+                },
+                {
+                    name: "summary",
+                    displayName: "Summary",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
+                    name: "entries",
+                    displayName: "Entries",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.ref({
+                                name: "NoteMeta",
+                            }),
+                        }),
+                    }),
+                },
+            ],
+            logic: [
+                o.ActionLogicStep.updateObject({
+                    object: { path: ["note"] },
+                    values: [
+                        {
+                            property: ["summary"],
+                            value: o.Expression.valueReference({
+                                path: ["summary"],
+                            }),
+                        },
+                        {
+                            property: ["entries"],
+                            value: o.Expression.valueReference({
+                                path: ["entries"],
+                            }),
+                        },
+                    ],
+                }),
+            ],
+        },
     ],
     queryFunctionTypes: [
         {
@@ -393,6 +461,114 @@ describe("SQLite LiveOntology MVP acceptance", () => {
         expect(note?.tags).toEqual(["reload"]);
         expect(note?.meta).toEqual({ priority: 1, source: "persist" });
         expect(note?.updatedAt).toHaveProperty("epochMilliseconds");
+    });
+
+    it("persists sparse updates, omission, null, and whole-list replacement after every action", async () => {
+        const created = await createOntology({
+            context: {
+                user: {
+                    email: "alice@example.com",
+                },
+            },
+        });
+        const { database } = created;
+        let ontology = created.ontology;
+        await ontology.ready;
+
+        const reload = async () => {
+            await ontology.cleanup();
+            ontologies.splice(
+                ontologies.indexOf(ontology),
+                1
+            );
+            ontology = await createLiveOntology({
+                ir,
+                backend: () =>
+                    createSQLiteOntologyBackendAdapter({
+                        ir,
+                        database,
+                        name: "test",
+                    }),
+                context: {
+                    user: {
+                        email: "alice@example.com",
+                    },
+                },
+            });
+            ontologies.push(ontology);
+            await ontology.ready;
+        };
+        const note = () =>
+            ontology.objects.Note!.get(
+                "sparse-note"
+            ) as
+                | Record<string, unknown>
+                | undefined;
+
+        await ontology.actions.createNote!({
+            id: "sparse-note",
+            title: "Sparse",
+        });
+        await reload();
+        expect(note()).not.toHaveProperty("summary");
+        expect(note()).not.toHaveProperty("entries");
+
+        await ontology.actions.editNote!({
+            note: "sparse-note",
+        });
+        await reload();
+        expect(note()).not.toHaveProperty("summary");
+        expect(note()).not.toHaveProperty("entries");
+
+        await ontology.actions.editNote!({
+            note: "sparse-note",
+            summary: "Now dense",
+            entries: [],
+        });
+        await reload();
+        expect(note()).toMatchObject({
+            summary: "Now dense",
+            entries: [],
+        });
+
+        await ontology.actions.editNote!({
+            note: "sparse-note",
+        });
+        await reload();
+        expect(note()).toMatchObject({
+            summary: "Now dense",
+            entries: [],
+        });
+
+        const populatedEntries = [
+            {
+                priority: 1,
+                source: "first",
+            },
+            {
+                priority: 2,
+                source: "second",
+            },
+        ];
+        await ontology.actions.editNote!({
+            note: "sparse-note",
+            entries: populatedEntries,
+        });
+        await reload();
+        expect(note()?.entries).toEqual(
+            populatedEntries
+        );
+
+        await ontology.actions.editNote!({
+            note: "sparse-note",
+            summary: null,
+            entries: [],
+        });
+        await reload();
+        expect(note()).toMatchObject({
+            summary: null,
+            entries: [],
+        });
     });
 
     it("executes shared mutators and query function handlers authoritatively", async () => {
