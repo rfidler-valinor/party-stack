@@ -4,6 +4,38 @@ import { createFoundryCodec } from "./foundryCodec.js";
 import { encodeFoundryMediaId } from "./foundryMediaId.js";
 
 describe("createFoundryCodec", () => {
+    it("preserves null while leaving omitted values undefined", () => {
+        const codec = createFoundryCodec({
+            types: [],
+            objectTypes: [],
+            linkTypes: [],
+            actionTypes: [],
+            queryFunctionTypes: [],
+        });
+        const optionalString = o.optional({
+            type: o.string({}),
+        });
+
+        expect(
+            codec.encodeValue(
+                optionalString,
+                undefined
+            )
+        ).toBeUndefined();
+        expect(
+            codec.decodeValue(
+                optionalString,
+                undefined
+            )
+        ).toBeUndefined();
+        expect(
+            codec.encodeValue(optionalString, null)
+        ).toBeNull();
+        expect(
+            codec.decodeValue(optionalString, null)
+        ).toBeNull();
+    });
+
     it("decodes attachment rids into serializable pointers", () => {
         const codec = createFoundryCodec({
             types: [],

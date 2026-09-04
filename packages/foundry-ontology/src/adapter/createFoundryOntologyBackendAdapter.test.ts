@@ -60,6 +60,113 @@ describe("isFoundryNotFoundError", () => {
     });
 });
 
+describe("Foundry action parameter omission", () => {
+    it("omits undefined parameters while sending null and supplied values", async () => {
+        ontologyMocks.applyWithOverrides.mockResolvedValue({
+            operationId: "operation-1",
+            validation: {
+                result: "VALID",
+            },
+            edits: {
+                type: "edits",
+                edits: [],
+            },
+        });
+        const adapter =
+            createFoundryOntologyBackendAdapter({
+                client: {
+                    ontologyRid:
+                        "ri.ontology.main.1",
+                } as OntologyClient,
+                ir: {
+                    types: [],
+                    objectTypes: [],
+                    linkTypes: [],
+                    actionTypes: [
+                        {
+                            name: "editWorkspace",
+                            displayName:
+                                "Edit workspace",
+                            parameters: [
+                                {
+                                    name: "omitted",
+                                    displayName:
+                                        "Omitted",
+                                    type: o.optional(
+                                        {
+                                            type: o.string(
+                                                {}
+                                            ),
+                                        }
+                                    ),
+                                },
+                                {
+                                    name: "cleared",
+                                    displayName:
+                                        "Cleared",
+                                    type: o.optional(
+                                        {
+                                            type: o.string(
+                                                {}
+                                            ),
+                                        }
+                                    ),
+                                },
+                                {
+                                    name: "supplied",
+                                    displayName:
+                                        "Supplied",
+                                    type: o.string(
+                                        {}
+                                    ),
+                                },
+                            ],
+                            logic: [],
+                        },
+                    ],
+                    queryFunctionTypes: [],
+                },
+            });
+
+        await adapter.applyAction(
+            "editWorkspace",
+            {
+                omitted: undefined,
+                cleared: null,
+                supplied: "updated",
+            },
+            {
+                objects: {},
+            }
+        );
+
+        expect(
+            ontologyMocks.applyWithOverrides
+                .mock.calls[0]?.[3]
+        ).toMatchObject({
+            request: {
+                parameters: {
+                    cleared: null,
+                    supplied: "updated",
+                },
+            },
+        });
+        expect(
+            (
+                ontologyMocks.applyWithOverrides
+                    .mock.calls[0]?.[3] as {
+                    request: {
+                        parameters: Record<
+                            string,
+                            unknown
+                        >;
+                    };
+                }
+            ).request.parameters
+        ).not.toHaveProperty("omitted");
+    });
+});
+
 describe("Foundry media attachments", () => {
     const mediaId = {
         mediaSetRid: "ri.mio.main.media-set.1",

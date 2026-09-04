@@ -52,9 +52,6 @@ export function createFoundryCodec(
         const resolvedType = resolveType(type);
 
         if (value === undefined || value === null) {
-            if (resolvedType.kind === "optional") {
-                return undefined;
-            }
             return value;
         }
 
@@ -127,7 +124,7 @@ export function createFoundryCodec(
 
     const encodeValue = (type: TypeDef, value: unknown): unknown => {
         if (value === undefined || value === null) {
-            return undefined;
+            return value;
         }
 
         const resolvedType = resolveType(type);
