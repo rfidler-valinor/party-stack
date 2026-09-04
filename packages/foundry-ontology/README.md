@@ -15,4 +15,10 @@ Uses public Foundry APIs (`ActionTypesV2` / `ActionTypesFullMetadata`):
 - Full logic-rule conversion
 - Synthetic UUID / current-time default parameters from public logic metadata
 
+`structListParameterFieldValue` metadata names source and target fields but does not
+include an element-mapping operator. Identity mappings of all listed fields from one
+list parameter are converted to whole-list replacement. Renamed, partial, mixed, or
+multi-parameter mappings are rejected until the ontology IR has explicit list-element
+semantics.
+
 OMS UI edit-prefill metadata is not available from public APIs and is not converted.
