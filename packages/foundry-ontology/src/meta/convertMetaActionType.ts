@@ -431,12 +431,46 @@ function convertAssignments(
             property: [property],
             value: convertLogicRuleArgument(argument, syntheticParameters),
         })),
-        ...Object.entries(rule.structPropertyArguments).flatMap(([property, fields]) =>
-            Object.entries(fields).map(([field, argument]) => ({
-                property: [property, field],
-                value: convertLogicRuleArgument(argument, syntheticParameters),
-            }))
-        ),
+        ...Object.entries(rule.structPropertyArguments).flatMap(([property, fields]) => {
+            const fieldEntries = Object.entries(fields);
+            const listFieldEntries = fieldEntries.filter(
+                ([, argument]) => argument.type === "structListParameterFieldValue"
+            );
+
+            if (listFieldEntries.length === 0) {
+                return fieldEntries.map(([field, argument]) => ({
+                    property: [property, field],
+                    value: convertLogicRuleArgument(argument, syntheticParameters),
+                }));
+            }
+
+            // Foundry's metadata only identifies each source and target field; it does not
+            // expose a list-element mapping operator. An identity mapping of every listed
+            // field from one list parameter represents replacement of the whole struct list.
+            // Anything else needs explicit list-element semantics in the ontology IR rather
+            // than being emitted as an invalid ordinary object traversal.
+            const parameterIds = new Set(
+                listFieldEntries.map(([, argument]) => argument.parameterId)
+            );
+            const isWholeListIdentityAssignment =
+                listFieldEntries.length === fieldEntries.length &&
+                parameterIds.size === 1 &&
+                listFieldEntries.every(
+                    ([field, argument]) => field === argument.structParameterFieldApiName
+                );
+            if (!isWholeListIdentityAssignment) {
+                throw new Error(
+                    `Unsupported Foundry struct-list field mapping for property "${property}". The metadata does not describe how to map individual list elements.`
+                );
+            }
+
+            return [
+                {
+                    property: [property],
+                    value: valueReference([listFieldEntries[0]![1].parameterId]),
+                },
+            ];
+        }),
     ];
 }
 

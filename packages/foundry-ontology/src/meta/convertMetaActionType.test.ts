@@ -198,4 +198,84 @@ describe("convertFoundryMetaActionType parameter validation", () => {
             },
         ]);
     });
+
+    it("converts identity-mapped struct-list fields to a whole-list assignment", () => {
+        const metadata = actionType({
+            objectTypes: {
+                displayName: "Object types",
+                dataType: {
+                    type: "array",
+                    subType: {
+                        type: "struct",
+                        fields: [],
+                    },
+                },
+                required: false,
+                typeClasses: [],
+            },
+        } as never);
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectTypeApiName: "Workspace",
+                objectToModify: "workspace",
+                propertyArguments: {},
+                structPropertyArguments: {
+                    objectTypes: {
+                        objectTypeRid: {
+                            type: "structListParameterFieldValue",
+                            parameterId: "objectTypes",
+                            structParameterFieldApiName: "objectTypeRid",
+                        },
+                        displayName: {
+                            type: "structListParameterFieldValue",
+                            parameterId: "objectTypes",
+                            structParameterFieldApiName: "displayName",
+                        },
+                    },
+                },
+            } as never,
+        ];
+
+        expect(convertFoundryMetaActionType(metadata).logic[0]).toMatchObject({
+            kind: "updateObject",
+            value: {
+                values: [
+                    {
+                        property: ["objectTypes"],
+                        value: {
+                            kind: "valueReference",
+                            value: { path: ["objectTypes"] },
+                        },
+                    },
+                ],
+            },
+        });
+    });
+
+    it("rejects ambiguous element-wise struct-list mappings", () => {
+        const metadata = actionType({});
+        metadata.fullLogicRules = [
+            {
+                type: "createObject",
+                objectTypeApiName: "Workspace",
+                propertyArguments: {},
+                structPropertyArguments: {
+                    objectTypes: {
+                        objectTypeRid: {
+                            type: "structListParameterFieldValue",
+                            parameterId: "objectTypes",
+                            structParameterFieldApiName: "rid",
+                        },
+                    },
+                },
+            } as never,
+        ];
+
+        expect(() =>
+            convertFoundryMetaActionType(metadata)
+        ).toThrow(
+            'Unsupported Foundry struct-list field mapping for property "objectTypes".'
+        );
+    });
 });
