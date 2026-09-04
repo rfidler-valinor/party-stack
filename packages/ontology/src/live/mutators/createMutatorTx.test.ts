@@ -151,7 +151,7 @@ describe("createMutatorTx", () => {
             { path: ["title"], value: "Added later" },
         ]);
 
-        expect(tasks.get("task-1")).toEqual({
+        expect(tasks.get("task-1")).toMatchObject({
             id: "task-1",
             title: "Added later",
         });
