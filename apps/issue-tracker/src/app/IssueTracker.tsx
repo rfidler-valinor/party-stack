@@ -18,12 +18,20 @@ import {
     type DragEndEvent,
     type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
-import { eq, ilike, useLiveQuery } from "@tanstack/react-db";
+import { eq, ilike, inArray, or, useLiveQuery } from "@tanstack/react-db";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { useNavigate } from "@tanstack/react-router";
 import { createOntologyDevtoolsPlugin, ontologyDevtoolsTrigger } from "@party-stack/ontology-devtools";
 import type { AttachmentMetadata } from "@party-stack/ontology";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type FormEvent,
+    type KeyboardEvent as ReactKeyboardEvent,
+    type ReactNode,
+} from "react";
 import { Temporal } from "temporal-polyfill";
 import type {
     CreateIssueParameters,
@@ -85,6 +93,17 @@ const kanbanKeyboardCoordinates: KeyboardCoordinateGetter = (event, { currentCoo
 };
 
 const PROJECT_COLORS = ["#5E6AD2", "#E5484D", "#F5A524", "#30A46C", "#0091FF", "#AB4ABA"];
+
+function normalizeIssueLabels(labels: readonly unknown[] | undefined): string[] {
+    return [
+        ...new Set(
+            (labels ?? [])
+                .filter((label): label is string => typeof label === "string")
+                .map((label) => label.trim())
+                .filter(Boolean)
+        ),
+    ];
+}
 
 type IconName =
     | "archive"
@@ -558,6 +577,71 @@ type PendingAttachment = {
     name: string;
 };
 
+function TagInput({
+    labels,
+    onChange,
+}: {
+    labels: string[];
+    onChange: (labels: string[]) => void;
+}) {
+    const [draft, setDraft] = useState("");
+
+    function addLabels(value: string) {
+        const additions = normalizeIssueLabels(value.split(","));
+        if (additions.length > 0) {
+            onChange(normalizeIssueLabels([...labels, ...additions]));
+        }
+        setDraft("");
+    }
+
+    function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+        if (event.key === "Enter" || event.key === ",") {
+            event.preventDefault();
+            addLabels(draft);
+        } else if (event.key === "Backspace" && !draft && labels.length > 0) {
+            onChange(labels.slice(0, -1));
+        }
+    }
+
+    return (
+        <div className="surface-raised flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-1 outline-none transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
+            {labels.map((label) => (
+                <span
+                    className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700"
+                    key={label}
+                >
+                    {label}
+                    <button
+                        aria-label={`Remove ${label}`}
+                        className="text-indigo-400 hover:text-indigo-700"
+                        onClick={() => onChange(labels.filter((candidate) => candidate !== label))}
+                        type="button"
+                    >
+                        <Icon className="size-3" name="close" />
+                    </button>
+                </span>
+            ))}
+            <input
+                aria-label="Add issue label"
+                className="min-w-28 flex-1 bg-transparent px-1 py-0.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                onBlur={() => addLabels(draft)}
+                onChange={(event) => {
+                    const value = event.target.value;
+                    if (value.includes(",")) {
+                        addLabels(value);
+                    } else {
+                        setDraft(value);
+                    }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={labels.length === 0 ? "Add a label…" : ""}
+                style={{ backgroundColor: "transparent" }}
+                value={draft}
+            />
+        </div>
+    );
+}
+
 function AttachmentPicker({
     actionType,
     attachments,
@@ -668,6 +752,7 @@ function IssueForm({
         status: IssueStatus;
         projectId?: string;
         assignee?: string;
+        issueLabels: string[];
         attachments: IssueAttachment[];
     }) => void;
 }) {
@@ -678,6 +763,7 @@ function IssueForm({
     );
     const [projectId, setProjectId] = useState(issue?.projectId ?? initialProjectId ?? "");
     const [assignee, setAssignee] = useState(issue?.assignee ?? "");
+    const [labels, setLabels] = useState(() => normalizeIssueLabels(issue?.issueLabels));
     const [attachments, setAttachments] = useState<PendingAttachment[]>(
         (issue?.issueAttachments ?? []).map((attachment, index) => ({
             attachment,
@@ -693,6 +779,7 @@ function IssueForm({
             status,
             projectId: projectId || undefined,
             assignee: assignee || undefined,
+            issueLabels: labels,
             attachments: attachments.map((item) => item.attachment),
         });
     }
@@ -753,6 +840,13 @@ function IssueForm({
                         </FormSelect>
                     </label>
                 </div>
+                <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-slate-600">Labels</span>
+                    <TagInput labels={labels} onChange={setLabels} />
+                    <span className="mt-1 block text-xs text-slate-400">
+                        Press Enter or comma to add a label.
+                    </span>
+                </label>
                 <AttachmentPicker
                     actionType={issue ? "updateIssue" : "createIssue"}
                     attachments={attachments}
@@ -903,6 +997,7 @@ function IssueDetails({
         status: IssueStatus;
         projectId?: string;
         assignee?: string;
+        issueLabels: string[];
         attachments: IssueAttachment[];
     }) {
         const parameters: UpdateIssueParameters = {
@@ -912,6 +1007,7 @@ function IssueDetails({
             status: values.status,
             project: values.projectId || null,
             assignee: values.assignee || null,
+            issueLabels: values.issueLabels,
             attachments: values.attachments,
             completedAt:
                 values.status === "Completed" ? issue!.issueCompletedAt || Temporal.Now.instant() : null,
@@ -982,16 +1078,17 @@ function IssueDetails({
                         highlighted
                         onChange={(status) =>
                             saveIssue({
-                                title: issue.issueTitle,
+                                title: issue.issueTitle ?? "",
                                 description: issue.issueDescription ?? "",
                                 status,
                                 projectId: issue.projectId || undefined,
                                 assignee: issue.assignee || undefined,
+                                issueLabels: issue.issueLabels ?? [],
                                 attachments: issue.issueAttachments ?? [],
                             })
                         }
                         showLabel
-                        status={issue.issueStatus}
+                        status={issue.issueStatus ?? "Open"}
                     />
                 </div>
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
@@ -1067,8 +1164,8 @@ type IssueRow = Issue & {
 
 type CommandIssue = {
     issueId: string;
-    issueTitle: string;
-    issueStatus: string;
+    issueTitle?: string;
+    issueStatus?: string;
 };
 
 function KanbanCard({
@@ -1153,10 +1250,10 @@ function KanbanCard({
                         </span>
                     )}
                     <span className="ml-auto flex shrink-0 items-center gap-2">
-                        {issue.issueAttachments?.length > 0 && (
+                        {(issue.issueAttachments?.length ?? 0) > 0 && (
                             <span className="flex items-center gap-1 text-[10px] text-slate-400">
                                 <Icon className="size-3" name="attachment" />
-                                {issue.issueAttachments.length}
+                                {issue.issueAttachments?.length}
                             </span>
                         )}
                         <span className="text-[10px] text-slate-400">{formatDate(issue.issueUpdatedAt)}</span>
@@ -1332,7 +1429,7 @@ function CommandPalette({
             },
             ...projects.map((project) => ({
                 id: `project-${project.projectId}`,
-                label: project.projectTitle,
+                label: project.projectTitle ?? "Untitled project",
                 description: "Project",
                 icon: (
                     <span
@@ -1346,9 +1443,9 @@ function CommandPalette({
             })),
             ...issues.map((issue) => ({
                 id: `issue-${issue.issueId}`,
-                label: issue.issueTitle,
-                description: `Issue · ${issue.issueStatus}`,
-                icon: <StatusIcon className="size-4" status={issue.issueStatus} />,
+                label: issue.issueTitle ?? "Untitled issue",
+                description: `Issue · ${issue.issueStatus ?? "Open"}`,
+                icon: <StatusIcon className="size-4" status={issue.issueStatus ?? "Open"} />,
                 run: () => onOpenIssue(issue.issueId),
             })),
         ];
@@ -1748,7 +1845,14 @@ function ConnectedIssueTracker({
         (q) =>
             q
                 .from({ Issue: ontology.objects.Issue })
-                .where(({ Issue }) => ilike(Issue.issueTitle, `${search}%`))
+                .where(({ Issue }) =>
+                    search
+                        ? or(
+                              ilike(Issue.issueTitle, `${search}%`),
+                              inArray(search, Issue.issueLabels)
+                          )
+                        : ilike(Issue.issueTitle, "%")
+                )
                 .where(({ Issue }) =>
                     selectedProjectId ? eq(Issue.projectId, selectedProjectId) : ilike(Issue.issueTitle, "%")
                 )
@@ -1770,6 +1874,7 @@ function ConnectedIssueTracker({
                     issueCompletedAt: Issue.issueCompletedAt,
                     createdBy: Issue.createdBy,
                     assignee: Issue.assignee,
+                    issueLabels: Issue.issueLabels,
                     issueAttachments: Issue.issueAttachments,
                     projectId: Issue.projectId,
                     projectTitle: Project.projectTitle,
@@ -1814,6 +1919,7 @@ function ConnectedIssueTracker({
         status: IssueStatus;
         projectId?: string;
         assignee?: string;
+        issueLabels: string[];
         attachments: IssueAttachment[];
     }) {
         void createIssue({
@@ -1822,6 +1928,7 @@ function ConnectedIssueTracker({
             status: values.status,
             project: values.projectId || null,
             assignee: values.assignee || null,
+            issueLabels: values.issueLabels,
             attachments: values.attachments,
             completedAt: values.status === "Completed" ? Temporal.Now.instant() : null,
         }).catch((error: unknown) => {
@@ -1838,6 +1945,7 @@ function ConnectedIssueTracker({
             status,
             project: issue.projectId || null,
             assignee: issue.assignee || null,
+            issueLabels: issue.issueLabels ?? [],
             attachments: issue.issueAttachments ?? [],
             completedAt: status === "Completed" ? issue.issueCompletedAt || Temporal.Now.instant() : null,
         }).catch((error: unknown) => {
@@ -2282,7 +2390,7 @@ function ConnectedIssueTracker({
                                                         onChange={(status) =>
                                                             changeIssueStatus(issue, status)
                                                         }
-                                                        status={issue.issueStatus}
+                                                        status={issue.issueStatus ?? "Open"}
                                                     />
                                                     <DeleteContextMenu
                                                         className="contents"
@@ -2315,13 +2423,13 @@ function ConnectedIssueTracker({
                                                                     </p>
                                                                 )}
                                                             </div>
-                                                            {issue.issueAttachments?.length > 0 && (
+                                                            {(issue.issueAttachments?.length ?? 0) > 0 && (
                                                                 <span className="flex items-center gap-1 text-xs text-slate-400">
                                                                     <Icon
                                                                         className="size-3.5"
                                                                         name="attachment"
                                                                     />
-                                                                    {issue.issueAttachments.length}
+                                                                    {issue.issueAttachments?.length}
                                                                 </span>
                                                             )}
                                                             {issue.projectTitle && (

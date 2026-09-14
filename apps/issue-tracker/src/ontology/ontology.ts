@@ -44,6 +44,15 @@ export default defineOntology({
                     description: "Stable system-generated identifier for an issue.",
                 },
                 {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
+                },
+                {
                     name: "createdBy",
                     displayName: "Created by",
                     type: o.optional({
@@ -279,6 +288,15 @@ export default defineOntology({
                     description: "Optional files that support or explain the issue.",
                 },
                 {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
+                },
+                {
                     name: "project",
                     displayName: "Project",
                     type: o.optional({
@@ -384,6 +402,12 @@ export default defineOntology({
                             property: ["createdBy"],
                             value: o.Expression.contextReference({
                                 name: "user",
+                            }),
+                        },
+                        {
+                            property: ["issueLabels"],
+                            value: o.Expression.inputReference({
+                                name: "issueLabels",
                             }),
                         },
                         {
@@ -643,6 +667,29 @@ export default defineOntology({
                     description: "Issue to update.",
                 },
                 {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueLabels"],
+                    }),
+                },
+                {
                     name: "description",
                     displayName: "Issue Description",
                     type: o.optional({
@@ -799,6 +846,12 @@ export default defineOntology({
                             property: ["issueUpdatedAt"],
                             value: o.Expression.inputReference({
                                 name: "__now",
+                            }),
+                        },
+                        {
+                            property: ["issueLabels"],
+                            value: o.Expression.inputReference({
+                                name: "issueLabels",
                             }),
                         },
                         {

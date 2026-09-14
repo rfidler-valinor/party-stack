@@ -6,7 +6,7 @@ import {
     type OntologyMutatorRegistry,
     type OntologyQueryFunctionRegistry,
 } from "@party-stack/ontology";
-import { eq, queryOnce } from "@tanstack/db";
+import { eq, inArray, queryOnce } from "@tanstack/db";
 import { afterEach, describe, expect, it } from "vitest";
 import type { attachment as OntologyAttachment } from "@party-stack/ontology/values";
 import { createSQLiteOntologyBackendAdapter } from "./index.js";
@@ -356,6 +356,40 @@ describe("SQLite LiveOntology MVP acceptance", () => {
             foreignKey: "authorId",
             cardinality: "many",
         });
+    });
+
+    it("filters list properties with reverse inArray expressions", async () => {
+        const { ontology } = await createOntology({
+            context: { user: { email: "alice@example.com" } },
+        });
+        await ontology.ready;
+
+        await ontology.actions.createAuthor!({
+            id: "author-1",
+            email: "author@example.com",
+        });
+        await ontology.actions.createNote!({
+            id: "note-1",
+            title: "SQLite",
+            author: "author-1",
+            tags: ["database", "sqlite"],
+            meta: { priority: 1, source: "test" },
+        });
+        await ontology.actions.createNote!({
+            id: "note-2",
+            title: "Foundry",
+            author: "author-1",
+            tags: ["foundry"],
+            meta: { priority: 1, source: "test" },
+        });
+
+        const notes = await queryOnce((q) =>
+            q
+                .from({ note: ontology.objects.Note! })
+                .where(({ note }) => inArray("sqlite", note.tags))
+        );
+
+        expect(notes.map((note) => note.id)).toEqual(["note-1"]);
     });
 
     it("persists action mutations and hydrates Temporal values on reload", async () => {

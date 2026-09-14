@@ -2,7 +2,6 @@ import { mkdirSync } from "node:fs";
 import Database from "better-sqlite3";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "@tanstack/db";
-import { o } from "@party-stack/ontology";
 import { createRemoteOntologyServer } from "@party-stack/remote-ontology/server";
 import {
     createSQLiteOntologyBackendAdapter,
@@ -50,6 +49,7 @@ const remoteServer = createRemoteOntologyServer<{ user: string }, IssueTrackerOn
                 "issueStatus",
                 "issueUpdatedAt",
                 "issueId",
+                "issueLabels",
                 "createdBy",
                 "issueTitle",
                 "assignee",
@@ -67,13 +67,6 @@ const remoteServer = createRemoteOntologyServer<{ user: string }, IssueTrackerOn
                 "projectTitle",
             ],
             User: ["id", "givenName", "familyName", "email", "avatar"],
-        },
-        fixedActionParameterValues: {
-            createIssue: {
-                createdBy: o.Expression.contextReference({
-                    name: "user",
-                }),
-            },
         },
         clientContext: "forward",
         canApplyAction: () => true,
