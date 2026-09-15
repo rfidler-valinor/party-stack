@@ -36,6 +36,10 @@ import { createFoundryCodec } from "./foundryCodec.js";
 import { decodeFoundryMediaId, mediaReferenceToFoundryMediaId } from "./foundryMediaId.js";
 import { objectCollectionOptions, type ObjectCollectionUtils } from "./objectCollectionOptions.js";
 
+function isFoundryAttachmentRid(value: string): value is AttachmentRid {
+    return /^ri\.attachments\.[^.]+\.attachment\..+$/.test(value);
+}
+
 export function isFoundryNotFoundError(error: unknown): boolean {
     if (typeof error !== "object" || error === null) {
         return false;
@@ -206,14 +210,24 @@ export function createFoundryOntologyBackendAdapter(opts: {
                 getAttachmentProviderType(target) === "attachment",
                 "Foundry media references must be uploaded during action execution."
             );
-            try {
-                await Attachments.get(opts.client, attachment.id as AttachmentRid);
-                return;
-            } catch {
-                // The stable attachment RID has not been materialized yet.
+            const filename = getAttachmentName(blob) ?? "";
+            if (!isFoundryAttachmentRid(attachment.id)) {
+                const uploaded = await Attachments.upload(opts.client, blob, { filename });
+                return {
+                    ...attachment,
+                    id: uploaded.rid,
+                };
             }
-            await Attachments.uploadWithRid(opts.client, attachment.id as AttachmentRid, blob, {
-                filename: getAttachmentName(blob) ?? "",
+            try {
+                await Attachments.get(opts.client, attachment.id);
+                return;
+            } catch (error) {
+                if (!isFoundryNotFoundError(error)) {
+                    throw error;
+                }
+            }
+            await Attachments.uploadWithRid(opts.client, attachment.id, blob, {
+                filename,
                 preview: true,
             });
         },

@@ -11,6 +11,11 @@ const mediaMocks = vi.hoisted(() => ({
     metadata: vi.fn(),
     uploadMedia: vi.fn(),
 }));
+const attachmentMocks = vi.hoisted(() => ({
+    get: vi.fn(),
+    upload: vi.fn(),
+    uploadWithRid: vi.fn(),
+}));
 const ontologyMocks = vi.hoisted(() => ({
     applyWithOverrides: vi.fn(),
     getActionType: vi.fn(),
@@ -34,6 +39,12 @@ vi.mock("@osdk/foundry.ontologies", async (importOriginal) => {
         Actions: {
             ...original.Actions,
             applyWithOverrides: ontologyMocks.applyWithOverrides,
+        },
+        Attachments: {
+            ...original.Attachments,
+            get: attachmentMocks.get,
+            upload: attachmentMocks.upload,
+            uploadWithRid: attachmentMocks.uploadWithRid,
         },
         ActionTypesV2: {
             ...original.ActionTypesV2,
@@ -68,6 +79,112 @@ describe("isFoundryNotFoundError", () => {
                 statusCode: 500,
             })
         ).toBe(false);
+    });
+});
+
+describe("Foundry attachments", () => {
+    const attachmentType = o.attachment({
+        meta: { type: "attachment" },
+    });
+    const adapter = createFoundryOntologyBackendAdapter({
+        client: {
+            ontologyRid: "ri.ontology.main.1",
+        } as OntologyClient,
+        ir: {
+            types: [],
+            objectTypes: [],
+            linkTypes: [],
+            actionTypes: [],
+            queryFunctionTypes: [],
+        },
+    });
+    const materializeAttachment = adapter.attachments!.materializeAttachment!;
+    const target = attachmentType.value;
+    const blob = new Blob(["attachment"], { type: "text/plain" });
+
+    it("lets Foundry assign a canonical RID for an opaque local ID", async () => {
+        attachmentMocks.upload.mockResolvedValue({
+            rid: "ri.attachments.main.attachment.remote",
+        });
+
+        await expect(
+            materializeAttachment(
+                {
+                    id: "local-id",
+                    type: "text/plain",
+                },
+                blob,
+                { target }
+            )
+        ).resolves.toEqual({
+            id: "ri.attachments.main.attachment.remote",
+            type: "text/plain",
+        });
+        expect(attachmentMocks.upload).toHaveBeenCalledWith(expect.anything(), blob, {
+            filename: "",
+        });
+        expect(attachmentMocks.get).not.toHaveBeenCalled();
+        expect(attachmentMocks.uploadWithRid).not.toHaveBeenCalled();
+    });
+
+    it("preserves an existing Foundry attachment RID", async () => {
+        attachmentMocks.get.mockResolvedValue({
+            rid: "ri.attachments.main.attachment.existing",
+        });
+
+        await expect(
+            materializeAttachment(
+                {
+                    id: "ri.attachments.main.attachment.existing",
+                },
+                blob,
+                { target }
+            )
+        ).resolves.toBeUndefined();
+        expect(attachmentMocks.upload).not.toHaveBeenCalled();
+        expect(attachmentMocks.uploadWithRid).not.toHaveBeenCalled();
+    });
+
+    it("uploads a missing preassigned Foundry attachment RID", async () => {
+        attachmentMocks.get.mockRejectedValue({
+            statusCode: 404,
+        });
+
+        await expect(
+            materializeAttachment(
+                {
+                    id: "ri.attachments.main.attachment.missing",
+                },
+                blob,
+                { target }
+            )
+        ).resolves.toBeUndefined();
+        expect(attachmentMocks.uploadWithRid).toHaveBeenCalledWith(
+            expect.anything(),
+            "ri.attachments.main.attachment.missing",
+            blob,
+            {
+                filename: "",
+                preview: true,
+            }
+        );
+    });
+
+    it("does not treat other lookup failures as a missing attachment", async () => {
+        const error = new Error("Foundry unavailable");
+        attachmentMocks.get.mockRejectedValue(error);
+
+        await expect(
+            materializeAttachment(
+                {
+                    id: "ri.attachments.main.attachment.existing",
+                },
+                blob,
+                { target }
+            )
+        ).rejects.toBe(error);
+        expect(attachmentMocks.upload).not.toHaveBeenCalled();
+        expect(attachmentMocks.uploadWithRid).not.toHaveBeenCalled();
     });
 });
 
