@@ -1,5 +1,11 @@
 # @party-stack/db-indexeddb-persistence
 
+## 0.1.2
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+
 ## 0.1.1
 
 ### Patch Changes

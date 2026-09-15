@@ -1,5 +1,16 @@
 # @party-stack/salesforce-task-manager
 
+## 0.1.8
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/salesforce-ontology@0.1.8
+    - @party-stack/node-runtime@0.2.3
+    - @party-stack/ontology@0.16.3
+
 ## 0.1.7
 
 ### Patch Changes

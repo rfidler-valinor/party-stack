@@ -1,5 +1,13 @@
 # @party-stack/expo-runtime
 
+## 0.3.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+    - @party-stack/runtime@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes

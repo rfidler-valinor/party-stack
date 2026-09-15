@@ -1,5 +1,13 @@
 # @party-stack/blobs
 
+## 0.5.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+    - @party-stack/runtime@0.3.3
+
 ## 0.5.2
 
 ### Patch Changes

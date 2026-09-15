@@ -1,5 +1,14 @@
 # @party-stack/sqlite-ontology
 
+## 0.6.4
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/ontology@0.16.3
+
 ## 0.6.3
 
 ### Patch Changes

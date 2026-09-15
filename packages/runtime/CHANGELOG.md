@@ -1,5 +1,11 @@
 # @party-stack/runtime
 
+## 0.3.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @party-stack/foundry-ontology
 
+## 0.14.7
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- d2e1dbd: clarify attachment id contract + fix foundry impl
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/connections@0.2.3
+    - @party-stack/ontology@0.16.3
+    - @party-stack/runtime@0.3.3
+    - @party-stack/oauth@0.2.3
+
 ## 0.14.6
 
 ### Patch Changes

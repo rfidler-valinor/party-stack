@@ -1,5 +1,21 @@
 # @party-stack/issue-tracker
 
+## 0.2.8
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/ontology-devtools@0.4.11
+    - @party-stack/foundry-ontology@0.14.7
+    - @party-stack/remote-ontology@0.8.3
+    - @party-stack/sqlite-ontology@0.6.4
+    - @party-stack/better-auth@0.2.3
+    - @party-stack/connections@0.2.3
+    - @party-stack/ontology@0.16.3
+    - @party-stack/web-runtime@0.3.3
+
 ## 0.2.7
 
 ### Patch Changes
