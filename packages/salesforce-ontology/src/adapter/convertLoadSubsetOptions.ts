@@ -23,7 +23,42 @@ function fieldPathToSoql(fieldPath: FieldPath): string {
 }
 
 function escapeSoqlString(value: string): string {
-    return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    let escaped = "";
+    for (const character of value) {
+        switch (character) {
+            case "\\":
+                escaped += "\\\\";
+                break;
+            case "'":
+                escaped += "\\'";
+                break;
+            case "\b":
+                escaped += "\\b";
+                break;
+            case "\f":
+                escaped += "\\f";
+                break;
+            case "\n":
+                escaped += "\\n";
+                break;
+            case "\r":
+                escaped += "\\r";
+                break;
+            case "\t":
+                escaped += "\\t";
+                break;
+            default: {
+                const codePoint = character.codePointAt(0)!;
+                if (codePoint < 0x20 || codePoint === 0x7f) {
+                    throw new Error(
+                        `Cannot serialize control character U+${codePoint.toString(16).padStart(4, "0")} to SOQL.`
+                    );
+                }
+                escaped += character;
+            }
+        }
+    }
+    return escaped;
 }
 
 export function serializeSoqlLiteral(value: unknown): string {
@@ -59,6 +94,24 @@ export function serializeSoqlLiteral(value: unknown): string {
 
 export function isAlwaysFalseFilter(filter: CompiledSoqlFilter | undefined): boolean {
     return Boolean(filter?.alwaysFalse);
+}
+
+function convertInFilter(fieldOrValue: unknown, valuesOrField: unknown): string {
+    if (!Array.isArray(valuesOrField)) {
+        throw new Error("Expected the second inArray argument to be an array or field path");
+    }
+
+    if (!Array.isArray(fieldOrValue)) {
+        return fieldOrValue == null
+            ? ALWAYS_FALSE
+            : `${fieldPathToSoql(valuesOrField as FieldPath)} INCLUDES (${serializeSoqlLiteral(fieldOrValue)})`;
+    }
+
+    const literals = (valuesOrField as unknown[])
+        .filter((entry) => entry !== null && entry !== undefined)
+        .map(serializeSoqlLiteral);
+    if (literals.length === 0) return ALWAYS_FALSE;
+    return `${fieldPathToSoql(fieldOrValue as FieldPath)} IN (${literals.join(", ")})`;
 }
 
 export function convertLoadSubsetFilter(filter: LoadSubsetOptions["where"]): CompiledSoqlFilter | undefined {
@@ -107,13 +160,7 @@ export function convertLoadSubsetFilter(filter: LoadSubsetOptions["where"]): Com
                         ? ALWAYS_FALSE
                         : `${fieldPathToSoql(field)} <= ${serializeSoqlLiteral(value)}`,
                 isUndefined: (field: FieldPath) => `${fieldPathToSoql(field)} = null`,
-                in: (field: FieldPath, values: unknown[]) => {
-                    const literals = values
-                        .filter((entry) => entry !== null && entry !== undefined)
-                        .map(serializeSoqlLiteral);
-                    if (literals.length === 0) return ALWAYS_FALSE;
-                    return `${fieldPathToSoql(field)} IN (${literals.join(", ")})`;
-                },
+                in: convertInFilter,
                 like: (field: FieldPath, value: string) =>
                     value === "%" ? "" : `${fieldPathToSoql(field)} LIKE ${serializeSoqlLiteral(value)}`,
                 ilike: (field: FieldPath, value: string) =>

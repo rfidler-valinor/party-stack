@@ -3,6 +3,7 @@ import {
     eq,
     gt,
     ilike,
+    inArray,
     IR,
     isUndefined,
     like,
@@ -95,20 +96,58 @@ describe("convertLoadSubsetFilter", () => {
     });
 
     it("serializes Temporal cursor values for Foundry", () => {
-        const filter = convertLoadSubsetFilter(
-            gt(
-                new IR.PropRef<Temporal.Instant>([
-                    "createdAt",
-                ]),
-                Temporal.Instant.from(
-                    "2026-07-27T12:00:00Z"
-                )
-            )
+        const cursor = Temporal.Instant.from("2026-07-27T12:00:00Z");
+        const expression = gt(
+            new IR.PropRef<Temporal.Instant>(["createdAt"]),
+            cursor
         );
+        const filter = convertLoadSubsetFilter(expression);
 
         expect(filter).toMatchObject({
             type: "gt",
             value: "2026-07-27T12:00:00Z",
+        });
+        expect(
+            compileSingleRowExpression(expression)({
+                createdAt: Temporal.Instant.from("2026-07-27T12:00:01Z"),
+            })
+        ).toBe(true);
+    });
+
+    it("converts reverse inArray expressions to Foundry contains filters", () => {
+        const expression = inArray(
+            "admin",
+            new IR.PropRef<string[]>(["roles"])
+        );
+
+        expect(expression).toMatchObject({
+            type: "func",
+            name: "in",
+            args: [
+                { type: "val", value: "admin" },
+                { type: "ref", path: ["roles"] },
+            ],
+        });
+        expect(convertLoadSubsetFilter(expression)).toEqual({
+            type: "contains",
+            propertyIdentifier: { type: "property", apiName: "roles" },
+            value: "admin",
+        });
+        expect(
+            compileSingleRowExpression(expression)({ roles: ["admin", "member"] })
+        ).toBe(true);
+        expect(compileSingleRowExpression(expression)({ roles: ["member"] })).toBe(false);
+    });
+
+    it("preserves regular inArray pushdown", () => {
+        expect(
+            convertLoadSubsetFilter(
+                inArray(new IR.PropRef<string>(["status"]), ["open", "closed"])
+            )
+        ).toEqual({
+            type: "in",
+            propertyIdentifier: { type: "property", apiName: "status" },
+            value: ["open", "closed"],
         });
     });
 

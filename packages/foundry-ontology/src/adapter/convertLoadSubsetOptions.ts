@@ -134,6 +134,30 @@ function fieldPathToPropertyIdentifier(fieldPath: FieldPath): PropertyIdentifier
     throw new Error(`Invalid field path: ${fieldPath.join(".")}`);
 }
 
+function convertInFilter(fieldOrValue: unknown, valuesOrField: unknown): PushdownFilter {
+    if (!Array.isArray(valuesOrField)) {
+        throw new Error("Expected the second inArray argument to be an array or field path");
+    }
+
+    if (!Array.isArray(fieldOrValue)) {
+        return pushdown({
+            type: "contains",
+            propertyIdentifier: fieldPathToPropertyIdentifier(valuesOrField as FieldPath),
+            value: convertQueryValue(fieldOrValue),
+        });
+    }
+
+    const field = fieldOrValue as FieldPath;
+    const values = valuesOrField as unknown[];
+    return pushdown({
+        type: "in",
+        propertyIdentifier: fieldPathToPropertyIdentifier(field),
+        value: values
+            .filter((entry) => entry !== null && entry !== undefined)
+            .map(convertQueryValue),
+    });
+}
+
 export function isAlwaysFalseFilter(filter: SearchJsonQueryV2 | undefined): boolean {
     return filter?.type === "or" && filter.value.length === 0;
 }
@@ -220,14 +244,7 @@ export function convertLoadSubsetFilter(filter: LoadSubsetOptions["where"]): Sea
                     },
                     safeToNegate: true,
                 }),
-                in: (field: FieldPath, value: unknown[]) =>
-                    pushdown({
-                        type: "in",
-                        propertyIdentifier: fieldPathToPropertyIdentifier(field),
-                        value: value
-                            .filter((entry) => entry !== null && entry !== undefined)
-                            .map(convertQueryValue),
-                    }),
+                in: convertInFilter,
                 ilike: convertLikeFilter,
                 // Foundry wildcard and contains searches are case-insensitive,
                 // so LIKE can over-fetch while TanStack applies exact casing.

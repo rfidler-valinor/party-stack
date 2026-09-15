@@ -1,4 +1,4 @@
-import { eq, gt, IR, lt } from "@tanstack/db";
+import { eq, gt, inArray, IR, lt } from "@tanstack/db";
 import { Temporal } from "temporal-polyfill";
 import { describe, expect, it } from "vitest";
 import {
@@ -15,6 +15,24 @@ describe("serializeSoqlLiteral", () => {
         expect(serializeSoqlLiteral(Temporal.PlainDate.from("2026-08-06"))).toBe("2026-08-06");
         expect(serializeSoqlLiteral(Temporal.Instant.from("2026-08-06T12:00:00Z"))).toBe(
             "2026-08-06T12:00:00Z"
+        );
+    });
+
+    it("keeps injection-shaped strings inside one escaped literal", () => {
+        expect(serializeSoqlLiteral("x' OR Name != ''")).toBe(
+            String.raw`'x\' OR Name != \'\''`
+        );
+        expect(serializeSoqlLiteral(String.raw`x\' OR Name != null`)).toBe(
+            String.raw`'x\\\' OR Name != null'`
+        );
+    });
+
+    it("escapes supported control characters and rejects the rest", () => {
+        expect(serializeSoqlLiteral("line1\nline2\tvalue")).toBe(
+            String.raw`'line1\nline2\tvalue'`
+        );
+        expect(() => serializeSoqlLiteral("before\u0000after")).toThrow(
+            /control character U\+0000/
         );
     });
 });
@@ -42,6 +60,39 @@ describe("convertLoadSubsetFilter", () => {
         );
         expect(filter).toEqual({
             clause: "CreatedDate > 2026-07-27T12:00:00Z",
+            alwaysFalse: false,
+        });
+    });
+
+    it("converts reverse inArray expressions to SOQL INCLUDES", () => {
+        expect(
+            convertLoadSubsetFilter(
+                inArray("Enterprise", new IR.PropRef<string[]>(["Customer_Tiers__c"]))
+            )
+        ).toEqual({
+            clause: "Customer_Tiers__c INCLUDES ('Enterprise')",
+            alwaysFalse: false,
+        });
+    });
+
+    it("escapes untrusted values in generated filters", () => {
+        expect(
+            convertLoadSubsetFilter(
+                eq(new IR.PropRef<string>(["Name"]), "x' OR IsDeleted = false OR Name = '")
+            )
+        ).toEqual({
+            clause: String.raw`Name = 'x\' OR IsDeleted = false OR Name = \''`,
+            alwaysFalse: false,
+        });
+    });
+
+    it("preserves regular inArray pushdown", () => {
+        expect(
+            convertLoadSubsetFilter(
+                inArray(new IR.PropRef<string>(["Status__c"]), ["Open", "Closed"])
+            )
+        ).toEqual({
+            clause: "Status__c IN ('Open', 'Closed')",
             alwaysFalse: false,
         });
     });
