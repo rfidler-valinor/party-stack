@@ -1,5 +1,13 @@
 # @party-stack/better-auth
 
+## 0.2.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+    - @party-stack/connections@0.2.3
+
 ## 0.2.2
 
 ### Patch Changes

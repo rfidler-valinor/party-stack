@@ -1,5 +1,17 @@
 # @party-stack/ontology
 
+## 0.16.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- d2e1dbd: clarify attachment id contract + fix foundry impl
+- Updated dependencies [81d897a]
+    - @party-stack/node-runtime@0.2.3
+    - @party-stack/connections@0.2.3
+    - @party-stack/runtime@0.3.3
+    - @party-stack/blobs@0.5.3
+
 ## 0.16.2
 
 ### Patch Changes

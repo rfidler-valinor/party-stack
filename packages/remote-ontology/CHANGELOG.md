@@ -1,5 +1,15 @@
 # @party-stack/remote-ontology
 
+## 0.8.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/ontology@0.16.3
+    - @party-stack/runtime@0.3.3
+
 ## 0.8.2
 
 ### Patch Changes

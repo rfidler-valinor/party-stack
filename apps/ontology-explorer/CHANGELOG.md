@@ -1,5 +1,15 @@
 # @party-stack/ontology-explorer
 
+## 0.1.14
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/foundry-ontology@0.14.7
+    - @party-stack/ontology@0.16.3
+
 ## 0.1.13
 
 ### Patch Changes
