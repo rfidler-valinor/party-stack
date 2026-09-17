@@ -3,12 +3,12 @@ import type { OntologyBackendAdapter } from "@party-stack/ontology";
 import type { SalesforceClient } from "@party-stack/salesforce-client";
 import { actionTypeCollectionOptions } from "./actionTypeCollectionOptions.js";
 import {
-    createMetaEntityCollection,
     linkTypeCollectionOptions,
     objectTypeCollectionOptions,
     valueTypeCollectionOptions,
 } from "./entityCollectionOptions.js";
 import { queryFunctionTypeCollectionOptions } from "./queryFunctionTypeCollectionOptions.js";
+import type { SalesforceCrudActionTypeSelection } from "../crud.js";
 
 export interface CreateSalesforceMetaOntologyBackendAdapterOpts {
     client: SalesforceClient;
@@ -18,35 +18,53 @@ export interface CreateSalesforceMetaOntologyBackendAdapterOpts {
      */
     objectTypeNames?: string[];
     /** Optional allowlist of autolaunched Flow API names. */
-    actionTypeNames?: string[];
+    flowActionTypeNames?: string[];
+    /** Standard Salesforce operations modeled as mutating actions. */
+    standardActionTypeNames?: string[];
+    /** Standard Salesforce operations modeled as query functions. */
+    standardQueryFunctionTypeNames?: string[];
+    /** Explicit CRUD actions to synthesize from sObject describe metadata. */
+    crudActionTypes?: readonly SalesforceCrudActionTypeSelection[];
 }
 
 export function createSalesforceMetaOntologyBackendAdapter(
     opts: CreateSalesforceMetaOntologyBackendAdapterOpts
 ): OntologyBackendAdapter {
-    const metadata = createMetaEntityCollection({
+    const entityOptions = {
         client: opts.client,
         objectTypeNames: opts.objectTypeNames,
-    });
+    };
 
     return {
         name: "salesforce-metadata",
         getCollectionOptions: (objectType: string) => {
             switch (objectType) {
                 case "ObjectType":
-                    return objectTypeCollectionOptions(metadata);
+                    return objectTypeCollectionOptions(
+                        entityOptions
+                    );
                 case "ValueType":
-                    return valueTypeCollectionOptions(metadata);
+                    return valueTypeCollectionOptions();
                 case "LinkType":
-                    return linkTypeCollectionOptions(metadata);
+                    return linkTypeCollectionOptions(
+                        entityOptions
+                    );
                 case "ActionType":
                     return actionTypeCollectionOptions({
                         client: opts.client,
-                        actionTypeNames:
-                            opts.actionTypeNames,
+                        flowActionTypeNames:
+                            opts.flowActionTypeNames,
+                        standardActionTypeNames:
+                            opts.standardActionTypeNames,
+                        crudActionTypes:
+                            opts.crudActionTypes,
                     });
                 case "QueryFunctionType":
-                    return queryFunctionTypeCollectionOptions();
+                    return queryFunctionTypeCollectionOptions({
+                        client: opts.client,
+                        standardQueryFunctionTypeNames:
+                            opts.standardQueryFunctionTypeNames,
+                    });
                 default:
                     throw new Error(`Unsupported Salesforce metadata object type "${objectType}".`);
             }
@@ -56,9 +74,6 @@ export function createSalesforceMetaOntologyBackendAdapter(
         },
         runQueryFunction: () => {
             notImplemented();
-        },
-        cleanup: async () => {
-            await metadata.cleanup();
         },
     };
 }

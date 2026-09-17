@@ -1,28 +1,6 @@
-import {
-    o,
-    type OntologyIR,
-    type TypeDef,
-} from "@party-stack/ontology";
+import type { OntologyIR } from "@party-stack/ontology";
 
-function taskPropertyType(
-    ontology: OntologyIR,
-    propertyName: string,
-    fallback: TypeDef
-): TypeDef {
-    return (
-        ontology.objectTypes
-            .find(
-                (objectType) =>
-                    objectType.name === "Task"
-            )
-            ?.properties.find(
-                (property) =>
-                    property.name === propertyName
-            )?.type ?? fallback
-    );
-}
-
-export function addTaskManagerActions(
+export function projectTaskManagerOntology(
     ontology: OntologyIR
 ): OntologyIR {
     const selectedProperties = new Map([
@@ -53,7 +31,7 @@ export function addTaskManagerActions(
             ]),
         ],
     ]);
-    const projected: OntologyIR = {
+    return {
         ...ontology,
         objectTypes: ontology.objectTypes.map(
             (objectType) => {
@@ -87,86 +65,5 @@ export function addTaskManagerActions(
                 );
             }
         ),
-    };
-    const status = taskPropertyType(
-        projected,
-        "Status",
-        o.string({})
-    );
-    const priority = taskPropertyType(
-        projected,
-        "Priority",
-        o.string({})
-    );
-    const activityDate = taskPropertyType(
-        projected,
-        "ActivityDate",
-        o.optional({
-            type: o.date({}),
-        })
-    );
-    const writableFields = [
-        {
-            name: "subject",
-            displayName: "Subject",
-            type: o.string({}),
-        },
-        {
-            name: "status",
-            displayName: "Status",
-            type: status,
-        },
-        {
-            name: "priority",
-            displayName: "Priority",
-            type: priority,
-        },
-        {
-            name: "activityDate",
-            displayName: "Due date",
-            type: activityDate,
-        },
-    ];
-
-    return {
-        ...projected,
-        actionTypes: [
-            ...projected.actionTypes,
-            {
-                name: "createTask",
-                displayName: "Create task",
-                parameters: writableFields,
-                logic: [],
-            },
-            {
-                name: "updateTask",
-                displayName: "Update task",
-                parameters: [
-                    {
-                        name: "task",
-                        displayName: "Task",
-                        type: o.objectReference({
-                            objectType: "Task",
-                        }),
-                    },
-                    ...writableFields,
-                ],
-                logic: [],
-            },
-            {
-                name: "deleteTask",
-                displayName: "Delete task",
-                parameters: [
-                    {
-                        name: "task",
-                        displayName: "Task",
-                        type: o.objectReference({
-                            objectType: "Task",
-                        }),
-                    },
-                ],
-                logic: [],
-            },
-        ],
     };
 }

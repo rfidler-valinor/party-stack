@@ -323,6 +323,7 @@ function renderActionPropertyAssignment(assignment: PropertyAssignment, ctx?: Re
 
 function renderActionType(actionType: ActionTypeDef, ctx?: RenderContext): string {
     return renderObject([
+        { name: "meta", value: actionType.meta ? renderPlainValue(actionType.meta) : undefined },
         { name: "name", value: renderPlainValue(actionType.name) },
         { name: "displayName", value: renderPlainValue(actionType.displayName) },
         {

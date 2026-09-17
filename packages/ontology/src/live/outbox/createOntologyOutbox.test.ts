@@ -441,6 +441,60 @@ describe("createOntologyOutbox", () => {
         await outbox.cleanup();
     });
 
+    it("does not resolve completion until its projection has settled", async () => {
+        let finishSettlement!: () => void;
+        const settlement = new Promise<void>(
+            (resolve) => {
+                finishSettlement = resolve;
+            }
+        );
+        const { runtime } =
+            createSingleProcessRuntime(
+                {
+                    blobBytes:
+                        new MemoryBlobBytesStore(),
+                    connectivity:
+                        new TestNetworkConnectivity(
+                            true
+                        ),
+                },
+                "projection-settlement"
+            );
+        const outbox = createOntologyOutbox({
+            runtime,
+            execute: () =>
+                Promise.resolve("confirmed"),
+            project: () =>
+                Promise.resolve({
+                    settle: () => settlement,
+                }),
+        });
+        await outbox.ready;
+        const action = await outbox.enqueue<string>({
+            actionTypeName: "updateTask",
+            parameters: { id: "one" },
+        });
+        let completed = false;
+        void action.completed.then(() => {
+            completed = true;
+        });
+
+        await vi.waitFor(() => {
+            expect(
+                outbox.collection.has(
+                    action.entry.id
+                )
+            ).toBe(false);
+        });
+        expect(completed).toBe(false);
+
+        finishSettlement();
+        await expect(action.completed).resolves.toBe(
+            "confirmed"
+        );
+        await outbox.cleanup();
+    });
+
     it("keeps durable intent when local projection fails", async () => {
         const { runtime } =
             createSingleProcessRuntime(

@@ -54,18 +54,30 @@ describe("createOntologyDevtoolsPlugin", () => {
         expect(title.props).toMatchObject({ theme: "light" });
     });
 
-    it("forwards plugin metadata", () => {
+    it("forwards plugin metadata and related meta ontology", () => {
+        const metaOntology = {} as LiveOntology;
         const plugin = createOntologyDevtoolsPlugin({
             ontology: {} as LiveOntology,
             id: "custom-ontology",
-            name: "Data model",
+            metaOntology,
             defaultOpen: true,
         });
 
         expect(plugin).toMatchObject({
             id: "custom-ontology",
-            name: "Data model",
             defaultOpen: true,
+        });
+        if (typeof plugin.render !== "function") {
+            throw new Error("Expected a plugin renderer.");
+        }
+        const panel = plugin.render({} as HTMLElement, {
+            devtoolsOpen: true,
+            theme: "light",
+        });
+        const Component = panel.type as (props: typeof panel.props) => ReactElement;
+        const ontologyPanel = Component(panel.props);
+        expect(ontologyPanel.props).toMatchObject({
+            metaOntology,
         });
     });
 

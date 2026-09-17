@@ -15,6 +15,7 @@ import {
     convertOmsActionParameterStringConstraint,
     convertOmsActionParameterStringSuggestions,
 } from "./convertOmsActionParameterMetadata.js";
+import { foundryAttachmentMeta } from "./foundryAttachmentMetadata.js";
 import type { ActionTypeOmsMetadata } from "./loadActionTypeOmsMetadata.js";
 import type {
     ActionLogicRule,
@@ -140,7 +141,7 @@ function geopointType(): TypeDef {
 function attachmentType(type: "attachment" | "media"): TypeDef {
     return {
         kind: "attachment",
-        value: { meta: { type } },
+        value: { meta: foundryAttachmentMeta(type) },
     };
 }
 

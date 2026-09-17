@@ -52,7 +52,19 @@ export default createSalesforceOntologyPullConfig({
     apiVersion: "65.0",
     ontologyId: "salesforce:task-manager",
     objectTypeNames: ["Task", "User"],
-    actionTypeNames: [],
+    flowActionTypeNames: ["Create_Task_Flow"],
+    standardActionTypeNames: [
+        "confirmSalesMeeting",
+    ],
+    standardQueryFunctionTypeNames: [
+        "getAvailableMeetingTimes",
+    ],
+    crudActionTypes: [
+        {
+            objectType: "Task",
+            operations: ["create", "update", "delete"],
+        },
+    ],
     connection: {
         oauth: {
             clientId,
@@ -106,9 +118,16 @@ const meta = await createMetaLiveOntology({
 });
 ```
 
+Unscoped object/action queries load Salesforce catalog summaries only.
+Queries using `eq` or `inArray` on `name` push down to the direct describe
+endpoints and hydrate just those definitions. This avoids one describe request
+per object or action when browsing a large org.
+
 ## Scope
 
 - sObject describe → object/link metadata
 - Active autolaunched Flows → action metadata and invocation
+- Standard invocable actions → actions or explicitly classified query functions
+- Describe-backed sObject CRUD actions
 - SOQL-backed object collections
-- No CDC live sync, Files attachments, Apex actions, or query functions in this slice
+- No CDC live sync, Files attachments, or Apex actions in this slice

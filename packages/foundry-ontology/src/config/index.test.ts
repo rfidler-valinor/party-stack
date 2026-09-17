@@ -29,7 +29,11 @@ describe("createFoundryOntologyPullSource", () => {
                             name: "media",
                             displayName: "Media",
                             type: o.attachment({
-                                meta: { type: "media" },
+                                meta: {
+                                    foundry: {
+                                        kind: "media",
+                                    },
+                                },
                             }),
                         },
                     ],
@@ -46,7 +50,11 @@ describe("createFoundryOntologyPullSource", () => {
                             displayName: "Media",
                             type: o.optional({
                                 type: o.attachment({
-                                    meta: { type: "media" },
+                                    meta: {
+                                        foundry: {
+                                            kind: "media",
+                                        },
+                                    },
                                 }),
                             }),
                         },
@@ -86,14 +94,22 @@ describe("createFoundryOntologyPullSource", () => {
         expect(transformed.objectTypes[0]?.properties[1]?.type).toEqual(
             o.attachment({
                 constraint,
-                meta: { type: "media" },
+                meta: {
+                    foundry: {
+                        kind: "media",
+                    },
+                },
             })
         );
         expect(transformed.actionTypes[0]?.parameters[0]?.type).toEqual(
             o.optional({
                 type: o.attachment({
                     constraint,
-                    meta: { type: "media" },
+                    meta: {
+                        foundry: {
+                            kind: "media",
+                        },
+                    },
                 }),
             })
         );

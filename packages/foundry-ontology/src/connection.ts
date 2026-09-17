@@ -1,4 +1,3 @@
-import { createConfidentialOauthClient } from "@osdk/oauth";
 import {
     type BackendConnectionAdapter,
     type BackendConnectionAdapterContext,
@@ -12,7 +11,13 @@ import {
 } from "@party-stack/connections";
 import { unauthenticated } from "@party-stack/errors";
 import { createFoundryFetch, createFoundryWebSocket, getTokenDetails } from "@party-stack/foundry-client";
-import { createPublicOAuthClient, type OAuthSession, type PublicOAuthClient } from "@party-stack/oauth";
+import {
+    createClientCredentialsOAuthClient,
+    createPublicOAuthClient,
+    type ClientCredentialsOAuthClient,
+    type OAuthSession,
+    type PublicOAuthClient,
+} from "@party-stack/oauth";
 import type { BrowserAuthenticationPresentation } from "@party-stack/runtime";
 
 export interface FoundryOAuthConnectionOptions {
@@ -57,8 +62,6 @@ const DEFAULT_SCOPES = [
     "ontology:view-unredacted-action-type",
     "ontology:view-object-type",
 ];
-
-type ConfidentialOauthClient = ReturnType<typeof createConfidentialOauthClient>;
 
 function activeState(expiresAt: number | undefined, refreshable: boolean): Connection<"active">["state"] {
     return expiresAt === undefined
@@ -130,14 +133,38 @@ async function createFoundryConnectionAdapterInstance(
               resolveUserId: (token) => getTokenDetails(token).userId,
           })
         : undefined;
-    const confidentialOauth: ConfidentialOauthClient | undefined = options.clientCredentials
-        ? createConfidentialOauthClient(
-              options.clientCredentials.clientId,
-              options.clientCredentials.clientSecret,
-              options.baseUrl,
-              options.clientCredentials.scopes ?? DEFAULT_SCOPES,
-              options.clientCredentials.fetch
-          )
+    const clientCredentialsOauth:
+        | ClientCredentialsOAuthClient
+        | undefined = options.clientCredentials
+        ? createClientCredentialsOAuthClient({
+              clientId:
+                  options.clientCredentials.clientId,
+              clientSecret:
+                  options.clientCredentials.clientSecret,
+              tokenEndpoint: new URL(
+                  "multipass/api/oauth2/token",
+                  options.baseUrl.endsWith("/")
+                      ? options.baseUrl
+                      : `${options.baseUrl}/`
+              ).toString(),
+              tokenEndpointAuthMethod:
+                  "client_secret_basic",
+              revocationEndpoint: new URL(
+                  "multipass/api/oauth2/revoke_token",
+                  options.baseUrl.endsWith("/")
+                      ? options.baseUrl
+                      : `${options.baseUrl}/`
+              ).toString(),
+              scopes:
+                  options.clientCredentials.scopes ??
+                  DEFAULT_SCOPES,
+              fetch:
+                  options.clientCredentials.fetch,
+              resolveUserId: (token) =>
+                  options.clientCredentials
+                      ?.userId ??
+                  getTokenDetails(token).userId,
+          })
         : undefined;
 
     const createTokenSession = (candidate?: string): EstablishedConnection => {
@@ -165,29 +192,33 @@ async function createFoundryConnectionAdapterInstance(
         return { connection, session };
     };
 
-    const createConfidentialSession = async (
-        oauth: ConfidentialOauthClient
+    const createClientCredentialsSession = async (
+        oauth: ClientCredentialsOAuthClient,
+        forceRefresh = false
     ): Promise<EstablishedConnection> => {
-        const token = await oauth.signIn();
-        const userId = options.clientCredentials?.userId ?? getTokenDetails(token.access_token).userId;
+        const oauthSession = forceRefresh
+            ? await oauth.refresh()
+            : await oauth.getSession();
+        const userId = oauthSession.userId;
         const connection: Connection<"active"> = {
             userId,
-            state: activeState(token.expires_at, true),
+            state: activeState(
+                oauthSession.expiration?.expiresAt,
+                true
+            ),
         };
         const session: ConnectionSession = {
-            refresh: () => createConfidentialSession(oauth),
-            disconnect: () => oauth.signOut(),
+            refresh: () =>
+                createClientCredentialsSession(
+                    oauth,
+                    true
+                ),
+            disconnect: () => oauth.revoke(),
             egress: createFoundryEgressWrapper({
                 baseUrl: options.baseUrl,
-                tokenProvider: oauth,
+                tokenProvider: () =>
+                    oauth.getAccessToken(),
             }),
-            cleanup() {
-                (
-                    oauth as ConfidentialOauthClient & {
-                        rmTimeout?(): void;
-                    }
-                ).rmTimeout?.();
-            },
         };
         return { connection, session };
     };
@@ -249,13 +280,16 @@ async function createFoundryConnectionAdapterInstance(
                         return connectionSession.connection;
                     },
                     async clientCredentials() {
-                        if (!confidentialOauth) {
+                        if (!clientCredentialsOauth) {
                             throw new Error("Foundry client credentials are not configured.");
                         }
                         if (typeof window !== "undefined") {
                             throw new Error("Foundry client credentials cannot run in a browser.");
                         }
-                        const session = await createConfidentialSession(confidentialOauth);
+                        const session =
+                            await createClientCredentialsSession(
+                                clientCredentialsOauth
+                            );
                         await controller.connect(session);
                         return session.connection;
                     },
@@ -282,14 +316,21 @@ async function createFoundryConnectionAdapterInstance(
                     restored.set(session.connection.userId, session);
                 }
             }
-            if (confidentialOauth && typeof window === "undefined") {
-                const session = await createConfidentialSession(confidentialOauth);
+            if (
+                clientCredentialsOauth &&
+                typeof window === "undefined"
+            ) {
+                const session =
+                    await createClientCredentialsSession(
+                        clientCredentialsOauth
+                    );
                 restored.set(session.connection.userId, session);
             }
             return [...restored.values()];
         },
         async cleanup() {
             await publicOauth?.cleanup();
+            clientCredentialsOauth?.cleanup();
         },
     };
 }

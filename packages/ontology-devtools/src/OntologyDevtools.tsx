@@ -52,13 +52,11 @@ import {
     useEffect,
     useId,
     useMemo,
-    useRef,
     useState,
     type ComponentType,
     type CSSProperties,
     type ReactNode,
 } from "react";
-import { flushSync } from "react-dom";
 import type {
     AttachmentMetadata,
     LiveOntology,
@@ -75,16 +73,20 @@ import "./styles.css";
 
 export interface OntologyDevtoolsPanelProps<
     Ontology extends OntologyDefinition = OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
 > {
     ontology: LiveOntology<Ontology>;
+    metaOntology?: LiveOntology<MetaOntology>;
     theme?: "light" | "dark";
 }
 
 export interface OntologyDevtoolsPluginOptions<
     Ontology extends OntologyDefinition = OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
 > {
     ontology: LiveOntology<Ontology>;
     id?: string;
+    metaOntology?: LiveOntology<MetaOntology>;
     name?: TanStackDevtoolsReactPlugin["name"];
     defaultOpen?: boolean;
 }
@@ -200,6 +202,7 @@ export function OntologyDevtoolsTrigger({ theme }: OntologyDevtoolsChromeProps) 
                     : "linear-gradient(145deg, #fff, #f5f5f4)",
                 border: dark ? "1px solid rgba(255,255,255,.16)" : "1px solid rgba(23,23,23,.14)",
                 borderRadius: "999px",
+                boxSizing: "border-box",
                 boxShadow: dark
                     ? "0 10px 30px rgba(0,0,0,.34), 0 0 0 4px rgba(232,59,50,.11)"
                     : "0 10px 28px rgba(28,25,23,.16), 0 0 0 4px rgba(232,59,50,.09)",
@@ -365,79 +368,17 @@ function OutboxEntryCard({
     );
 }
 
-function outboxSnapshotKey(entries: OntologyOutboxEntry[]): string {
-    return entries
-        .map((entry) => `${entry.id}:${entry.status}:${entry.updatedAt}:${entry.attempts}`)
-        .join("|");
-}
-
-function useTransitionedEntries(entries: OntologyOutboxEntry[]): OntologyOutboxEntry[] {
-    const [visibleEntries, setVisibleEntries] = useState(entries);
-    const snapshotKey = outboxSnapshotKey(entries);
-    const previousKey = useRef(snapshotKey);
-
-    useEffect(() => {
-        if (snapshotKey === previousKey.current) {
-            return;
-        }
-        previousKey.current = snapshotKey;
-        let cancelled = false;
-
-        queueMicrotask(() => {
-            if (cancelled) return;
-            if (
-                window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-                !document.startViewTransition
-            ) {
-                setVisibleEntries(entries);
-                return;
-            }
-
-            document.documentElement.dataset.psOutboxTransition = "";
-            try {
-                const transition = document.startViewTransition(() => {
-                    flushSync(() => {
-                        setVisibleEntries(entries);
-                    });
-                });
-                const cleanup = () => {
-                    delete document.documentElement.dataset.psOutboxTransition;
-                };
-                void transition.ready.catch(() => undefined);
-                void transition.updateCallbackDone.catch(() => undefined);
-                void transition.finished.then(cleanup, cleanup);
-            } catch {
-                delete document.documentElement.dataset.psOutboxTransition;
-                setVisibleEntries(entries);
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [entries, snapshotKey]);
-
-    return visibleEntries;
-}
-
 function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" | "dark" }) {
     const now = useRelativeTimeNow();
-    const transitionScope = `ps-outbox-${useId().replaceAll(":", "")}`;
     const { data } = useLiveQuery(
         (query) => query.from({ entry: outbox.collection }).orderBy(({ entry }) => entry.sequence, "asc"),
         [outbox]
     );
-    const visibleData = useTransitionedEntries(data);
 
     return (
         <OutboxPanel theme={theme}>
-            {visibleData.length === 0 ? (
-                <div
-                    className="ps-outbox-empty"
-                    style={{
-                        viewTransitionName: `${transitionScope}-empty`,
-                    }}
-                >
+            {data.length === 0 ? (
+                <div className="ps-outbox-empty">
                     <div>
                         <span className="ps-outbox-empty-mark">
                             <CheckIcon aria-hidden="true" />
@@ -448,17 +389,8 @@ function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" 
                 </div>
             ) : (
                 <div className="ps-outbox-track">
-                    {visibleData.map((entry, index) => (
-                        <div
-                            className="ps-outbox-step"
-                            key={entry.id}
-                            style={{
-                                viewTransitionName: `${transitionScope}-entry-${entry.id.replaceAll(
-                                    /[^a-zA-Z0-9_-]/g,
-                                    "-"
-                                )}`,
-                            }}
-                        >
+                    {data.map((entry, index) => (
+                        <div className="ps-outbox-step" key={entry.id}>
                             {index > 0 ? <span aria-hidden="true" className="ps-outbox-connector" /> : null}
                             <div className="ps-outbox-node">
                                 <OutboxEntryCard entry={entry} now={now} outbox={outbox} />
@@ -471,7 +403,7 @@ function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" 
     );
 }
 
-type OntologyDevtoolsView = "objects" | "schema" | "outbox";
+type OntologyDevtoolsView = "objects" | "schema" | "outbox" | "meta";
 type OutboxActivity = "idle" | "draining" | "paused";
 
 export function getOutboxActivity(entries: OntologyOutboxEntry[]): OutboxActivity {
@@ -922,10 +854,12 @@ function ObjectTable({
     collection,
     objectType,
     ontology,
+    pageSize,
 }: {
     collection: LiveOntology["objects"][string];
     objectType: ObjectTypeDef;
     ontology: LiveOntology;
+    pageSize: number;
 }) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -967,8 +901,8 @@ function ObjectTable({
                 )
                 .select(({ row }) => row as Record<string, unknown>);
         },
-        { pageSize: 50 },
-        [collection.id, objectType.primaryKey, selectedSort?.id, selectedSort?.desc]
+        { pageSize },
+        [collection.id, objectType.primaryKey, pageSize, selectedSort?.id, selectedSort?.desc]
     );
     const rows = data as Array<Record<string, unknown>>;
     const columns = useMemo(
@@ -1325,7 +1259,9 @@ function ObjectTable({
                                     type="button"
                                     onClick={() => void fetchNextPage()}
                                 >
-                                    {isFetchingNextPage ? "Loading…" : "Load 50 more"}
+                                    {isFetchingNextPage
+                                        ? "Loading…"
+                                        : `Load ${pageSize} more`}
                                 </button>
                             </div>
                         ) : null}
@@ -1347,7 +1283,13 @@ function ObjectTable({
     );
 }
 
-function ObjectsView({ ontology }: { ontology: LiveOntology }) {
+function ObjectsView({
+    ontology,
+    pageSize = 50,
+}: {
+    ontology: LiveOntology;
+    pageSize?: number;
+}) {
     const objectTypes = ontology.ir.objectTypes;
     const [selectedName, setSelectedName] = useState(() => objectTypes[0]?.name);
     const selected = objectTypes.find((objectType) => objectType.name === selectedName) ?? objectTypes[0];
@@ -1391,6 +1333,7 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                 key={selected.name}
                 objectType={selected}
                 ontology={ontology}
+                pageSize={pageSize}
             />
         </div>
     );
@@ -1636,10 +1579,14 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
     );
 }
 
-export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
+export function OntologyDevtoolsPanel<
+    Ontology extends OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+>({
+    metaOntology,
     ontology,
     theme = "dark",
-}: OntologyDevtoolsPanelProps<Ontology>) {
+}: OntologyDevtoolsPanelProps<Ontology, MetaOntology>) {
     const { data: outboxEntries } = useLiveQuery(
         (query) => query.from({ entry: ontology.outbox.collection }),
         [ontology.outbox]
@@ -1662,7 +1609,18 @@ export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
                 className="ps:flex ps:flex-none ps:items-center ps:gap-1 ps:border-b ps:border-zinc-500/20 ps:px-4"
                 style={{ height: 40 }}
             >
-                {ontologyViews.map((view) => {
+                {[
+                    ...ontologyViews,
+                    ...(metaOntology
+                        ? [
+                              {
+                                  id: "meta" as const,
+                                  label: "Meta",
+                                  icon: CodeBracketSquareIcon,
+                              },
+                          ]
+                        : []),
+                ].map((view) => {
                     const Icon = view.icon;
                     return (
                         <Tabs.Tab
@@ -1707,22 +1665,45 @@ export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
             <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="objects">
                 <ObjectsView ontology={ontology as LiveOntology} />
             </Tabs.Panel>
+            {metaOntology ? (
+                <Tabs.Panel
+                    className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden"
+                    value="meta"
+                >
+                    <ObjectsView
+                        ontology={
+                            metaOntology as LiveOntology
+                        }
+                        pageSize={25}
+                    />
+                </Tabs.Panel>
+            ) : null}
             </Tabs.Root>
         </Tooltip.Provider>
     );
 }
 
-export function createOntologyDevtoolsPlugin<Ontology extends OntologyDefinition>({
+export function createOntologyDevtoolsPlugin<
+    Ontology extends OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+>({
     ontology,
     id = "party-stack-ontology",
+    metaOntology,
     name,
     defaultOpen,
-}: OntologyDevtoolsPluginOptions<Ontology>): TanStackDevtoolsReactPlugin {
+}: OntologyDevtoolsPluginOptions<Ontology, MetaOntology>): TanStackDevtoolsReactPlugin {
     const [createPlugin] = createReactPlugin({
         id,
         name: "Ontology",
         defaultOpen,
-        Component: ({ theme }) => <OntologyDevtoolsPanel ontology={ontology} theme={theme} />,
+        Component: ({ theme }) => (
+            <OntologyDevtoolsPanel
+                metaOntology={metaOntology}
+                ontology={ontology}
+                theme={theme}
+            />
+        ),
     });
 
     return {

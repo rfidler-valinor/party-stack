@@ -2,7 +2,7 @@ import { requestFingerprint } from "./repository.js";
 import type { OntologyOutboxEntry } from "./types.js";
 
 export interface OutboxProjection {
-    settle(error?: Error): void;
+    settle(error?: Error): void | Promise<void>;
 }
 
 interface DesiredProjection {
@@ -93,11 +93,17 @@ export class OutboxProjectionManager {
         if (this.closed) return Promise.resolve();
         this.closed = true;
         const error = new Error("Outbox disposed.");
-        for (const candidate of this.desired) {
-            this.invalidate(candidate.entry.id, error);
-        }
+        const settlements = this.desired.map(
+            (candidate) =>
+                this.invalidate(
+                    candidate.entry.id,
+                    error
+                )
+        );
         this.desired = [];
-        return Promise.resolve();
+        return Promise.all(settlements).then(
+            () => undefined
+        );
     }
 
     private schedule(work: () => Promise<void>): Promise<void> {
@@ -124,7 +130,7 @@ export class OutboxProjectionManager {
                     try {
                         await this.install(candidate);
                     } catch (error) {
-                        this.disable(
+                        await this.disable(
                             normalizeError(error)
                         );
                         return;
@@ -136,7 +142,10 @@ export class OutboxProjectionManager {
 
         for (let index = this.desired.length - 1; index >= divergence; index -= 1) {
             const removed = this.desired[index]!;
-            this.invalidate(removed.entry.id, removalError(removed));
+            await this.invalidate(
+                removed.entry.id,
+                removalError(removed)
+            );
         }
         this.desired = next;
 
@@ -145,19 +154,21 @@ export class OutboxProjectionManager {
             try {
                 await this.install(candidate);
             } catch (error) {
-                this.disable(normalizeError(error));
+                await this.disable(
+                    normalizeError(error)
+                );
                 return;
             }
         }
     }
 
-    private disable(error: Error): void {
+    private async disable(error: Error): Promise<void> {
         for (
             let index = this.desired.length - 1;
             index >= 0;
             index -= 1
         ) {
-            this.invalidate(
+            await this.invalidate(
                 this.desired[index]!.entry.id,
                 error
             );
@@ -189,11 +200,16 @@ export class OutboxProjectionManager {
             return;
         }
 
-        this.invalidate(candidate.entry.id, new Error("Outbox optimistic projection replaced."));
+        await this.invalidate(
+            candidate.entry.id,
+            new Error(
+                "Outbox optimistic projection replaced."
+            )
+        );
         const version = this.versions.get(candidate.entry.id) ?? 0;
         const projection = await this.project?.(candidate.entry);
         if (this.closed || this.versions.get(candidate.entry.id) !== version) {
-            this.settle(
+            await this.settle(
                 projection,
                 new Error(this.closed ? "Outbox disposed." : "Outbox projection became stale.")
             );
@@ -206,16 +222,25 @@ export class OutboxProjectionManager {
         this.installedFingerprints.set(candidate.entry.id, candidate.fingerprint);
     }
 
-    private invalidate(id: string, error?: Error): void {
+    private async invalidate(
+        id: string,
+        error?: Error
+    ): Promise<void> {
         this.versions.set(id, (this.versions.get(id) ?? 0) + 1);
-        this.settle(this.projections.get(id), error);
+        await this.settle(
+            this.projections.get(id),
+            error
+        );
         this.projections.delete(id);
         this.installedFingerprints.delete(id);
     }
 
-    private settle(projection: OutboxProjection | undefined, error?: Error): void {
+    private async settle(
+        projection: OutboxProjection | undefined,
+        error?: Error
+    ): Promise<void> {
         try {
-            projection?.settle(error);
+            await projection?.settle(error);
         } catch {
             // Projection teardown is isolated from outbox state.
         }

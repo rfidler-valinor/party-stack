@@ -1,5 +1,6 @@
 import { Temporal } from "temporal-polyfill";
 import type { ObjectTypeDef, OntologyIR, TypeDef } from "@party-stack/ontology";
+import { getFoundryAttachmentKind } from "../meta/foundryAttachmentMetadata.js";
 import {
     decodeFoundryMediaId,
     foundryMediaIdToReference,
@@ -294,7 +295,9 @@ function unwrapEditHistoryValue(type: TypeDef, value: unknown): unknown {
     }
     if (
         type.kind === "attachment" &&
-        type.value.meta?.type !== "media" &&
+        getFoundryAttachmentKind(
+            type.value.meta
+        ) !== "media" &&
         isPlainObject(value) &&
         value.type === "attachment" &&
         typeof value.attachment === "string"
@@ -303,7 +306,9 @@ function unwrapEditHistoryValue(type: TypeDef, value: unknown): unknown {
     }
     if (
         type.kind === "attachment" &&
-        type.value.meta?.type === "media" &&
+        getFoundryAttachmentKind(
+            type.value.meta
+        ) === "media" &&
         isPlainObject(value) &&
         value.type === "mediaReference" &&
         isPlainObject(value.mediaReference)
@@ -318,13 +323,16 @@ function decodeAttachment(
     meta: Record<string, unknown> | undefined,
     optional: boolean
 ): unknown {
+    const kind = getFoundryAttachmentKind(meta);
     const decoded =
-        meta?.type === "media" ? decodeMediaReference(value) : decodeFoundryAttachment(value);
+        kind === "media"
+            ? decodeMediaReference(value)
+            : decodeFoundryAttachment(value);
     if (decoded !== undefined || optional) {
         return decoded;
     }
     throw new Error(
-        `Invalid required Foundry ${meta?.type === "media" ? "media" : "attachment"} value.`
+        `Invalid required Foundry ${kind} value.`
     );
 }
 
@@ -368,7 +376,7 @@ function encodeAttachment(
     if (typeof value.id !== "string") {
         throw new Error("Invalid Foundry attachment value: expected an attachment with a string id.");
     }
-    if (meta?.type !== "media") {
+    if (getFoundryAttachmentKind(meta) !== "media") {
         return value.id;
     }
     const resolved = resolveMediaReference?.(value.id);

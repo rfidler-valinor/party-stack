@@ -37,8 +37,10 @@ returned.
 pnpm demo
 ```
 
-The local Task Manager reads `Task` and `User` through the generated
-`LiveOntology`. Its create, update, and delete operations call the generated
-`createTask`, `updateTask`, and `deleteTask` actions. Salesforce
-`TaskChangeEvent` notifications invalidate the runtime collection and refresh
-the browser over Server-Sent Events.
+The TanStack Start app lives entirely in this package and opens Salesforce
+directly in the browser through `createWebRuntime` and OAuth PKCE. It reads
+`Task` and `User` through the generated `LiveOntology`; create, update, and
+delete use the generated `createTask`, `updateTask`, and `deleteTask` actions.
+JSforce subscribes to Salesforce `TaskChangeEvent` notifications in-browser.
+The metadata panel searches the live meta ontology and batch-loads complete
+action definitions through the Composite API.

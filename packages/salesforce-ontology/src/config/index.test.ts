@@ -78,7 +78,23 @@ describe("createSalesforceOntologyPullSource", () => {
             apiVersion: "65.0",
             ontologyId: "salesforce:tasks",
             objectTypeNames: ["Task", "User"],
-            actionTypeNames: ["Create_Task"],
+            flowActionTypeNames: ["Create_Task"],
+            standardActionTypeNames: [
+                "confirmSalesMeeting",
+            ],
+            standardQueryFunctionTypeNames: [
+                "getAvailableMeetingTimes",
+            ],
+            crudActionTypes: [
+                {
+                    objectType: "Task",
+                    operations: [
+                        "create",
+                        "update",
+                        "delete",
+                    ],
+                },
+            ],
             connection: {
                 token: "token",
                 userId: "005000000000001",
@@ -94,8 +110,34 @@ describe("createSalesforceOntologyPullSource", () => {
         ]);
         expect(config.actionTypeNames).toEqual([
             "Create_Task",
+            "confirmSalesMeeting",
+            "createTask",
+            "updateTask",
+            "deleteTask",
         ]);
-        expect(config.queryFunctionTypeNames).toEqual([]);
+        expect(config.queryFunctionTypeNames).toEqual([
+            "getAvailableMeetingTimes",
+        ]);
+    });
+
+    it("requires CRUD object types to be pulled", () => {
+        expect(() =>
+            createSalesforceOntologyPullConfig({
+                instanceUrl:
+                    "https://example.my.salesforce.com",
+                apiVersion: "65.0",
+                ontologyId: "salesforce:tasks",
+                objectTypeNames: ["User"],
+                flowActionTypeNames: [],
+                crudActionTypes: [
+                    {
+                        objectType: "Task",
+                        operations: ["create"],
+                    },
+                ],
+                connection: { token: "token" },
+            })
+        ).toThrow(/must also appear in objectTypeNames/);
     });
 
     it("keeps selected object references and downgrades dangling references", async () => {

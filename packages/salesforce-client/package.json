@@ -19,15 +19,13 @@
         "test": "vitest run --pass-with-no-tests"
     },
     "dependencies": {
-        "@bobbyfidz/panic": "^0.1.0",
-        "@jsforce/jsforce-node": "^3.10.19"
+        "@bobbyfidz/panic": "^0.1.0"
     },
     "devDependencies": {
         "@bobbyfidz/universal-build-config": "^0.1.1",
         "@party-stack/node-runtime": "workspace:^",
         "@party-stack/oauth": "workspace:^",
         "eslint": "^9.25.0",
-        "open": "^11.0.1",
         "typescript": "~5.8.3",
         "vitest": "^3.1.1"
     }

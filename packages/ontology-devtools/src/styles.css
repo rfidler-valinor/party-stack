@@ -459,11 +459,3 @@
   }
 }
 
-html[data-ps-outbox-transition]::view-transition-old(root),
-html[data-ps-outbox-transition]::view-transition-new(root) {
-  animation: none;
-}
-html[data-ps-outbox-transition]::view-transition-group(*) {
-  animation-duration: 240ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}

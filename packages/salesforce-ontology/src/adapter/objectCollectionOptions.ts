@@ -8,24 +8,42 @@ import {
     SyncConfig,
     UtilsRecord,
 } from "@tanstack/db";
-import type { SalesforceClient } from "@party-stack/salesforce-client";
+import type {
+    SalesforceChangeEvent,
+    SalesforceChangeEventSubscription,
+    SalesforceChangeEventSubscriptionOptions,
+    SalesforceClient,
+} from "@party-stack/salesforce-client";
 import * as AsyncIterable from "../utils/AsyncIterable.js";
 import {
     buildSoqlQuery,
     convertLoadSubsetFilter,
     convertLoadSubsetOrderBy,
     isAlwaysFalseFilter,
+    serializeSoqlLiteral,
 } from "./convertLoadSubsetOptions.js";
 
 type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
 
 type SalesforceObject = Record<string, unknown>;
 
+export type SubscribeToSalesforceChangeEvents = (
+    objectType: string,
+    listener: (
+        event: SalesforceChangeEvent
+    ) => void,
+    options?: SalesforceChangeEventSubscriptionOptions
+) => Promise<SalesforceChangeEventSubscription>;
+
 export interface ObjectCollectionUtils extends UtilsRecord {
     /**
-     * Reset load-subset deduplication so subsequent reads refetch after writes.
+     * Reset load-subset deduplication and await refetching active subsets.
      */
-    invalidate: () => void;
+    invalidate: () => Promise<void>;
+    /** Refetch one confirmed backend record and commit it locally. */
+    refreshByKey: (
+        key: string | number
+    ) => Promise<void>;
     /** Apply a confirmed backend deletion to the local collection. */
     deleteByKey: (
         key: string | number
@@ -110,7 +128,11 @@ async function fetchSalesforceObjects(
 function createSyncConfig(
     client: SalesforceClient,
     objectType: string,
+    primaryKeyProperty: string,
     selectedProperties: string[],
+    subscribeToChangeEvents:
+        | SubscribeToSalesforceChangeEvents
+        | undefined,
     decodeObject: (object: SalesforceObject) => SalesforceObject = (object) => object
 ): { sync: SyncConfig<Record<string, unknown>, string | number>; utils: ObjectCollectionUtils } {
     let loadSubsetDedupe: DeduplicatedLoadSubset | undefined;
@@ -119,10 +141,31 @@ function createSyncConfig(
               key: string | number
           ) => Promise<void>)
         | undefined;
+    let refreshByKey:
+        | ((
+              key: string | number
+          ) => Promise<void>)
+        | undefined;
+    let invalidate:
+        | (() => Promise<void>)
+        | undefined;
 
     const utils: ObjectCollectionUtils = {
         invalidate: () => {
-            loadSubsetDedupe?.reset();
+            if (!invalidate) {
+                throw new Error(
+                    `Salesforce ${objectType} collection is not ready.`
+                );
+            }
+            return invalidate();
+        },
+        refreshByKey: (key) => {
+            if (!refreshByKey) {
+                throw new Error(
+                    `Salesforce ${objectType} collection is not ready.`
+                );
+            }
+            return refreshByKey(key);
         },
         deleteByKey: (key) => {
             if (!deleteByKey) {
@@ -136,7 +179,29 @@ function createSyncConfig(
 
     const sync: SyncConfig<Record<string, unknown>, string | number> = {
         sync: (params) => {
-            const { begin, write, commit, markReady } = params;
+            const {
+                begin,
+                write,
+                commit,
+                markError,
+                markReady,
+            } = params;
+            const activeSubsets =
+                new Set<LoadSubsetOptions>();
+            const collectionMetadata =
+                params.metadata?.collection;
+            const replayMetadataKey =
+                `salesforce.cdc.${objectType}.replayId`;
+            const restoredReplayId =
+                collectionMetadata?.get(
+                    replayMetadataKey
+                );
+            let disposed = false;
+            let changeSubscription:
+                | SalesforceChangeEventSubscription
+                | undefined;
+            let changeQueue =
+                Promise.resolve();
 
             const upsertObject = (object: SalesforceObject) => {
                 const key = object.Id;
@@ -153,7 +218,18 @@ function createSyncConfig(
                 });
             };
 
-            const loadSubset = async (opts: LoadSubsetOptions): Promise<void> => {
+            const loadSubset = async (
+                opts: LoadSubsetOptions,
+                awaitApplication = true
+            ): Promise<void> => {
+                if (!activeSubsets.has(opts)) {
+                    activeSubsets.add(opts);
+                    opts.signal?.addEventListener(
+                        "abort",
+                        () => activeSubsets.delete(opts),
+                        { once: true }
+                    );
+                }
                 const objects = await fetchSalesforceObjects(
                     client,
                     objectType,
@@ -166,28 +242,191 @@ function createSyncConfig(
                     for (const object of objects) {
                         upsertObject(object);
                     }
-                    await commit();
+                    const applied = commit();
+                    if (applied instanceof Promise) {
+                        if (awaitApplication) {
+                            await applied;
+                        } else {
+                            void applied.catch(
+                                (error) => {
+                                    if (!disposed) {
+                                        markError(
+                                            error
+                                        );
+                                    }
+                                }
+                            );
+                        }
+                    }
                 }
             };
 
-            loadSubsetDedupe = new DeduplicatedLoadSubset({ loadSubset });
-            deleteByKey = async (key) => {
+            loadSubsetDedupe =
+                new DeduplicatedLoadSubset({
+                    loadSubset: (options) =>
+                        loadSubset(options),
+                });
+            invalidate = async () => {
+                loadSubsetDedupe?.reset();
+                for (const subset of activeSubsets) {
+                    if (!subset.signal?.aborted) {
+                        await loadSubset(
+                            subset,
+                            false
+                        );
+                    }
+                }
+            };
+            refreshByKey = async (key) => {
+                const result =
+                    await client.query<SalesforceObject>(
+                        buildSoqlQuery({
+                            objectType,
+                            selectedProperties,
+                            where: {
+                                clause: `${primaryKeyProperty} = ${serializeSoqlLiteral(key)}`,
+                                alwaysFalse: false,
+                            },
+                            limit: 1,
+                        })
+                    );
+                const object = result.records[0];
+                if (!object) {
+                    throw new Error(
+                        `Salesforce ${objectType} record "${key}" was not returned after a confirmed write.`
+                    );
+                }
+                begin();
+                upsertObject(decodeObject(object));
+                const applied = commit();
+                if (applied instanceof Promise) {
+                    void applied.catch((error) => {
+                        if (!disposed) {
+                            markError(error);
+                        }
+                    });
+                }
+                loadSubsetDedupe?.reset();
+            };
+            deleteByKey = (key) => {
                 begin();
                 write({
                     type: "delete",
                     key,
                 });
-                await commit();
+                const applied = commit();
+                if (applied instanceof Promise) {
+                    void applied.catch((error) => {
+                        if (!disposed) {
+                            markError(error);
+                        }
+                    });
+                }
                 loadSubsetDedupe?.reset();
+                return Promise.resolve();
             };
             markReady();
+            if (subscribeToChangeEvents) {
+                void subscribeToChangeEvents(
+                    objectType,
+                    (event) => {
+                        changeQueue = changeQueue
+                            .then(async () => {
+                                if (disposed) return;
+                                const header =
+                                    event.payload
+                                        .ChangeEventHeader;
+                                if (
+                                    header.changeType ===
+                                    "DELETE"
+                                ) {
+                                    begin();
+                                    for (const id of header.recordIds) {
+                                        write({
+                                            type: "delete",
+                                            key: id,
+                                        });
+                                    }
+                                    const replayId =
+                                        event.event
+                                            ?.replayId;
+                                    if (
+                                        replayId !==
+                                        undefined
+                                    ) {
+                                        collectionMetadata?.set(
+                                            replayMetadataKey,
+                                            replayId
+                                        );
+                                    }
+                                    await commit();
+                                    loadSubsetDedupe?.reset();
+                                    return;
+                                }
+                                await invalidate?.();
+                                const replayId =
+                                    event.event
+                                        ?.replayId;
+                                if (
+                                    replayId !==
+                                        undefined &&
+                                    collectionMetadata
+                                ) {
+                                    begin();
+                                    collectionMetadata.set(
+                                        replayMetadataKey,
+                                        replayId
+                                    );
+                                    await commit();
+                                }
+                            })
+                            .catch((error: unknown) => {
+                                markError(
+                                    error instanceof Error
+                                        ? error
+                                        : new Error(
+                                              String(
+                                                  error
+                                              )
+                                          )
+                                );
+                            });
+                    },
+                    typeof restoredReplayId ===
+                        "number"
+                        ? {
+                              replayId:
+                                  restoredReplayId,
+                          }
+                        : undefined
+                ).then((subscription) => {
+                    if (disposed) {
+                        subscription.unsubscribe();
+                    } else {
+                        changeSubscription =
+                            subscription;
+                    }
+                }, (error: unknown) => {
+                    markError(
+                        error instanceof Error
+                            ? error
+                            : new Error(String(error))
+                    );
+                });
+            }
 
             return {
                 loadSubset: loadSubsetDedupe.loadSubset,
                 cleanup: () => {
-                    loadSubsetDedupe?.reset();
-                    loadSubsetDedupe = undefined;
-                    deleteByKey = undefined;
+                    disposed = true;
+                    changeSubscription?.unsubscribe();
+                    void changeQueue.finally(() => {
+                        loadSubsetDedupe?.reset();
+                        loadSubsetDedupe = undefined;
+                        invalidate = undefined;
+                        refreshByKey = undefined;
+                        deleteByKey = undefined;
+                    });
                 },
             };
         },
@@ -201,6 +440,7 @@ export interface ObjectCollectionOpts {
     objectType: string;
     primaryKeyProperty: string;
     selectedProperties: string[];
+    subscribeToChangeEvents?: SubscribeToSalesforceChangeEvents;
     decodeObject?: (object: Record<string, unknown>) => Record<string, unknown>;
 }
 
@@ -226,12 +466,28 @@ export function objectCollectionOptions(config: ObjectCollectionOpts): {
 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function objectCollectionOptions(config: any): any {
-    const { client, objectType, primaryKeyProperty, selectedProperties, decodeObject, schema, ...rest } =
+    const {
+        client,
+        objectType,
+        primaryKeyProperty,
+        selectedProperties,
+        subscribeToChangeEvents,
+        decodeObject,
+        schema,
+        ...rest
+    } =
         config as ObjectCollectionOpts & { schema?: StandardSchema<SalesforceObject> } & Record<
             string,
             unknown
         >;
-    const { sync, utils } = createSyncConfig(client, objectType, selectedProperties, decodeObject);
+    const { sync, utils } = createSyncConfig(
+        client,
+        objectType,
+        primaryKeyProperty,
+        selectedProperties,
+        subscribeToChangeEvents,
+        decodeObject
+    );
 
     if (schema === undefined) {
         return { syncMode: "on-demand" as const, sync, utils };

@@ -1,4 +1,5 @@
 import { setAtPath } from "../../utils/paths.js";
+import { unwrapValueType } from "../../utils/types.js";
 import { decorateObjectAttachmentSources } from "../attachments/attachmentSources.js";
 import { evaluateExpression, getObjectReferenceObjectType } from "../expression.js";
 import type {
@@ -48,6 +49,7 @@ export async function applyActionLogicToMutatorTx(options: {
     actionTypeName: string;
     parameters: Record<string, unknown>;
     context: Record<string, unknown>;
+    idempotencyKey?: string;
     objects: OntologyMutatorObjects;
     tx: OntologyMutatorTx;
 }): Promise<void> {
@@ -56,7 +58,10 @@ export async function applyActionLogicToMutatorTx(options: {
         throw new Error(`Unknown action "${options.actionTypeName}".`);
     }
 
-    for (const step of action.logic) {
+    for (const [
+        stepIndex,
+        step,
+    ] of action.logic.entries()) {
         if (step.kind === "createObject") {
             const type = objectType(options.ir, step.value.objectType);
             let object: Record<string, unknown> = {};
@@ -71,6 +76,32 @@ export async function applyActionLogicToMutatorTx(options: {
                 objectType: type,
                 object,
             });
+            if (
+                object[type.primaryKey] ===
+                undefined
+            ) {
+                const primaryKey =
+                    type.properties.find(
+                        (property) =>
+                            property.name ===
+                            type.primaryKey
+                    );
+                if (
+                    !options.idempotencyKey ||
+                    !primaryKey ||
+                    unwrapValueType(
+                        options.ir,
+                        primaryKey.type
+                    ).kind !== "string"
+                ) {
+                    continue;
+                }
+                // Temporary view key for backend-assigned IDs. This is stable
+                // across outbox projection replay, but it cannot support
+                // dependent edits until local-to-remote view-key mapping exists.
+                object[type.primaryKey] =
+                    `optimistic:${options.idempotencyKey}:${type.name}:${stepIndex}`;
+            }
             await options.tx.mutate[type.name]!.create(object);
             continue;
         }

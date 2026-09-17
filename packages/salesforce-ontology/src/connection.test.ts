@@ -69,6 +69,71 @@ describe("createSalesforceConnectionAdapter", () => {
         );
     });
 
+    it("establishes server-side client credentials connections", async () => {
+        let tokenBody:
+            | URLSearchParams
+            | undefined;
+        const fetch = vi.fn<
+            typeof globalThis.fetch
+        >(async (input, init) => {
+            const request = new Request(
+                input,
+                init
+            );
+            if (
+                request.url.endsWith(
+                    "/services/oauth2/userinfo"
+                )
+            ) {
+                return Response.json({
+                    user_id:
+                        "005000000000001",
+                });
+            }
+            tokenBody =
+                new URLSearchParams(
+                    await request.text()
+                );
+            return Response.json({
+                access_token: "access-token",
+                expires_in: 3600,
+                token_type: "Bearer",
+            });
+        });
+        const adapter =
+            await createSalesforceConnectionAdapter({
+                instanceUrl:
+                    "https://example.my.salesforce.com",
+                clientCredentials: {
+                    clientId: "client",
+                    clientSecret: "secret",
+                    fetch,
+                },
+            })({
+                installationId: "salesforce",
+                runtime: {} as never,
+            });
+
+        const [established] =
+            await adapter.restoreConnections();
+
+        expect(
+            established?.connection
+        ).toMatchObject({
+            userId: "005000000000001",
+            state: {
+                status: "active",
+            },
+        });
+        expect(
+            tokenBody?.get("grant_type")
+        ).toBe("client_credentials");
+        expect(
+            tokenBody?.get("client_secret")
+        ).toBe("secret");
+        await adapter.cleanup?.();
+    });
+
     it("composes stored public OAuth authentication", async () => {
         const values = new Map<string, string>();
         const runtime = {

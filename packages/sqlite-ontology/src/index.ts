@@ -558,6 +558,9 @@ export function createSQLiteOntologyBackendAdapter(
                 actionTypeName,
                 parameters: resolvedParameters,
                 context: live.context ?? {},
+                idempotencyKey:
+                    live.idempotencyKey ??
+                    crypto.randomUUID(),
                 objects: collections,
                 mutators: opts.mutators,
             });
