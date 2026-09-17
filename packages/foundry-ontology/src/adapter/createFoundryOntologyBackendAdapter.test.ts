@@ -1,4 +1,5 @@
 import { o } from "@party-stack/ontology";
+import { Temporal } from "temporal-polyfill";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OntologyClient } from "@party-stack/foundry-client";
 import {
@@ -79,6 +80,76 @@ describe("isFoundryNotFoundError", () => {
                 statusCode: 500,
             })
         ).toBe(false);
+    });
+});
+
+describe("Foundry action execution time overrides", () => {
+    const adapter = createFoundryOntologyBackendAdapter({
+        client: {
+            ontologyRid: "ri.ontology.main.1",
+        } as OntologyClient,
+        ir: {
+            types: [],
+            objectTypes: [],
+            linkTypes: [],
+            actionTypes: [
+                {
+                    name: "setTimestamp",
+                    displayName: "Set timestamp",
+                    parameters: [
+                        {
+                            name: "__now",
+                            displayName: "Current time",
+                            type: o.timestamp({}),
+                            defaultValue: o.Expression.now({}),
+                        },
+                    ],
+                    logic: [],
+                },
+            ],
+            queryFunctionTypes: [],
+        },
+    });
+    const isoInstant = "2026-09-17T20:21:00Z";
+    const temporalLike = {
+        toString: () => isoInstant,
+    };
+
+    it.each([
+        ["Temporal.Instant", Temporal.Instant.from(isoInstant)],
+        ["Date", new Date(isoInstant)],
+        ["Temporal-like value from another module", temporalLike],
+    ])("serializes a %s as a raw ISO instant", async (_description, value) => {
+        expect(temporalLike).not.toBeInstanceOf(Temporal.Instant);
+        ontologyMocks.applyWithOverrides.mockResolvedValue({
+            operationId: "operation-1",
+            validation: { result: "VALID" },
+            edits: {
+                type: "edits",
+                edits: [],
+            },
+        });
+
+        await adapter.applyAction("setTimestamp", { __now: value }, { objects: {} });
+
+        expect(ontologyMocks.applyWithOverrides.mock.calls[0]?.[3]).toMatchObject({
+            overrides: {
+                actionExecutionTime: isoInstant,
+            },
+        });
+    });
+
+    it("rejects an invalid execution time before making a Foundry request", async () => {
+        await expect(
+            adapter.applyAction(
+                "setTimestamp",
+                { __now: "not an ISO instant" },
+                { objects: {} }
+            )
+        ).rejects.toThrow(
+            "Invalid action execution time: expected a Date or Temporal-like ISO instant."
+        );
+        expect(ontologyMocks.applyWithOverrides).not.toHaveBeenCalled();
     });
 });
 
