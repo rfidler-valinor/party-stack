@@ -79,14 +79,23 @@ describe("createFoundryConnectionAdapter", () => {
 
     it("composes server-only client credentials authentication", async () => {
         const token = foundryToken();
-        const fetch = vi.fn<typeof globalThis.fetch>(() =>
-            Promise.resolve(
-                Response.json({
+        let tokenRequest:
+            | Request
+            | undefined;
+        const fetch = vi.fn<typeof globalThis.fetch>(
+            (input, init) => {
+                tokenRequest = new Request(
+                    input,
+                    init
+                );
+                return Promise.resolve(
+                    Response.json({
                     access_token: token,
                     token_type: "Bearer",
                     expires_in: 3600,
                 })
-            )
+                );
+            }
         );
         const adapter = await createFoundryConnectionAdapter({
             baseUrl: "https://foundry.example.com",
@@ -114,6 +123,16 @@ describe("createFoundryConnectionAdapter", () => {
             })
         );
         expect(fetch).toHaveBeenCalledOnce();
+        expect(tokenRequest?.url).toBe(
+            "https://foundry.example.com/multipass/api/oauth2/token"
+        );
+        expect(
+            tokenRequest?.headers.get(
+                "authorization"
+            )
+        ).toBe(
+            "Basic Y2xpZW50OnNlY3JldA=="
+        );
     });
 
     it("composes stored public OAuth authentication", async () => {

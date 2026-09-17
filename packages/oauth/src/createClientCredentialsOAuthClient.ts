@@ -4,6 +4,10 @@ export interface CreateClientCredentialsOAuthClientOptions {
     clientId: string;
     clientSecret: string;
     tokenEndpoint: string;
+    tokenEndpointAuthMethod?:
+        | "client_secret_basic"
+        | "client_secret_post";
+    revocationEndpoint?: string;
     scopes?: readonly string[];
     resolveUserId(
         accessToken: string
@@ -15,6 +19,7 @@ export interface ClientCredentialsOAuthClient {
     getAccessToken(): Promise<string>;
     getSession(): Promise<OAuthSession>;
     refresh(): Promise<OAuthSession>;
+    revoke(): Promise<void>;
     cleanup(): void;
 }
 
@@ -38,6 +43,42 @@ export function createClientCredentialsOAuthClient(
         | Promise<ClientCredentialsToken>
         | undefined;
     let cleaned = false;
+    const authMethod =
+        options.tokenEndpointAuthMethod ??
+        "client_secret_post";
+
+    const authenticatedRequest = (
+        endpoint: string,
+        parameters: URLSearchParams
+    ): Request => {
+        const headers = new Headers({
+            Accept: "application/json",
+            "Content-Type":
+                "application/x-www-form-urlencoded",
+        });
+        if (authMethod === "client_secret_basic") {
+            headers.set(
+                "Authorization",
+                `Basic ${btoa(
+                    `${encodeURIComponent(options.clientId)}:${encodeURIComponent(options.clientSecret)}`
+                )}`
+            );
+        } else {
+            parameters.set(
+                "client_id",
+                options.clientId
+            );
+            parameters.set(
+                "client_secret",
+                options.clientSecret
+            );
+        }
+        return new Request(endpoint, {
+            method: "POST",
+            headers,
+            body: parameters,
+        });
+    };
 
     const requestToken =
         async (): Promise<ClientCredentialsToken> => {
@@ -49,9 +90,6 @@ export function createClientCredentialsOAuthClient(
             const body = new URLSearchParams({
                 grant_type:
                     "client_credentials",
-                client_id: options.clientId,
-                client_secret:
-                    options.clientSecret,
             });
             if (options.scopes?.length) {
                 body.set(
@@ -60,16 +98,10 @@ export function createClientCredentialsOAuthClient(
                 );
             }
             const response = await fetchImpl(
-                options.tokenEndpoint,
-                {
-                    method: "POST",
-                    headers: {
-                        Accept: "application/json",
-                        "Content-Type":
-                            "application/x-www-form-urlencoded",
-                    },
-                    body,
-                }
+                authenticatedRequest(
+                    options.tokenEndpoint,
+                    body
+                )
             );
             const result =
                 (await response.json()) as {
@@ -172,6 +204,32 @@ export function createClientCredentialsOAuthClient(
                   };
         },
         refresh,
+        async revoke() {
+            const accessToken =
+                token?.accessToken;
+            token = undefined;
+            if (
+                !accessToken ||
+                !options.revocationEndpoint
+            ) {
+                return;
+            }
+            const response = await fetchImpl(
+                authenticatedRequest(
+                    options.revocationEndpoint,
+                    new URLSearchParams({
+                        token: accessToken,
+                        token_type_hint:
+                            "access_token",
+                    })
+                )
+            );
+            if (!response.ok) {
+                throw new Error(
+                    `OAuth token revocation failed (${response.status}).`
+                );
+            }
+        },
         cleanup() {
             cleaned = true;
             token = undefined;

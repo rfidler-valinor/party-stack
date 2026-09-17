@@ -36,7 +36,6 @@
         "@osdk/foundry.core": "^2.77.0",
         "@osdk/foundry.mediasets": "^2.77.0",
         "@osdk/foundry.ontologies": "^2.77.0",
-        "@osdk/oauth": "^1.5.0",
         "@party-stack/connections": "workspace:*",
         "@party-stack/errors": "workspace:*",
         "@party-stack/foundry-client": "workspace:*",
