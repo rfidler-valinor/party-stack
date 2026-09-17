@@ -1,5 +1,14 @@
 # @party-stack/durable-object-ontology
 
+## 0.2.7
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/sqlite-ontology@0.6.5
+    - @party-stack/ontology@0.16.4
+
 ## 0.2.6
 
 ### Patch Changes

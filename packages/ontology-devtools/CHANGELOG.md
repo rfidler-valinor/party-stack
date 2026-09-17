@@ -1,5 +1,13 @@
 # @party-stack/ontology-devtools
 
+## 0.4.12
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/ontology@0.16.4
+
 ## 0.4.11
 
 ### Patch Changes

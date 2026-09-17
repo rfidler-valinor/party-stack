@@ -1,5 +1,13 @@
 # @party-stack/web-runtime
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [cd0b360]
+    - @party-stack/db-indexeddb-persistence@0.1.3
+    - @party-stack/runtime@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes
