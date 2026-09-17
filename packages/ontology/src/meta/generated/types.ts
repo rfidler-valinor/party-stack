@@ -427,6 +427,8 @@ export type LinkType = {
 export type ActionType = {
     /** The provider-assigned stable identifier for this action type. */
     id: string;
+    /** Provider-specific metadata used to execute this action. */
+    meta?: Record<string, unknown>;
     /** The object type's programmatic name. */
     name: string;
     /** Human-readable name. */

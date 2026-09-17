@@ -726,7 +726,13 @@ describe("objectCollectionOptions", () => {
                             name: "attachments",
                             displayName: "Attachments",
                             type: o.list({
-                                elementType: o.attachment({ meta: { type: "attachment" } }),
+                                elementType: o.attachment({
+                                    meta: {
+                                        foundry: {
+                                            kind: "attachment",
+                                        },
+                                    },
+                                }),
                             }),
                         },
                     ],
@@ -803,7 +809,13 @@ describe("objectCollectionOptions", () => {
                             name: "logoMedia",
                             displayName: "Logo media",
                             type: o.optional({
-                                type: o.attachment({ meta: { type: "media" } }),
+                                type: o.attachment({
+                                    meta: {
+                                        foundry: {
+                                            kind: "media",
+                                        },
+                                    },
+                                }),
                             }),
                         },
                     ],

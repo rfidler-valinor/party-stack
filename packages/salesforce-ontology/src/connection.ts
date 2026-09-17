@@ -10,11 +10,18 @@ import {
     withHttpRetryHandling,
 } from "@party-stack/connections";
 import { unauthenticated } from "@party-stack/errors";
-import { createPublicOAuthClient, type OAuthSession, type PublicOAuthClient } from "@party-stack/oauth";
+import {
+    createClientCredentialsOAuthClient,
+    createPublicOAuthClient,
+    type ClientCredentialsOAuthClient,
+    type OAuthSession,
+    type PublicOAuthClient,
+} from "@party-stack/oauth";
 import {
     createSalesforceClient,
     type SalesforceChangeEvent,
     type SalesforceChangeEventSubscription,
+    type SalesforceChangeEventSubscriptionOptions,
 } from "@party-stack/salesforce-client";
 import type { BrowserAuthenticationPresentation } from "@party-stack/runtime";
 
@@ -27,10 +34,20 @@ export interface SalesforceOAuthConnectionOptions {
     dangerouslyPersistSecrets?: boolean;
 }
 
+export interface SalesforceClientCredentialsConnectionOptions {
+    clientId: string;
+    clientSecret: string;
+    loginUrl?: string;
+    scopes?: string[];
+    fetch?: typeof globalThis.fetch;
+}
+
 export interface CreateSalesforceConnectionAdapterOptions {
     instanceUrl: string;
     apiVersion?: string;
+    cometdUrl?: string;
     oauth?: SalesforceOAuthConnectionOptions;
+    clientCredentials?: SalesforceClientCredentialsConnectionOptions;
     token?: string;
     userId?: string;
 }
@@ -40,12 +57,14 @@ export interface SalesforceAuthenticationClient {
     subscribeToChangeEvents(
         userId: string,
         sObjectName: string,
-        listener: (event: SalesforceChangeEvent) => void
+        listener: (event: SalesforceChangeEvent) => void,
+        options?: SalesforceChangeEventSubscriptionOptions
     ): Promise<SalesforceChangeEventSubscription>;
     signIn: {
         oauth(options?: {
             browserPresentation?: BrowserAuthenticationPresentation;
         }): Promise<Connection<"active">>;
+        clientCredentials(): Promise<Connection<"active">>;
         accessToken(options?: {
             token?: string;
             userId?: string;
@@ -165,27 +184,66 @@ async function createSalesforceConnectionAdapterInstance(
 ): Promise<BackendConnectionAdapter<SalesforceAuthenticationClient>> {
     const instanceUrl = normalizeUrl(options.instanceUrl);
     const apiVersion = options.apiVersion ?? "65.0";
-    const loginUrl = normalizeUrl(options.oauth?.loginUrl ?? instanceUrl);
-    const fetchImpl = options.oauth?.fetch ?? globalThis.fetch.bind(globalThis);
+    const loginUrl = normalizeUrl(
+        options.oauth?.loginUrl ??
+            options.clientCredentials?.loginUrl ??
+            instanceUrl
+    );
+    const fetchImpl =
+        options.oauth?.fetch ??
+        options.clientCredentials?.fetch ??
+        globalThis.fetch.bind(globalThis);
     let tokenActive = Boolean(options.token);
     const tokenProviders = new Map<
         string,
         () => Promise<string>
     >();
-    const publicOauth: PublicOAuthClient | undefined = options.oauth
-        ? await createPublicOAuthClient({
-              clientId: options.oauth.clientId,
-              redirectUrl: options.oauth.redirectUrl,
-              scopes: [...new Set(options.oauth.scopes ?? DEFAULT_SCOPES)],
-              authorizationServer: {
-                  issuer: loginUrl,
-                  authorizationEndpoint: `${loginUrl}/services/oauth2/authorize`,
-                  tokenEndpoint: `${loginUrl}/services/oauth2/token`,
-                  revocationEndpoint: `${loginUrl}/services/oauth2/revoke`,
-              },
-              runtime: context.runtime,
-              fetch: options.oauth.fetch,
-              dangerouslyPersistSecrets: options.oauth.dangerouslyPersistSecrets,
+    const publicOauth: PublicOAuthClient | undefined =
+        options.oauth
+            ? await createPublicOAuthClient({
+                  clientId:
+                      options.oauth.clientId,
+                  redirectUrl:
+                      options.oauth.redirectUrl,
+                  scopes: [
+                      ...new Set(
+                          options.oauth.scopes ??
+                              DEFAULT_SCOPES
+                      ),
+                  ],
+                  authorizationServer: {
+                      issuer: loginUrl,
+                      authorizationEndpoint: `${loginUrl}/services/oauth2/authorize`,
+                      tokenEndpoint: `${loginUrl}/services/oauth2/token`,
+                      revocationEndpoint: `${loginUrl}/services/oauth2/revoke`,
+                  },
+                  runtime: context.runtime,
+                  fetch: options.oauth.fetch,
+                  dangerouslyPersistSecrets:
+                      options.oauth
+                          .dangerouslyPersistSecrets,
+                  resolveUserId: (token) =>
+                      resolveSalesforceUserId({
+                          loginUrl,
+                          token,
+                          fetch: fetchImpl,
+                      }),
+              })
+            : undefined;
+    const clientCredentialsOauth:
+        | ClientCredentialsOAuthClient
+        | undefined = options.clientCredentials
+        ? createClientCredentialsOAuthClient({
+              clientId:
+                  options.clientCredentials.clientId,
+              clientSecret:
+                  options.clientCredentials
+                      .clientSecret,
+              tokenEndpoint: `${loginUrl}/services/oauth2/token`,
+              scopes:
+                  options.clientCredentials.scopes,
+              fetch:
+                  options.clientCredentials.fetch,
               resolveUserId: (token) =>
                   resolveSalesforceUserId({
                       loginUrl,
@@ -281,6 +339,59 @@ async function createSalesforceConnectionAdapterInstance(
         return { connection, session };
     };
 
+    const createClientCredentialsSession =
+        async (
+            forceRefresh = false
+        ): Promise<EstablishedConnection> => {
+            if (!clientCredentialsOauth) {
+                throw new Error(
+                    "Salesforce client credentials are not configured."
+                );
+            }
+            const oauthSession = forceRefresh
+                ? await clientCredentialsOauth.refresh()
+                : await clientCredentialsOauth.getSession();
+            const userId = oauthSession.userId;
+            const tokenProvider = () =>
+                clientCredentialsOauth.getAccessToken();
+            tokenProviders.set(
+                userId,
+                tokenProvider
+            );
+            return {
+                connection: {
+                    userId,
+                    state: activeState(
+                        oauthSession.expiration
+                            ?.expiresAt,
+                        true
+                    ),
+                },
+                session: {
+                    refresh: () =>
+                        createClientCredentialsSession(
+                            true
+                        ),
+                    disconnect() {
+                        tokenProviders.delete(userId);
+                        return Promise.resolve();
+                    },
+                    egress:
+                        createSalesforceEgressWrapper({
+                            instanceUrl,
+                            tokenProvider,
+                            refresh: () =>
+                                clientCredentialsOauth
+                                    .refresh()
+                                    .then(
+                                        () =>
+                                            undefined
+                                    ),
+                        }),
+                },
+            };
+        };
+
     return {
         name: "salesforce",
         createAuthenticationClient(controller) {
@@ -288,7 +399,8 @@ async function createSalesforceConnectionAdapterInstance(
                 async subscribeToChangeEvents(
                     userId,
                     sObjectName,
-                    listener
+                    listener,
+                    subscriptionOptions
                 ) {
                     const tokenProvider =
                         tokenProviders.get(userId);
@@ -301,11 +413,14 @@ async function createSalesforceConnectionAdapterInstance(
                         createSalesforceClient({
                             instanceUrl,
                             apiVersion,
+                            cometdUrl:
+                                options.cometdUrl,
                             tokenProvider,
                         });
                     return client.subscribeToChangeEvents(
                         sObjectName,
-                        listener
+                        listener,
+                        subscriptionOptions
                     );
                 },
                 async completeOAuthRedirect(url) {
@@ -326,6 +441,27 @@ async function createSalesforceConnectionAdapterInstance(
                         });
                         const connectionSession = createPublicSession(session);
                         await controller.connect(connectionSession);
+                        return connectionSession.connection;
+                    },
+                    async clientCredentials() {
+                        if (!clientCredentialsOauth) {
+                            throw new Error(
+                                "Salesforce client credentials are not configured."
+                            );
+                        }
+                        if (
+                            typeof window !==
+                            "undefined"
+                        ) {
+                            throw new Error(
+                                "Salesforce client credentials cannot run in a browser."
+                            );
+                        }
+                        const connectionSession =
+                            await createClientCredentialsSession();
+                        await controller.connect(
+                            connectionSession
+                        );
                         return connectionSession.connection;
                     },
                     async accessToken(authenticationOptions = {}) {
@@ -351,11 +487,23 @@ async function createSalesforceConnectionAdapterInstance(
                     restored.set(session.connection.userId, session);
                 }
             }
+            if (
+                clientCredentialsOauth &&
+                typeof window === "undefined"
+            ) {
+                const session =
+                    await createClientCredentialsSession();
+                restored.set(
+                    session.connection.userId,
+                    session
+                );
+            }
             return [...restored.values()];
         },
         async cleanup() {
             tokenProviders.clear();
             await publicOauth?.cleanup();
+            clientCredentialsOauth?.cleanup();
         },
     };
 }

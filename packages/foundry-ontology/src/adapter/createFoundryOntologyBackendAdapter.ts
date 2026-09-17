@@ -26,6 +26,7 @@ import { Temporal } from "temporal-polyfill";
 import type { OntologyClient } from "@party-stack/foundry-client";
 import type { attachment } from "@party-stack/ontology/values";
 import { getFoundryActionOverrideParameterMapping } from "../meta/convertMetaActionType.js";
+import { getFoundryAttachmentKind } from "../meta/foundryAttachmentMetadata.js";
 import { toFoundryActionTypeName } from "../utils/actionTypeName.js";
 import {
     getFoundryValidationIssues,
@@ -107,7 +108,7 @@ function getAttachmentName(attachment: unknown): string | undefined {
 function getAttachmentProviderType(
     target: { meta?: Record<string, unknown> } | undefined
 ): "attachment" | "media" {
-    return target?.meta?.type === "media" ? "media" : "attachment";
+    return getFoundryAttachmentKind(target?.meta);
 }
 
 function getEditedObjectTypes(
@@ -194,8 +195,10 @@ export function createFoundryOntologyBackendAdapter(opts: {
                 target,
                 "A property target must be passed to generateAttachmentId in the Foundry adapter so that we know whether to target attachments or media."
             );
-            const meta = target.meta as { type: "attachment" | "media" };
-            if (meta.type === "attachment") {
+            if (
+                getFoundryAttachmentKind(target.meta) ===
+                "attachment"
+            ) {
                 return `ri.attachments.main.attachment.${crypto.randomUUID()}`;
             }
             return crypto.randomUUID();

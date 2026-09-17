@@ -84,7 +84,7 @@ describe("isFoundryNotFoundError", () => {
 
 describe("Foundry attachments", () => {
     const attachmentType = o.attachment({
-        meta: { type: "attachment" },
+        meta: { foundry: { kind: "attachment" } },
     });
     const adapter = createFoundryOntologyBackendAdapter({
         client: {
@@ -202,7 +202,7 @@ describe("Foundry media attachments", () => {
         },
     };
     const mediaType = o.attachment({
-        meta: { type: "media" },
+        meta: { foundry: { kind: "media" } },
     });
     const adapter = createFoundryOntologyBackendAdapter({
         client: {

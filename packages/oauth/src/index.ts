@@ -1,4 +1,11 @@
-export { createPublicOAuthClient } from "./createPublicOAuthClient.js";
+export {
+    createPublicOAuthClient,
+} from "./createPublicOAuthClient.js";
+export {
+    createClientCredentialsOAuthClient,
+    type ClientCredentialsOAuthClient,
+    type CreateClientCredentialsOAuthClientOptions,
+} from "./createClientCredentialsOAuthClient.js";
 export {
     resolveOAuthSecretStore,
     type OAuthSecretStore,

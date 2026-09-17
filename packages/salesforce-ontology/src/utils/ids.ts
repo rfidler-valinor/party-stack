@@ -21,3 +21,25 @@ export function salesforceLinkTypeId(sObjectName: string, fieldName: string): st
 export function salesforceFlowActionTypeId(flowApiName: string): string {
     return `salesforce:flow:${flowApiName}`;
 }
+
+export function salesforceStandardActionTypeId(
+    actionApiName: string
+): string {
+    return `salesforce:standard:${actionApiName}`;
+}
+
+export type SalesforceCrudOperation = "create" | "update" | "delete";
+
+export function salesforceCrudActionTypeId(
+    operation: SalesforceCrudOperation,
+    sObjectName: string
+): string {
+    return `salesforce:crud:${operation}:${sObjectName}`;
+}
+
+export function salesforceCrudActionTypeName(
+    operation: SalesforceCrudOperation,
+    sObjectName: string
+): string {
+    return `${operation}${sObjectName}`;
+}

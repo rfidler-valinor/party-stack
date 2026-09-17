@@ -104,7 +104,13 @@ describe("convertFoundryMetaObjectType", () => {
             value: {
                 type: {
                     kind: "attachment",
-                    value: { meta: { type: "attachment" } },
+                    value: {
+                        meta: {
+                            foundry: {
+                                kind: "attachment",
+                            },
+                        },
+                    },
                 },
             },
         });

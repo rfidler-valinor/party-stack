@@ -93,6 +93,8 @@ export function createLiveOntologyActions(options: {
                 actionTypeName: request.actionTypeName,
                 parameters,
                 context: options.context,
+                idempotencyKey:
+                    request.idempotencyKey,
                 objects: options.objects,
                 mutators: options.writes?.mutators,
             });
@@ -128,6 +130,10 @@ export function createLiveOntologyActions(options: {
             settle(error) {
                 if (error) reject(error);
                 else resolve();
+                return transaction.isPersisted.promise.then(
+                    () => undefined,
+                    () => undefined
+                );
             },
         };
     };

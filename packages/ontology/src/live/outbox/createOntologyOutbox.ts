@@ -141,13 +141,12 @@ export function useOntologyOutbox(
         let disposing = false;
         let reconciliationVersion = 0;
 
-        const discardProjection = (id: string, error?: Error) => {
-            void projections.discard(id, error);
-        };
-        const deliverResult = (event: OutboxResultEvent) => {
+        const deliverResult = async (
+            event: OutboxResultEvent
+        ) => {
             const completion = completions.get(event.id);
             if (event.type === "completed") {
-                discardProjection(event.id);
+                await projections.discard(event.id);
                 if (completion) {
                     completions.delete(event.id);
                     completion.resolve(event.result);
@@ -156,14 +155,23 @@ export function useOntologyOutbox(
             }
 
             const error = eventError(event);
-            discardProjection(event.id, error);
+            await projections.discard(
+                event.id,
+                error
+            );
             if (completion) {
                 completions.delete(event.id);
                 completion.reject(error);
             }
         };
         try {
-            lifetime.unsubscribeResults = service.events.subscribe("result", deliverResult);
+            lifetime.unsubscribeResults =
+                service.events.subscribe(
+                    "result",
+                    (event) => {
+                        void deliverResult(event);
+                    }
+                );
 
             yield* until(repository.preload());
             if (isCoordinationHost(options.runtime.coordination)) {

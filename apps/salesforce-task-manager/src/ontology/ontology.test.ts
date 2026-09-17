@@ -36,11 +36,29 @@ describe("generated Salesforce task-manager ontology", () => {
         expect(
             ontology.actionTypes.map(
                 (action) => action.name
-            )
+            ).sort()
         ).toEqual([
+            "confirmSalesMeeting",
             "createTask",
-            "updateTask",
             "deleteTask",
+            "sales_sfa_flows__CreateSalesLead",
+            "updateTask",
         ]);
+        expect(
+            ontology.actionTypes.find(
+                (action) => action.name === "createTask"
+            )?.meta
+        ).toEqual({
+            salesforce: {
+                kind: "crud",
+                objectType: "Task",
+                operation: "create",
+            },
+        });
+        expect(
+            ontology.queryFunctionTypes.map(
+                (query) => query.name
+            )
+        ).toEqual(["getAvailableMeetingTimes"]);
     });
 });

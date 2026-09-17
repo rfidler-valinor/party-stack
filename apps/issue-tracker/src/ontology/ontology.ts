@@ -82,7 +82,9 @@ export default defineOntology({
                         type: o.list({
                             elementType: o.attachment({
                                 meta: {
-                                    type: "attachment",
+                                    foundry: {
+                                        kind: "attachment",
+                                    },
                                 },
                                 constraint: {
                                     content: {
@@ -272,7 +274,9 @@ export default defineOntology({
                         type: o.list({
                             elementType: o.attachment({
                                 meta: {
-                                    type: "attachment",
+                                    foundry: {
+                                        kind: "attachment",
+                                    },
                                 },
                                 constraint: {
                                     content: {
@@ -629,7 +633,9 @@ export default defineOntology({
                         type: o.list({
                             elementType: o.attachment({
                                 meta: {
-                                    type: "attachment",
+                                    foundry: {
+                                        kind: "attachment",
+                                    },
                                 },
                                 constraint: {
                                     content: {

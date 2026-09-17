@@ -1057,6 +1057,18 @@ export default {
             type: o.struct({
                 fields: [
                     {
+                        name: "meta",
+                        displayName: "Meta",
+                        type: o.optional({
+                            type: o.map({
+                                keyType: o.string({}),
+                                valueType: o.unknown({}),
+                            }),
+                        }),
+                        description:
+                            "Provider-specific metadata used to execute this action.",
+                    },
+                    {
                         name: "name",
                         displayName: "Name",
                         type: o.string({}),

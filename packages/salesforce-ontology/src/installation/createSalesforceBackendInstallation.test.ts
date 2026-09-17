@@ -28,13 +28,13 @@ describe("createSalesforceOntologyRoute", () => {
         expect(route.matches("salesforce:other")).toBe(false);
     });
 
-    it("defers IR metadata projection to the installation", () => {
+    it("serves data and metadata from the same IR route", () => {
         const route = createSalesforceOntologyRoute({
             ontologyId: "salesforce:tasks",
             ir,
         })(backend);
 
         expect(route.configure !== undefined).toBe(true);
-        expect(route.configureMeta === undefined).toBe(true);
+        expect(route.configureMeta !== undefined).toBe(true);
     });
 });

@@ -1,25 +1,19 @@
-import {
-    createCollection,
-    eq,
-    liveQueryCollectionOptions,
-    Query,
-} from "@tanstack/db";
 import { QueryClient } from "@tanstack/query-core";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type {
-    MetaLinkType,
     MetaObjectType,
-    MetaValueType,
     OntologyCollectionOptions,
 } from "@party-stack/ontology";
-import type { SalesforceClient } from "@party-stack/salesforce-client";
+import type {
+    SalesforceClient,
+    SalesforceSObjectDescribe,
+} from "@party-stack/salesforce-client";
+import {
+    salesforceObjectTypeId,
+} from "../utils/ids.js";
 import { convertSalesforceMetaLinkTypes } from "./convertMetaLinkType.js";
+import { convertMetaNameQuery } from "./convertMetaLoadSubsetOptions.js";
 import { convertSalesforceMetaObjectType } from "./convertMetaObjectType.js";
-
-type MetaEntity =
-    | { entityType: "ObjectType"; entity: MetaObjectType }
-    | { entityType: "ValueType"; entity: MetaValueType }
-    | { entityType: "LinkType"; entity: MetaLinkType };
 
 export interface MetaEntityStoreOpts {
     client: SalesforceClient;
@@ -30,94 +24,124 @@ export interface MetaEntityStoreOpts {
     objectTypeNames?: string[];
 }
 
-export function createMetaEntityCollection(opts: MetaEntityStoreOpts) {
-    return createCollection(
-        queryCollectionOptions<MetaEntity>({
-            queryClient: new QueryClient(),
-            getKey: (row) => {
-                switch (row.entityType) {
-                    case "ObjectType":
-                    case "ValueType":
-                        return `${row.entityType}:${row.entity.name}`;
-                    case "LinkType":
-                        return `${row.entityType}:${row.entity.id}`;
-                }
-            },
-            queryKey: ["salesforce", "ontology", "metadata"],
-            syncMode: "eager",
-            queryFn: async () => {
-                const loaded = await loadSalesforceMetaOntology(opts.client, opts.objectTypeNames);
-                return [
-                    ...loaded.objectTypes.map((entity) => ({
-                        entityType: "ObjectType" as const,
-                        entity,
-                        ...entity,
-                    })),
-                    ...loaded.valueTypes.map((entity) => ({
-                        entityType: "ValueType" as const,
-                        entity,
-                        ...entity,
-                    })),
-                    ...loaded.linkTypes.map((entity) => ({
-                        entityType: "LinkType" as const,
-                        entity,
-                        ...entity,
-                    })),
-                ];
-            },
+async function describeSObjects(
+    client: SalesforceClient,
+    names: readonly string[]
+): Promise<SalesforceSObjectDescribe[]> {
+    const describes = await Promise.all(
+        [...new Set(names)].map(async (name) => {
+            try {
+                return await client.describeSObject(name);
+            } catch {
+                return undefined;
+            }
         })
     );
-}
-
-export type MetaEntityCollection = ReturnType<typeof createMetaEntityCollection>;
-
-export function objectTypeCollectionOptions(metadata: MetaEntityCollection): OntologyCollectionOptions {
-    return liveQueryCollectionOptions({
-        query: new Query()
-            .from({ metadata })
-            .where(({ metadata }) => eq(metadata.entityType, "ObjectType")),
-    }) as unknown as OntologyCollectionOptions;
-}
-
-export function valueTypeCollectionOptions(metadata: MetaEntityCollection): OntologyCollectionOptions {
-    return liveQueryCollectionOptions({
-        query: new Query()
-            .from({ metadata })
-            .where(({ metadata }) => eq(metadata.entityType, "ValueType")),
-    }) as unknown as OntologyCollectionOptions;
-}
-
-export function linkTypeCollectionOptions(metadata: MetaEntityCollection): OntologyCollectionOptions {
-    return liveQueryCollectionOptions({
-        query: new Query()
-            .from({ metadata })
-            .where(({ metadata }) => eq(metadata.entityType, "LinkType")),
-    }) as unknown as OntologyCollectionOptions;
-}
-
-async function loadSalesforceMetaOntology(
-    client: SalesforceClient,
-    objectTypeNames?: string[]
-): Promise<{
-    objectTypes: MetaObjectType[];
-    valueTypes: MetaValueType[];
-    linkTypes: MetaLinkType[];
-}> {
-    const global = await client.describeGlobal();
-    const allowlist = objectTypeNames ? new Set(objectTypeNames) : undefined;
-    const candidates = global.sobjects.filter((sobject) => {
-        if (!sobject.queryable) return false;
-        if (allowlist && !allowlist.has(sobject.name)) return false;
-        return true;
-    });
-
-    const describes = await Promise.all(
-        candidates.map((sobject) => client.describeSObject(sobject.name))
+    return describes.filter(
+        (
+            describe
+        ): describe is SalesforceSObjectDescribe =>
+            Boolean(describe)
     );
+}
 
-    return {
-        objectTypes: describes.map(convertSalesforceMetaObjectType),
-        valueTypes: [],
-        linkTypes: convertSalesforceMetaLinkTypes(describes),
-    };
+export function objectTypeCollectionOptions(
+    opts: MetaEntityStoreOpts
+): OntologyCollectionOptions {
+    return queryCollectionOptions<MetaObjectType>({
+        queryClient: new QueryClient(),
+        getKey: (row) => row.name,
+        queryKey: [
+            "salesforce",
+            "ontology",
+            "objectTypes",
+            opts.objectTypeNames ?? "all",
+        ],
+        syncMode: "on-demand",
+        queryFn: async (ctx) => {
+            const query = convertMetaNameQuery(
+                ctx.meta?.loadSubsetOptions
+            );
+            if (query.type === "getBatch") {
+                const allowlist = opts.objectTypeNames
+                    ? new Set(opts.objectTypeNames)
+                    : undefined;
+                const names = allowlist
+                    ? query.names.filter((name) =>
+                          allowlist.has(name)
+                      )
+                    : query.names;
+                return (
+                    await describeSObjects(
+                        opts.client,
+                        names
+                    )
+                ).map(convertSalesforceMetaObjectType);
+            }
+            const global =
+                await opts.client.describeGlobal();
+            const allowlist = opts.objectTypeNames
+                ? new Set(opts.objectTypeNames)
+                : undefined;
+            return global.sobjects
+                .filter(
+                    (sObject) =>
+                        sObject.queryable &&
+                        (!allowlist ||
+                            allowlist.has(sObject.name))
+                )
+                .map(
+                    (sObject): MetaObjectType => ({
+                        id: salesforceObjectTypeId(
+                            sObject.name
+                        ),
+                        name: sObject.name,
+                        displayName: sObject.label,
+                        pluralDisplayName:
+                            sObject.labelPlural,
+                        primaryKey: "Id",
+                        properties: [],
+                    })
+                );
+        },
+    }) as unknown as OntologyCollectionOptions;
+}
+
+export function valueTypeCollectionOptions(): OntologyCollectionOptions {
+    return queryCollectionOptions({
+        queryClient: new QueryClient(),
+        getKey: (row: { name: string }) => row.name,
+        queryKey: [
+            "salesforce",
+            "ontology",
+            "valueTypes",
+        ],
+        syncMode: "on-demand",
+        queryFn: () => Promise.resolve([]),
+    }) as unknown as OntologyCollectionOptions;
+}
+
+export function linkTypeCollectionOptions(
+    opts: MetaEntityStoreOpts
+): OntologyCollectionOptions {
+    return queryCollectionOptions({
+        queryClient: new QueryClient(),
+        getKey: (row: { id: string }) => row.id,
+        queryKey: [
+            "salesforce",
+            "ontology",
+            "linkTypes",
+            opts.objectTypeNames ?? [],
+        ],
+        syncMode: "on-demand",
+        queryFn: async () => {
+            if (!opts.objectTypeNames?.length) return [];
+            return convertSalesforceMetaLinkTypes(
+                await describeSObjects(
+                    opts.client,
+                    opts.objectTypeNames
+                )
+            );
+        },
+    }) as unknown as OntologyCollectionOptions;
 }

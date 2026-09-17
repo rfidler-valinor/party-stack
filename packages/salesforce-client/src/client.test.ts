@@ -217,45 +217,133 @@ describe("createSalesforceClient", () => {
     });
 
     it("subscribes to Salesforce Change Data Capture channels", async () => {
-        const client = createSalesforceClient({
-            instanceUrl: "https://example.my.salesforce.com",
-            apiVersion: "61.0",
-            tokenProvider: () => "stream-token",
-            fetch: vi.fn(),
-        });
-        const cancel = vi.fn();
-        let receive: ((event: unknown) => void) | undefined;
-        const subscribe = vi
-            .spyOn(client.connection.streaming, "subscribe")
-            .mockImplementation((channel, listener) => {
-                expect(channel).toBe("/data/TaskChangeEvent");
-                receive = listener as (event: unknown) => void;
-                return Object.assign(Promise.resolve(), {
-                    cancel,
-                    unsubscribe: cancel,
-                    withChannel: vi.fn(),
-                }) as never;
-            });
-        const listener = vi.fn();
-
-        const subscription = await client.subscribeToChangeEvents("Task", listener);
         const event = {
+            event: { replayId: 42 },
             payload: {
                 ChangeEventHeader: {
                     entityName: "Task",
                     changeType: "UPDATE",
-                    recordIds: ["00TPW0000012345YAA"],
+                    recordIds: [
+                        "00TPW0000012345YAA",
+                    ],
                 },
             },
         };
-        receive?.(event);
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce(
+                Response.json([
+                    {
+                        channel:
+                            "/meta/handshake",
+                        successful: true,
+                        clientId: "client-1",
+                    },
+                ])
+            )
+            .mockResolvedValueOnce(
+                Response.json([
+                    {
+                        channel:
+                            "/meta/subscribe",
+                        successful: true,
+                    },
+                ])
+            )
+            .mockResolvedValueOnce(
+                Response.json([
+                    {
+                        channel:
+                            "/data/TaskChangeEvent",
+                        data: event,
+                    },
+                    {
+                        channel:
+                            "/meta/connect",
+                        successful: true,
+                    },
+                ])
+            )
+            .mockImplementation(
+                (...args: [
+                    RequestInfo | URL,
+                    RequestInit?,
+                ]) =>
+                    new Promise<Response>(
+                        (resolve, reject) => {
+                            void resolve;
+                            const init = args[1];
+                            init?.signal?.addEventListener(
+                                "abort",
+                                () =>
+                                    reject(
+                                        new DOMException(
+                                            "Aborted",
+                                            "AbortError"
+                                        )
+                                    ),
+                                { once: true }
+                            );
+                        }
+                    )
+            );
+        const client = createSalesforceClient({
+            instanceUrl: "https://example.my.salesforce.com",
+            apiVersion: "61.0",
+            tokenProvider: () => "stream-token",
+            fetch: fetchMock as typeof fetch,
+        });
+        const listener = vi.fn();
+
+        const subscription =
+            await client.subscribeToChangeEvents(
+                "Task",
+                listener,
+                { replayId: 41 }
+            );
+        await vi.waitFor(() => {
+            expect(listener).toHaveBeenCalledWith(
+                event
+            );
+        });
         subscription.unsubscribe();
 
-        expect(client.connection.accessToken).toBe("stream-token");
-        expect(subscribe).toHaveBeenCalledOnce();
-        expect(listener).toHaveBeenCalledWith(event);
+        const handshakeCall = fetchMock.mock
+            .calls[0] as unknown as [
+            RequestInfo | URL,
+            RequestInit?,
+        ];
+        const subscribeCall = fetchMock.mock
+            .calls[1] as unknown as [
+            RequestInfo | URL,
+            RequestInit?,
+        ];
+        expect(
+            urlString(handshakeCall[0])
+        ).toBe(
+            "https://example.my.salesforce.com/cometd/61.0"
+        );
+        expect(
+            handshakeCall[1]?.credentials
+        ).toBe("include");
+        const subscribeBody =
+            subscribeCall[1]?.body;
+        expect(
+            typeof subscribeBody === "string"
+                ? JSON.parse(subscribeBody)
+                : undefined
+        ).toMatchObject([
+            {
+                subscription:
+                    "/data/TaskChangeEvent",
+                ext: {
+                    replay: {
+                        "/data/TaskChangeEvent": 41,
+                    },
+                },
+            },
+        ]);
         expect(subscription.channel).toBe("/data/TaskChangeEvent");
-        expect(cancel).toHaveBeenCalledOnce();
     });
 
     it("invokes Flow actions with an inputs payload", async () => {
@@ -298,5 +386,155 @@ describe("createSalesforceClient", () => {
                 outputValues: { Flow__InterviewStatus: "Finished" },
             },
         ]);
+    });
+
+    it("describes and invokes standard actions", async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce(
+                new Response(
+                    JSON.stringify({
+                        name: "getAvailableMeetingTimes",
+                        inputs: [],
+                        outputs: [],
+                    }),
+                    {
+                        status: 200,
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+                    }
+                )
+            )
+            .mockResolvedValueOnce(
+                new Response(
+                    JSON.stringify([
+                        {
+                            actionName:
+                                "getAvailableMeetingTimes",
+                            isSuccess: true,
+                            outputValues: {},
+                        },
+                    ]),
+                    {
+                        status: 200,
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+                    }
+                )
+            );
+        const client = createSalesforceClient({
+            instanceUrl:
+                "https://example.my.salesforce.com",
+            apiVersion: "61.0",
+            tokenProvider: () => "token",
+            fetch: fetchMock as typeof fetch,
+        });
+
+        await client.describeStandardAction(
+            "getAvailableMeetingTimes"
+        );
+        await client.invokeStandardAction(
+            "getAvailableMeetingTimes",
+            [{}]
+        );
+
+        const describeCall = fetchMock.mock
+            .calls[0] as unknown as [
+            RequestInfo | URL,
+            RequestInit?,
+        ];
+        const invokeCall = fetchMock.mock
+            .calls[1] as unknown as [
+            RequestInfo | URL,
+            RequestInit?,
+        ];
+        expect(
+            urlString(describeCall[0])
+        ).toBe(
+            "https://example.my.salesforce.com/services/data/v61.0/actions/standard/getAvailableMeetingTimes"
+        );
+        expect(
+            urlString(invokeCall[0])
+        ).toBe(
+            "https://example.my.salesforce.com/services/data/v61.0/actions/standard/getAvailableMeetingTimes"
+        );
+        expect(
+            invokeCall[1]?.method
+        ).toBe("POST");
+    });
+
+    it("batches action describes through the Composite Batch API", async () => {
+        let compositeBody = "";
+        const fetchMock = vi.fn(
+            (
+                input: RequestInfo | URL,
+                init?: RequestInit
+            ) => {
+                expect(urlString(input)).toBe(
+                    "https://example.my.salesforce.com/services/data/v61.0/composite/batch"
+                );
+                if (typeof init?.body !== "string") {
+                    throw new Error(
+                        "Expected a JSON Composite request body."
+                    );
+                }
+                compositeBody = init.body;
+                return Promise.resolve(
+                    Response.json({
+                        hasErrors: false,
+                        results: [
+                            {
+                                result: {
+                                    name: "First_Flow",
+                                    inputs: [],
+                                },
+                                statusCode: 200,
+                            },
+                            {
+                                result: {
+                                    name: "Second_Flow",
+                                    inputs: [],
+                                },
+                                statusCode: 200,
+                            },
+                        ],
+                    })
+                );
+            }
+        );
+        const client = createSalesforceClient({
+            instanceUrl:
+                "https://example.my.salesforce.com",
+            apiVersion: "61.0",
+            tokenProvider: () => "token",
+            fetch: fetchMock as typeof fetch,
+        });
+
+        await expect(
+            client.describeInvocableActions([
+                {
+                    kind: "flow",
+                    apiName: "First_Flow",
+                },
+                {
+                    kind: "standard",
+                    apiName: "Second_Action",
+                },
+            ])
+        ).resolves.toMatchObject([
+            { name: "First_Flow" },
+            { name: "Second_Flow" },
+        ]);
+        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(compositeBody).toContain(
+            "v61.0/actions/custom/flow/First_Flow"
+        );
+        expect(compositeBody).toContain(
+            "v61.0/actions/standard/Second_Action"
+        );
     });
 });

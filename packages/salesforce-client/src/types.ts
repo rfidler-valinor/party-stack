@@ -1,37 +1,93 @@
-import type {
-    DescribeGlobalResult,
-    DescribeSObjectResult,
-    Field,
-    QueryResult,
-    Record as JsforceRecord,
-} from "@jsforce/jsforce-node";
-
 /**
- * Re-export jsforce describe/query types as the Salesforce client contract.
- * @see https://github.com/jsforce/jsforce
- */
-export type {
-    DescribeGlobalResult,
-    DescribeSObjectResult,
-    Field,
-    QueryResult,
-    JsforceRecord as SalesforceRecord,
-};
-
-/** Party aliases kept for adapter readability. */
-export type SalesforceSObjectDescribe = DescribeSObjectResult;
-export type SalesforceFieldDescribe = Field;
-export type SalesforceGlobalDescribeResponse = DescribeGlobalResult;
-export type SalesforceQueryResponse<T extends JsforceRecord = JsforceRecord> = QueryResult<T>;
-
-/**
- * jsforce types `Field.picklistValues` as `any[]`; this is the shape Salesforce returns.
+ * Salesforce REST API shapes used by Party Stack.
  */
 export interface SalesforcePicklistValue {
     active: boolean;
     defaultValue: boolean;
     label: string | null;
     value: string;
+}
+
+export interface SalesforceFieldDescribe {
+    autoNumber: boolean;
+    calculated: boolean;
+    createable: boolean;
+    defaultedOnCreate: boolean;
+    inlineHelpText?: string | null;
+    label: string;
+    name: string;
+    nillable: boolean;
+    picklistValues: SalesforcePicklistValue[];
+    referenceTo?: string[];
+    relationshipName?: string | null;
+    type: string;
+    updateable: boolean;
+    [key: string]: unknown;
+}
+
+export type Field = SalesforceFieldDescribe;
+
+export interface SalesforceSObjectDescribe {
+    createable: boolean;
+    deletable: boolean;
+    fields: SalesforceFieldDescribe[];
+    label: string;
+    labelPlural: string;
+    name: string;
+    queryable: boolean;
+    updateable: boolean;
+    [key: string]: unknown;
+}
+
+export type DescribeSObjectResult =
+    SalesforceSObjectDescribe;
+
+export interface SalesforceGlobalSObjectSummary {
+    label: string;
+    labelPlural: string;
+    name: string;
+    queryable: boolean;
+    [key: string]: unknown;
+}
+
+export interface SalesforceGlobalDescribeResponse {
+    encoding?: string;
+    maxBatchSize?: number;
+    sobjects: SalesforceGlobalSObjectSummary[];
+}
+
+export type DescribeGlobalResult =
+    SalesforceGlobalDescribeResponse;
+
+export interface SalesforceRecord {
+    attributes?: {
+        type?: string;
+        url?: string;
+    };
+    [key: string]: unknown;
+}
+
+export interface SalesforceQueryResponse<
+    T extends SalesforceRecord = SalesforceRecord,
+> {
+    done: boolean;
+    nextRecordsUrl?: string;
+    records: T[];
+    totalSize: number;
+}
+
+export type QueryResult<
+    T extends SalesforceRecord = SalesforceRecord,
+> = SalesforceQueryResponse<T>;
+
+export interface SalesforceSaveResult {
+    errors: Array<{
+        fields?: string[];
+        message: string;
+        statusCode?: string;
+    }>;
+    id?: string;
+    success: boolean;
 }
 
 /**
@@ -51,8 +107,12 @@ export interface SalesforceInvocableActionParameter {
     type?: string | null;
     description?: string;
     required?: boolean;
+    maxOccurs?: number | null;
+    picklistValues?: SalesforcePicklistValue[] | null;
     apexClass?: string | null;
     sobjectType?: string | null;
+    /** Salesforce uses this casing on some Flow input describes. */
+    sObjectType?: string | null;
 }
 
 export interface SalesforceInvocableActionDescribe {
@@ -63,6 +123,11 @@ export interface SalesforceInvocableActionDescribe {
     category?: string;
     inputs?: SalesforceInvocableActionParameter[];
     outputs?: SalesforceInvocableActionParameter[];
+}
+
+export interface SalesforceInvocableActionDescribeRequest {
+    kind: "flow" | "standard";
+    apiName: string;
 }
 
 export type SalesforceInvocableActionListResponse =
@@ -109,6 +174,14 @@ export interface SalesforceChangeEvent<
 export interface SalesforceChangeEventSubscription {
     channel: string;
     unsubscribe: () => void;
+}
+
+export interface SalesforceChangeEventSubscriptionOptions {
+    /**
+     * Resume after this opaque Salesforce replay ID. Use -1 for new events
+     * only or -2 for the earliest retained event.
+     */
+    replayId?: number;
 }
 
 export type SalesforceFetch = typeof fetch;

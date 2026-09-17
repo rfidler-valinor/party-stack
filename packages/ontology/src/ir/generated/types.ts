@@ -387,6 +387,8 @@ export type ActionLogicStep = v.Union<{
 
 /** An action type in the ontology. */
 export type ActionTypeDef = {
+    /** Provider-specific metadata used to execute this action. */
+    meta?: Record<string, unknown>;
     /** The object type's programmatic name. */
     name: string;
     /** Human-readable name. */

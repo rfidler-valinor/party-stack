@@ -7,7 +7,7 @@ import {
     SALESFORCE_TASK_MANAGER_OBJECT_TYPES,
     SALESFORCE_TASK_MANAGER_ONTOLOGY_ID,
 } from "../settings.js";
-import { addTaskManagerActions } from "./transform.js";
+import { projectTaskManagerOntology } from "./transform.js";
 
 const settings = getSalesforceSettings();
 
@@ -18,9 +18,27 @@ export default createSalesforceOntologyPullConfig({
         SALESFORCE_TASK_MANAGER_ONTOLOGY_ID,
     objectTypeNames:
         SALESFORCE_TASK_MANAGER_OBJECT_TYPES,
-    actionTypeNames: [],
+    flowActionTypeNames: [
+        "sales_sfa_flows__CreateSalesLead",
+    ],
+    standardActionTypeNames: [
+        "confirmSalesMeeting",
+    ],
+    standardQueryFunctionTypeNames: [
+        "getAvailableMeetingTimes",
+    ],
+    crudActionTypes: [
+        {
+            objectType: "Task",
+            operations: [
+                "create",
+                "update",
+                "delete",
+            ],
+        },
+    ],
     transformPulledOntology:
-        addTaskManagerActions,
+        projectTaskManagerOntology,
     connection: {
         userId: settings.userId,
         oauth: {

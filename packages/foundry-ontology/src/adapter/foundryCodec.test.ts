@@ -86,13 +86,25 @@ describe("createFoundryCodec", () => {
                         {
                             name: "file",
                             displayName: "File",
-                            type: o.attachment({ meta: { type: "media" } }),
+                            type: o.attachment({
+                                meta: {
+                                    foundry: {
+                                        kind: "media",
+                                    },
+                                },
+                            }),
                         },
                         {
                             name: "optionalMedia",
                             displayName: "Optional media",
                             type: o.optional({
-                                type: o.attachment({ meta: { type: "media" } }),
+                                type: o.attachment({
+                                    meta: {
+                                        foundry: {
+                                            kind: "media",
+                                        },
+                                    },
+                                }),
                             }),
                         },
                     ],
@@ -133,7 +145,11 @@ describe("createFoundryCodec", () => {
         expect(
             codec.encodeValue(
                 o.attachment({
-                    meta: { type: "media" },
+                    meta: {
+                        foundry: {
+                            kind: "media",
+                        },
+                    },
                 }),
                 attachment
             )

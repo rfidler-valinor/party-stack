@@ -15,6 +15,8 @@ import {
     createSalesforceBackendInstallation,
     createSalesforceOntologyRoute,
 } from "../installation/createSalesforceBackendInstallation.js";
+import { salesforceCrudActionTypeName } from "../utils/ids.js";
+import type { SalesforceCrudActionTypeSelection } from "../crud.js";
 
 export interface SalesforceOntologyPullConnectionOptions {
     oauth?: SalesforceOAuthConnectionOptions;
@@ -27,7 +29,10 @@ export interface CreateSalesforceOntologyPullSourceOptions {
     apiVersion: string;
     ontologyId: string;
     objectTypeNames: string[];
-    actionTypeNames?: string[];
+    flowActionTypeNames?: string[];
+    standardActionTypeNames?: string[];
+    standardQueryFunctionTypeNames?: string[];
+    crudActionTypes?: readonly SalesforceCrudActionTypeSelection[];
     connection: SalesforceOntologyPullConnectionOptions;
     transformPulledOntology?: (
         ontology: OntologyIR
@@ -218,8 +223,14 @@ export function createSalesforceOntologyPullSource(
                         ontologyId: options.ontologyId,
                         objectTypeNames:
                             options.objectTypeNames,
-                        actionTypeNames:
-                            options.actionTypeNames,
+                        flowActionTypeNames:
+                            options.flowActionTypeNames,
+                        standardActionTypeNames:
+                            options.standardActionTypeNames,
+                        standardQueryFunctionTypeNames:
+                            options.standardQueryFunctionTypeNames,
+                        crudActionTypes:
+                            options.crudActionTypes,
                     }),
                 ],
             }),
@@ -301,18 +312,49 @@ export type SalesforceOntologyPullConfig =
 
 export interface CreateSalesforceOntologyPullConfigOptions
     extends CreateSalesforceOntologyPullSourceOptions {
-    actionTypeNames: string[];
+    flowActionTypeNames: string[];
     queryFunctionTypeNames?: string[];
 }
 
 export function createSalesforceOntologyPullConfig(
     options: CreateSalesforceOntologyPullConfigOptions
 ): SalesforceOntologyPullConfig {
+    const objectTypeNames = new Set(
+        options.objectTypeNames
+    );
+    for (const selection of options.crudActionTypes ??
+        []) {
+        if (!objectTypeNames.has(selection.objectType)) {
+            throw new Error(
+                `Salesforce CRUD object type "${selection.objectType}" must also appear in objectTypeNames.`
+            );
+        }
+    }
+    const crudActionTypeNames = (
+        options.crudActionTypes ?? []
+    ).flatMap((selection) =>
+        selection.operations.map((operation) =>
+            salesforceCrudActionTypeName(
+                operation,
+                selection.objectType
+            )
+        )
+    );
     return {
         source: createSalesforceOntologyPullSource(options),
         objectTypeNames: options.objectTypeNames,
-        actionTypeNames: options.actionTypeNames,
+        actionTypeNames: [
+            ...options.flowActionTypeNames,
+            ...(options.standardActionTypeNames ??
+                []),
+            ...crudActionTypeNames,
+        ],
         queryFunctionTypeNames:
-            options.queryFunctionTypeNames ?? [],
+            [
+                ...(options.queryFunctionTypeNames ??
+                    []),
+                ...(options.standardQueryFunctionTypeNames ??
+                    []),
+            ],
     };
 }

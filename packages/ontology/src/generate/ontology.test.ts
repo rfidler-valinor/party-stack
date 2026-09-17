@@ -97,6 +97,11 @@ describe("generateOntology", () => {
             linkTypes: [],
             actionTypes: [
                 {
+                    meta: {
+                        provider: {
+                            kind: "remote",
+                        },
+                    },
                     name: "updateEmployee",
                     displayName: "Update employee",
                     parameters: [
@@ -129,5 +134,8 @@ describe("generateOntology", () => {
         expect(output).toContain("o.Expression.getAt");
         expect(output).toContain('kind: "objectLookup"');
         expect(output).toContain('objectType: "Employee"');
+        expect(output).toContain("meta: {");
+        expect(output).toContain("provider: {");
+        expect(output).toContain('kind: "remote"');
     });
 });
