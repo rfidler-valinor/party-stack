@@ -1,5 +1,13 @@
 # @party-stack/oauth
 
+## 0.2.5
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/runtime@0.3.5
+
 ## 0.2.4
 
 ### Patch Changes

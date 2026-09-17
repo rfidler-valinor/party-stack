@@ -1,5 +1,14 @@
 # @party-stack/ontology-explorer
 
+## 0.1.17
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/foundry-ontology@0.14.10
+    - @party-stack/ontology@0.16.5
+
 ## 0.1.16
 
 ### Patch Changes

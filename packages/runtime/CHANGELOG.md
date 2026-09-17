@@ -1,5 +1,11 @@
 # @party-stack/runtime
 
+## 0.3.5
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+
 ## 0.3.4
 
 ### Patch Changes

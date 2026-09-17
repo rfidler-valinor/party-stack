@@ -1,5 +1,17 @@
 # @party-stack/salesforce-task-manager
 
+## 0.1.10
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/salesforce-ontology@0.1.10
+    - @party-stack/ontology-devtools@0.4.13
+    - @party-stack/node-runtime@0.2.5
+    - @party-stack/ontology@0.16.5
+    - @party-stack/web-runtime@0.3.5
+
 ## 0.1.9
 
 ### Patch Changes

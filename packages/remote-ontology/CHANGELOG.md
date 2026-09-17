@@ -1,5 +1,14 @@
 # @party-stack/remote-ontology
 
+## 0.8.5
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/ontology@0.16.5
+    - @party-stack/runtime@0.3.5
+
 ## 0.8.4
 
 ### Patch Changes
