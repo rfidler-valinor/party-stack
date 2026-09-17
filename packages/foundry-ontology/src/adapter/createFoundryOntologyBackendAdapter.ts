@@ -88,6 +88,18 @@ function serializeOverrideValue(value: unknown): string {
     return JSON.stringify(value) ?? "";
 }
 
+function serializeActionExecutionTime(value: unknown): string {
+    try {
+        const candidate = value instanceof Date ? value.toISOString() : String(value);
+        return Temporal.Instant.from(candidate).toString();
+    } catch (cause) {
+        throw new TypeError(
+            "Invalid action execution time: expected a Date or Temporal-like ISO instant.",
+            { cause }
+        );
+    }
+}
+
 function getApplyActionOperationId(result: ApplyActionResult): string {
     const operationId = result.operationId;
     if (typeof operationId !== "string" || operationId.length === 0) {
@@ -161,7 +173,7 @@ function prepareFoundryActionInvocation(options: {
         }
         if (overrideMapping.nowParameterName === parameterName) {
             if (value !== undefined) {
-                actionExecutionTime = serializeOverrideValue(value);
+                actionExecutionTime = serializeActionExecutionTime(value);
             }
             continue;
         }
