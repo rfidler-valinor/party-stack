@@ -1,5 +1,13 @@
 # @party-stack/expo-runtime
 
+## 0.3.4
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/runtime@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

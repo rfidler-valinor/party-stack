@@ -1,5 +1,11 @@
 # @party-stack/runtime
 
+## 0.3.4
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+
 ## 0.3.3
 
 ### Patch Changes

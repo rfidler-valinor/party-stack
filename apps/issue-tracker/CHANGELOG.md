@@ -1,5 +1,20 @@
 # @party-stack/issue-tracker
 
+## 0.2.9
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/ontology-devtools@0.4.12
+    - @party-stack/foundry-ontology@0.14.8
+    - @party-stack/sqlite-ontology@0.6.5
+    - @party-stack/ontology@0.16.4
+    - @party-stack/better-auth@0.2.4
+    - @party-stack/connections@0.2.4
+    - @party-stack/remote-ontology@0.8.4
+    - @party-stack/web-runtime@0.3.4
+
 ## 0.2.8
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @party-stack/db-indexeddb-persistence
 
+## 0.1.3
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+
 ## 0.1.2
 
 ### Patch Changes
