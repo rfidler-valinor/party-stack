@@ -1,5 +1,11 @@
 # @party-stack/foundry-ontology
 
+## 0.14.9
+
+### Patch Changes
+
+- ccf3bcd: Fix generated CurrentTime override serialization across bundled module instances.
+
 ## 0.14.8
 
 ### Patch Changes
