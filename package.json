@@ -19,7 +19,7 @@
     },
     "pnpm": {
         "overrides": {
-            "@tanstack/db": "0.9.0"
+            "@tanstack/db": "0.8.6"
         }
     },
     "packageManager": "pnpm@9.6.0",
