@@ -1,5 +1,17 @@
 # @party-stack/salesforce-task-manager
 
+## 0.1.11
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/node-runtime@0.2.6
+    - @party-stack/ontology-devtools@0.4.14
+    - @party-stack/ontology@0.16.6
+    - @party-stack/salesforce-ontology@0.1.11
+    - @party-stack/web-runtime@0.3.6
+
 ## 0.1.10
 
 ### Patch Changes

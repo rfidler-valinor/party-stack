@@ -1,5 +1,14 @@
 # @party-stack/ontology-explorer
 
+## 0.1.18
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/foundry-ontology@0.14.11
+    - @party-stack/ontology@0.16.6
+
 ## 0.1.17
 
 ### Patch Changes
