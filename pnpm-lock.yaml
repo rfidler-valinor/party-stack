@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.7
-        version: 2.29.7(@types/node@26.5.1)
+        version: 2.29.7(@types/node@26.6.1)
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -69,11 +69,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/web-runtime
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/react-db':
-        specifier: ^0.4.1
-        version: 0.4.1(react@19.2.0)(typescript@5.8.3)
+        specifier: ^0.3.6
+        version: 0.3.6(react@19.2.0)(typescript@5.8.3)
       '@tanstack/react-devtools':
         specifier: ^0.10.9
         version: 0.10.9(@types/react-dom@19.2.3(@types/react@19.2.6))(@types/react@19.2.6)(csstype@3.2.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)
@@ -154,17 +154,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ontology
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/query-core':
         specifier: ^5.102.8
         version: 5.102.8
       '@tanstack/query-db-collection':
-        specifier: ^1.2.15
-        version: 1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)
+        specifier: ^1.2.11
+        version: 1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)
       '@tanstack/react-db':
-        specifier: ^0.4.1
-        version: 0.4.1(react@19.2.0)(typescript@5.8.3)
+        specifier: ^0.3.6
+        version: 0.3.6(react@19.2.0)(typescript@5.8.3)
       '@tanstack/react-router':
         specifier: ^1.168.7
         version: 1.168.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -227,17 +227,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/web-runtime
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/query-core':
         specifier: ^5.102.8
         version: 5.102.8
       '@tanstack/query-db-collection':
-        specifier: ^1.2.15
-        version: 1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)
+        specifier: ^1.2.11
+        version: 1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)
       '@tanstack/react-db':
-        specifier: ^0.4.1
-        version: 0.4.1(react@19.2.0)(typescript@5.8.3)
+        specifier: ^0.3.6
+        version: 0.3.6(react@19.2.0)(typescript@5.8.3)
       '@tanstack/react-devtools':
         specifier: ^0.10.9
         version: 0.10.9(@types/react-dom@19.2.3(@types/react@19.2.6))(@types/react@19.2.6)(csstype@3.2.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)
@@ -324,11 +324,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/web-runtime
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/react-db':
-        specifier: ^0.4.1
-        version: 0.4.1(react@19.2.0)(typescript@5.8.3)
+        specifier: ^0.3.6
+        version: 0.3.6(react@19.2.0)(typescript@5.8.3)
       '@tanstack/react-devtools':
         specifier: ^0.10.9
         version: 0.10.9(@types/react-dom@19.2.3(@types/react@19.2.6))(@types/react@19.2.6)(csstype@3.2.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)
@@ -604,7 +604,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   old/osdk-react-todo-app:
     dependencies:
@@ -647,7 +647,7 @@ importers:
         version: 0.5.19(tailwindcss@4.1.17)
       '@tailwindcss/vite':
         specifier: ^4.0.6
-        version: 4.1.17(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+        version: 4.1.17(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       '@types/react':
         specifier: ^19.2.6
         version: 19.2.6
@@ -656,7 +656,7 @@ importers:
         version: 19.2.3(@types/react@19.2.6)
       '@vitejs/plugin-react-swc':
         specifier: ^3.7.2
-        version: 3.11.0(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+        version: 3.11.0(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -680,7 +680,7 @@ importers:
         version: 8.47.0(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       vite:
         specifier: ^7.2.4
-        version: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   old/osdk-utils:
     dependencies:
@@ -717,11 +717,11 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       better-auth:
         specifier: ^1.7.1
-        version: 1.7.1(@cloudflare/workers-types@5.20260827.1)(@tanstack/react-start@1.167.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(better-sqlite3@12.9.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+        version: 1.7.1(@cloudflare/workers-types@5.20260827.1)(@tanstack/react-start@1.167.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(better-sqlite3@12.9.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -730,7 +730,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/blobs:
     dependencies:
@@ -754,8 +754,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -764,7 +764,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/connections:
     dependencies:
@@ -782,8 +782,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -792,7 +792,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/coordination:
     dependencies:
@@ -811,13 +811,13 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/db-indexeddb-persistence:
     dependencies:
       '@tanstack/db-sqlite-persistence-core':
-        specifier: ^0.2.23
-        version: 0.2.23(typescript@5.8.3)
+        specifier: ^0.2.19
+        version: 0.2.19(typescript@5.8.3)
       idb:
         specifier: ^8.0.3
         version: 8.0.3
@@ -829,11 +829,11 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@vitest/browser':
         specifier: 3.2.4
-        version: 3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@3.2.4)
+        version: 3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@3.2.4)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -848,7 +848,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/durable-object-ontology:
     dependencies:
@@ -864,13 +864,13 @@ importers:
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@cloudflare/vitest-plugin':
         specifier: ^1.1.1
-        version: 1.1.1(@cloudflare/workers-types@5.20260827.1)(@vitest/runner@4.1.11)(@vitest/snapshot@4.1.11)(vitest@4.1.11(@types/node@26.5.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)))
+        version: 1.1.1(@cloudflare/workers-types@5.20260827.1)(@vitest/runner@4.1.11)(@vitest/snapshot@4.1.11)(vitest@4.1.11(@types/node@26.6.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)))
       '@cloudflare/workers-types':
         specifier: ^5.20260827.1
         version: 5.20260827.1
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       esbuild:
         specifier: ^0.28.1
         version: 0.28.1
@@ -882,7 +882,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@types/node@26.5.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+        version: 4.1.11(@types/node@26.6.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       wrangler:
         specifier: ^4.127.0
         version: 4.127.0(@cloudflare/workers-types@5.20260827.1)
@@ -900,7 +900,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/expo-runtime:
     dependencies:
@@ -911,8 +911,8 @@ importers:
         specifier: workspace:*
         version: link:../runtime
       '@tanstack/expo-db-sqlite-persistence':
-        specifier: ^0.2.23
-        version: 0.2.23(expo-sqlite@55.0.15(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0))(typescript@5.8.3)
+        specifier: ^0.2.19
+        version: 0.2.19(expo-sqlite@55.0.15(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0))(typescript@5.8.3)
       expo-secure-store:
         specifier: ^57.0.1
         version: 57.0.1(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))
@@ -968,7 +968,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/foundry-object-set-watcher:
     dependencies:
@@ -1086,11 +1086,11 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/query-db-collection':
-        specifier: ^1.2.15
-        version: 1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)
+        specifier: ^1.2.11
+        version: 1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -1128,8 +1128,8 @@ importers:
         specifier: workspace:*
         version: link:../runtime
       '@tanstack/node-db-sqlite-persistence':
-        specifier: ^0.2.23
-        version: 0.2.23(typescript@5.8.3)
+        specifier: ^0.2.19
+        version: 0.2.19(typescript@5.8.3)
       better-sqlite3:
         specifier: ^12.4.6
         version: 12.9.0
@@ -1178,8 +1178,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -1188,7 +1188,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/ontology:
     dependencies:
@@ -1214,8 +1214,8 @@ importers:
         specifier: workspace:*
         version: link:../runtime
       '@tanstack/db-sqlite-persistence-core':
-        specifier: ^0.2.23
-        version: 0.2.23(typescript@5.8.3)
+        specifier: ^0.2.19
+        version: 0.2.19(typescript@5.8.3)
       change-case:
         specifier: ^5.4.4
         version: 5.4.4
@@ -1245,8 +1245,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.6.1))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.6.1)
@@ -1258,7 +1258,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/ontology-devtools:
     dependencies:
@@ -1291,11 +1291,11 @@ importers:
         specifier: 4.1.17
         version: 4.1.17
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/react-db':
-        specifier: ^0.4.1
-        version: 0.4.1(react@19.2.0)(typescript@5.8.3)
+        specifier: ^0.3.6
+        version: 0.3.6(react@19.2.0)(typescript@5.8.3)
       '@tanstack/react-devtools':
         specifier: ^0.10.9
         version: 0.10.9(@types/react-dom@19.2.3(@types/react@19.2.6))(@types/react@19.2.6)(csstype@3.2.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)
@@ -1322,7 +1322,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/remote-ontology:
     dependencies:
@@ -1336,8 +1336,8 @@ importers:
         specifier: ^5.102.8
         version: 5.102.8
       '@tanstack/query-db-collection':
-        specifier: ^1.2.15
-        version: 1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)
+        specifier: ^1.2.11
+        version: 1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)
       temporal-polyfill:
         specifier: ^0.3.0
         version: 0.3.0
@@ -1349,8 +1349,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -1377,11 +1377,11 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/db-sqlite-persistence-core':
-        specifier: ^0.2.23
-        version: 0.2.23(typescript@5.8.3)
+        specifier: ^0.2.19
+        version: 0.2.19(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -1390,7 +1390,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/salesforce-client:
     dependencies:
@@ -1415,7 +1415,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/salesforce-ontology:
     dependencies:
@@ -1448,14 +1448,14 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@tanstack/query-core':
         specifier: ^5.102.8
         version: 5.102.8
       '@tanstack/query-db-collection':
-        specifier: ^1.2.15
-        version: 1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)
+        specifier: ^1.2.11
+        version: 1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)
       eslint:
         specifier: ^9.25.0
         version: 9.28.0(jiti@2.7.0)
@@ -1464,7 +1464,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   packages/sqlite-ontology:
     dependencies:
@@ -1479,8 +1479,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
       '@tanstack/db':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)
+        specifier: ^0.8.6
+        version: 0.8.6(typescript@5.8.3)
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -1523,7 +1523,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
 packages:
 
@@ -4045,18 +4045,18 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
 
-  '@tanstack/db-ivm@0.1.22':
-    resolution: {integrity: sha512-vpNIY6QnvFiVGPwdMVnh1OAZyFLioFkM5gQAqefghvgDhCMmWUPjYka2gw6w+2TBy742zsGPtLnpxBzUKXo9Jw==}
+  '@tanstack/db-ivm@0.1.19':
+    resolution: {integrity: sha512-3VGvgNXAPSVqny/pL8Y6n/txnaZzV49WmgSQ9N5eyCQNgMtuOEOJHKDatqqCy3gDxVu6pkhSHDKxcNFOtxMouw==}
     peerDependencies:
       typescript: '>=4.7'
 
-  '@tanstack/db-sqlite-persistence-core@0.2.23':
-    resolution: {integrity: sha512-czdn4wXGZNd+RD4POGMZAB2EozAdFmlxPuF54kIrq+h86HNruqDd5kyxavKzyOspo72uUQpjaMdMH+6ix9iAoQ==}
+  '@tanstack/db-sqlite-persistence-core@0.2.19':
+    resolution: {integrity: sha512-uTMoM8h/npMseiCV+dihTrT/J+IZ6bRxc6ZE5a4ZnozQvMslK2twjXMsZq6QZDePMBXvI/QiMlShMfYJpXnYFg==}
     peerDependencies:
       typescript: '>=4.7'
 
-  '@tanstack/db@0.9.2':
-    resolution: {integrity: sha512-jeyKbppXwjPNHe0GEVIvsvtirDCxjbPR2xphQaNjgteR15Y+Qnm+6IQNcd3zJ+98uJZ3ot9nagV3UNI+ckVRhQ==}
+  '@tanstack/db@0.8.6':
+    resolution: {integrity: sha512-ALS5eVRDKHLcCcjkUVvsRjtEIYxe+0C+6qSXBUTi4rSvvj0CXJE4hexqyJLi4L2napHhdaN6NcZQz7RYJRIGyA==}
     peerDependencies:
       typescript: '>=4.7'
 
@@ -4134,8 +4134,8 @@ packages:
     peerDependencies:
       solid-js: '>=1.9.7'
 
-  '@tanstack/expo-db-sqlite-persistence@0.2.23':
-    resolution: {integrity: sha512-53Mbb9pCWKl6z4KaiFYwXS822BnovFR4srgoCk18F0fa4/zmifU5OO6dFC//UDTmMXrI/6YKijg19b+IYJxw1w==}
+  '@tanstack/expo-db-sqlite-persistence@0.2.19':
+    resolution: {integrity: sha512-ApaaMe/SSaqJGk6AL3qRIUwWjBN4DDNf1h3yKDR9pczckRlJPcKvSRp0K8CwxE1XCDVkFcwHM2cYhiuSknR4GQ==}
     peerDependencies:
       expo-sqlite: ^55.0.10
       typescript: '>=4.7'
@@ -4144,8 +4144,8 @@ packages:
     resolution: {integrity: sha512-NaOGLRrddszbQj9upGat6HG/4TKvXLvu+osAIgfxPYA+eIvYKv8GKDJOrY2D3/U9MRnKfMWD7bU4jeD4xmqyIg==}
     engines: {node: '>=20.19'}
 
-  '@tanstack/node-db-sqlite-persistence@0.2.23':
-    resolution: {integrity: sha512-W6UbeGU+j4lXG7xwaHaDV7H4giMq1M9/ZXPS8uiSnamEFU9QNAtLu80lFhkwI7cuhwwmlilavq18O1jYNZH6Tg==}
+  '@tanstack/node-db-sqlite-persistence@0.2.19':
+    resolution: {integrity: sha512-jIueaXELFSPr9JcXrhMycuIeTaQTeQI+M30UKXYCdT2QJp57g4kTLs4trm//NHjiET2bnEFGpzkDIuhwsHWeRQ==}
     peerDependencies:
       typescript: '>=4.7'
 
@@ -4159,14 +4159,14 @@ packages:
   '@tanstack/query-core@5.90.10':
     resolution: {integrity: sha512-EhZVFu9rl7GfRNuJLJ3Y7wtbTnENsvzp+YpcAV7kCYiXni1v8qZh++lpw4ch4rrwC0u/EZRnBHIehzCGzwXDSQ==}
 
-  '@tanstack/query-db-collection@1.2.15':
-    resolution: {integrity: sha512-02d2haENejJObceIFuxCBY/YbyH1t5+Bw6VEl1vev8pX6CkXnkF1cAwxKPTQgHyj34dfWJ5RLo9bB3BgwuQz5Q==}
+  '@tanstack/query-db-collection@1.2.11':
+    resolution: {integrity: sha512-18aoJd9lFeOxH8LNBJuJm28gdNJabiB6Oj3aW2ZWb3/Cj//knOEwvTLKdlpJM1fFf/e8nGkEka13iW5TgSQ2rg==}
     peerDependencies:
       '@tanstack/query-core': ^5.0.0
       typescript: '>=4.7'
 
-  '@tanstack/react-db@0.4.1':
-    resolution: {integrity: sha512-mA/a3TAufm0/AZUHmfyKKYfJnEH0XEzJ1Cymt5ZOLqR90MzzDK9KyaDh/JScYHYEipoRkKeRcmedAnHksP6yrg==}
+  '@tanstack/react-db@0.3.6':
+    resolution: {integrity: sha512-jBBqrFOpbaZR7qhjOBhOcxZi+hM/Q1jn0CistWvg1V3qJJtN9k1AiA04hXnN4hWk86wMFbcreKvoEaXDAxX+Ww==}
     peerDependencies:
       react: '>=16.8.0'
 
@@ -4397,9 +4397,6 @@ packages:
 
   '@types/node@24.10.1':
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
-
-  '@types/node@26.5.1':
-    resolution: {integrity: sha512-CzNm2FezW4VR/LjG6yUdiEgLE/rAQ9Slj5gCu/C2VrdcW7I0ahNZ8DRbHT7zOZ6r3ONgd/bsQIeSaoDGrd1C6g==}
 
   '@types/node@26.6.1':
     resolution: {integrity: sha512-VqGJBMCtdhqkBUCcBLvywI0NJ+KLuVzgNnlBUNFOQjqVxzo2lxLUNg1DSey8+u2u6ktswSAxg+s68QLzWHNOuA==}
@@ -5495,8 +5492,8 @@ packages:
   electron-to-chromium@1.5.427:
     resolution: {integrity: sha512-n14zb3FdsChZ2BNobqNHAJMcP3ifFv4paox2LvCrfVAQcqGiSURgbJl+PfMpHVCNFkStnNc+RRVtPBTVW5PDgw==}
 
-  electron-to-chromium@1.5.430:
-    resolution: {integrity: sha512-e1QEj72Y4zd8RlNZVmoTg+iCOSVwpk05IOiiQwdrkwCSVlZfPthevErhE+nckGd2YbsXfp1SkisznhGVIXP2NQ==}
+  electron-to-chromium@1.5.431:
+    resolution: {integrity: sha512-AAVihz2YwJeOdAynX8MUtqpvjY0gaiARp/7+r4kwqgzqXMrfG1qDN7vwT80uxAoOQRPcZH8t73EI+CA/1OJN8A==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -10068,7 +10065,7 @@ snapshots:
     dependencies:
       '@changesets/types': 6.1.0
 
-  '@changesets/cli@2.29.7(@types/node@26.5.1)':
+  '@changesets/cli@2.29.7(@types/node@26.6.1)':
     dependencies:
       '@changesets/apply-release-plan': 7.0.13
       '@changesets/assemble-release-plan': 6.0.9
@@ -10084,7 +10081,7 @@ snapshots:
       '@changesets/should-skip-package': 0.1.2
       '@changesets/types': 6.1.0
       '@changesets/write': 0.4.0
-      '@inquirer/external-editor': 1.0.3(@types/node@26.5.1)
+      '@inquirer/external-editor': 1.0.3(@types/node@26.6.1)
       '@manypkg/get-packages': 1.1.3
       ansi-colors: 4.1.3
       ci-info: 3.9.0
@@ -10191,14 +10188,14 @@ snapshots:
     optionalDependencies:
       workerd: 1.20260826.1
 
-  '@cloudflare/vitest-plugin@1.1.1(@cloudflare/workers-types@5.20260827.1)(@vitest/runner@4.1.11)(@vitest/snapshot@4.1.11)(vitest@4.1.11(@types/node@26.5.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)))':
+  '@cloudflare/vitest-plugin@1.1.1(@cloudflare/workers-types@5.20260827.1)(@vitest/runner@4.1.11)(@vitest/snapshot@4.1.11)(vitest@4.1.11(@types/node@26.6.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)))':
     dependencies:
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.1
       miniflare: 5.20260826.0-alpha
-      vitest: 4.1.11(@types/node@26.5.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+      vitest: 4.1.11(@types/node@26.6.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       wrangler: 4.127.0(@cloudflare/workers-types@5.20260827.1)
       zod: 4.4.3
     transitivePeerDependencies:
@@ -11114,12 +11111,12 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.10.1
 
-  '@inquirer/external-editor@1.0.3(@types/node@26.5.1)':
+  '@inquirer/external-editor@1.0.3(@types/node@26.6.1)':
     dependencies:
       chardet: 2.1.1
       iconv-lite: 0.7.0
     optionalDependencies:
-      '@types/node': 26.5.1
+      '@types/node': 26.6.1
 
   '@inquirer/figures@1.0.15': {}
 
@@ -12119,29 +12116,29 @@ snapshots:
       tailwindcss: 4.1.17
       vite: 7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
-  '@tailwindcss/vite@4.1.17(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
+  '@tailwindcss/vite@4.1.17(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
     dependencies:
       '@tailwindcss/node': 4.1.17
       '@tailwindcss/oxide': 4.1.17
       tailwindcss: 4.1.17
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
-  '@tanstack/db-ivm@0.1.22(typescript@5.8.3)':
+  '@tanstack/db-ivm@0.1.19(typescript@5.8.3)':
     dependencies:
       fractional-indexing: 3.4.0
       sorted-btree: 1.8.1
       typescript: 5.8.3
 
-  '@tanstack/db-sqlite-persistence-core@0.2.23(typescript@5.8.3)':
+  '@tanstack/db-sqlite-persistence-core@0.2.19(typescript@5.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db': 0.9.2(typescript@5.8.3)
+      '@tanstack/db': 0.8.6(typescript@5.8.3)
       typescript: 5.8.3
 
-  '@tanstack/db@0.9.2(typescript@5.8.3)':
+  '@tanstack/db@0.8.6(typescript@5.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db-ivm': 0.1.22(typescript@5.8.3)
+      '@tanstack/db-ivm': 0.1.19(typescript@5.8.3)
       '@tanstack/pacer-lite': 0.2.2
       typescript: 5.8.3
 
@@ -12220,17 +12217,17 @@ snapshots:
       - csstype
       - utf-8-validate
 
-  '@tanstack/expo-db-sqlite-persistence@0.2.23(expo-sqlite@55.0.15(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0))(typescript@5.8.3)':
+  '@tanstack/expo-db-sqlite-persistence@0.2.19(expo-sqlite@55.0.15(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0))(typescript@5.8.3)':
     dependencies:
-      '@tanstack/db-sqlite-persistence-core': 0.2.23(typescript@5.8.3)
+      '@tanstack/db-sqlite-persistence-core': 0.2.19(typescript@5.8.3)
       expo-sqlite: 55.0.15(expo@55.0.23(@babel/core@7.29.7)(@expo/dom-webview@55.0.6)(react-dom@19.2.0(react@19.2.0))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)(typescript@5.8.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)
       typescript: 5.8.3
 
   '@tanstack/history@1.161.6': {}
 
-  '@tanstack/node-db-sqlite-persistence@0.2.23(typescript@5.8.3)':
+  '@tanstack/node-db-sqlite-persistence@0.2.19(typescript@5.8.3)':
     dependencies:
-      '@tanstack/db-sqlite-persistence-core': 0.2.23(typescript@5.8.3)
+      '@tanstack/db-sqlite-persistence-core': 0.2.19(typescript@5.8.3)
       better-sqlite3: 12.9.0
       typescript: 5.8.3
 
@@ -12240,16 +12237,16 @@ snapshots:
 
   '@tanstack/query-core@5.90.10': {}
 
-  '@tanstack/query-db-collection@1.2.15(@tanstack/query-core@5.102.8)(typescript@5.8.3)':
+  '@tanstack/query-db-collection@1.2.11(@tanstack/query-core@5.102.8)(typescript@5.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db': 0.9.2(typescript@5.8.3)
+      '@tanstack/db': 0.8.6(typescript@5.8.3)
       '@tanstack/query-core': 5.102.8
       typescript: 5.8.3
 
-  '@tanstack/react-db@0.4.1(react@19.2.0)(typescript@5.8.3)':
+  '@tanstack/react-db@0.3.6(react@19.2.0)(typescript@5.8.3)':
     dependencies:
-      '@tanstack/db': 0.9.2(typescript@5.8.3)
+      '@tanstack/db': 0.8.6(typescript@5.8.3)
       react: 19.2.0
       use-sync-external-store: 1.7.0(react@19.2.0)
     transitivePeerDependencies:
@@ -12567,11 +12564,6 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/node@26.5.1':
-    dependencies:
-      undici-types: 8.9.0
-    optional: true
-
   '@types/node@26.6.1':
     dependencies:
       undici-types: 8.9.0
@@ -12747,11 +12739,11 @@ snapshots:
 
   '@ungap/structured-clone@1.4.0': {}
 
-  '@vitejs/plugin-react-swc@3.11.0(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
+  '@vitejs/plugin-react-swc@3.11.0(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@swc/core': 1.15.3
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@swc/helpers'
 
@@ -12767,16 +12759,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/browser@3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@3.2.4)':
+  '@vitest/browser@3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@3.2.4)':
     dependencies:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
-      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       '@vitest/utils': 3.2.4
       magic-string: 0.30.21
       sirv: 3.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
       ws: 8.20.0
     optionalDependencies:
       playwright: 1.61.1
@@ -12808,7 +12800,7 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
-      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       '@vitest/utils': 3.2.4
       magic-string: 0.30.21
       sirv: 3.0.2
@@ -12855,21 +12847,13 @@ snapshots:
     optionalDependencies:
       vite: 7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
-  '@vitest/mocker@3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
+  '@vitest/mocker@3.2.4(vite@7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
     dependencies:
       '@vitest/spy': 3.2.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
-
-  '@vitest/mocker@3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
-    dependencies:
-      '@vitest/spy': 3.2.4
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   '@vitest/mocker@3.2.4(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
     dependencies:
@@ -12888,13 +12872,13 @@ snapshots:
       vite: 7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
     optional: true
 
-  '@vitest/mocker@4.1.11(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
+  '@vitest/mocker@4.1.11(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
   '@vitest/pretty-format@3.2.4':
     dependencies:
@@ -13273,7 +13257,7 @@ snapshots:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
 
-  better-auth@1.7.1(@cloudflare/workers-types@5.20260827.1)(@tanstack/react-start@1.167.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(better-sqlite3@12.9.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)):
+  better-auth@1.7.1(@cloudflare/workers-types@5.20260827.1)(@tanstack/react-start@1.167.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(better-sqlite3@12.9.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.14)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)):
     dependencies:
       '@better-auth/core': 1.7.1(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260827.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2)
       '@better-auth/drizzle-adapter': 1.7.1(@better-auth/core@1.7.1(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260827.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
@@ -13298,7 +13282,7 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
       solid-js: 1.9.14
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
@@ -13389,7 +13373,7 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.11.25
       caniuse-lite: 1.0.30001810
-      electron-to-chromium: 1.5.430
+      electron-to-chromium: 1.5.431
       node-releases: 2.0.56
       update-browserslist-db: 1.3.3(browserslist@4.29.0)
 
@@ -13887,7 +13871,7 @@ snapshots:
 
   electron-to-chromium@1.5.427: {}
 
-  electron-to-chromium@1.5.430: {}
+  electron-to-chromium@1.5.431: {}
 
   emoji-regex@10.6.0: {}
 
@@ -18053,34 +18037,13 @@ snapshots:
       - tsx
       - yaml
 
-  vite-node@3.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
+  vite-node@3.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3(supports-color@8.1.1)
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
-    transitivePeerDependencies:
-      - '@types/node'
-      - jiti
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vite-node@3.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.3(supports-color@8.1.1)
-      es-module-lexer: 1.7.0
-      pathe: 2.0.3
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -18150,7 +18113,7 @@ snapshots:
       tsx: 4.20.6
       yaml: 2.9.1
 
-  vite@7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
+  vite@7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.5)
@@ -18159,26 +18122,9 @@ snapshots:
       rollup: 4.53.3
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.5.1
+      '@types/node': 26.6.1
       fsevents: 2.3.3
       jiti: 2.6.1
-      lightningcss: 1.33.0
-      terser: 5.51.2
-      tsx: 4.20.6
-      yaml: 2.9.1
-
-  vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
-    dependencies:
-      esbuild: 0.25.12
-      fdir: 6.5.0(picomatch@4.0.5)
-      picomatch: 4.0.5
-      postcss: 8.5.6
-      rollup: 4.53.3
-      tinyglobby: 0.2.17
-    optionalDependencies:
-      '@types/node': 26.5.1
-      fsevents: 2.3.3
-      jiti: 2.7.0
       lightningcss: 1.33.0
       terser: 5.51.2
       tsx: 4.20.6
@@ -18293,11 +18239,11 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
+  vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.6.1)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
-      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       '@vitest/pretty-format': 3.2.4
       '@vitest/runner': 3.2.4
       '@vitest/snapshot': 3.2.4
@@ -18315,56 +18261,12 @@ snapshots:
       tinyglobby: 0.2.17
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
-      vite-node: 3.2.4(@types/node@26.5.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite-node: 3.2.4(@types/node@26.6.1)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
-      '@types/node': 26.5.1
-      '@vitest/browser': 3.2.4(vitest@3.2.4)
-      jsdom: 27.2.0
-    transitivePeerDependencies:
-      - jiti
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vitest@3.2.4(@types/debug@4.1.12)(@types/node@26.5.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1):
-    dependencies:
-      '@types/chai': 5.2.3
-      '@vitest/expect': 3.2.4
-      '@vitest/mocker': 3.2.4(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
-      '@vitest/pretty-format': 3.2.4
-      '@vitest/runner': 3.2.4
-      '@vitest/snapshot': 3.2.4
-      '@vitest/spy': 3.2.4
-      '@vitest/utils': 3.2.4
-      chai: 5.3.3
-      debug: 4.4.3(supports-color@8.1.1)
-      expect-type: 1.4.0
-      magic-string: 0.30.21
-      pathe: 2.0.3
-      picomatch: 4.0.5
-      std-env: 3.10.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.17
-      tinypool: 1.1.1
-      tinyrainbow: 2.0.0
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
-      vite-node: 3.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/debug': 4.1.12
-      '@types/node': 26.5.1
+      '@types/node': 26.6.1
       '@vitest/browser': 3.2.4(vitest@3.2.4)
       jsdom: 27.2.0
     transitivePeerDependencies:
@@ -18453,10 +18355,10 @@ snapshots:
       - msw
     optional: true
 
-  vitest@4.1.11(@types/node@26.5.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)):
+  vitest@4.1.11(@types/node@26.6.1)(jsdom@27.2.0)(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
+      '@vitest/mocker': 4.1.11(vite@7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -18473,10 +18375,10 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 7.2.4(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+      vite: 7.2.4(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 26.5.1
+      '@types/node': 26.6.1
       jsdom: 27.2.0
     transitivePeerDependencies:
       - msw
