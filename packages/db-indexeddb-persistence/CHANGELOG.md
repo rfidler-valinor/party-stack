@@ -1,5 +1,11 @@
 # @party-stack/db-indexeddb-persistence
 
+## 0.1.4
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+
 ## 0.1.3
 
 ### Patch Changes

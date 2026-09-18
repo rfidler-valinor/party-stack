@@ -1,5 +1,13 @@
 # @party-stack/blobs
 
+## 0.5.5
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/runtime@0.3.5
+
 ## 0.5.4
 
 ### Patch Changes

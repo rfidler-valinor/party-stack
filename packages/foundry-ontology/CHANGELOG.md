@@ -1,5 +1,22 @@
 # @party-stack/foundry-ontology
 
+## 0.14.10
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/connections@0.2.5
+    - @party-stack/ontology@0.16.5
+    - @party-stack/runtime@0.3.5
+    - @party-stack/oauth@0.2.5
+
+## 0.14.9
+
+### Patch Changes
+
+- ccf3bcd: Fix generated CurrentTime override serialization across bundled module instances.
+
 ## 0.14.8
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @party-stack/durable-object-ontology
 
+## 0.2.8
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/sqlite-ontology@0.6.6
+    - @party-stack/ontology@0.16.5
+
 ## 0.2.7
 
 ### Patch Changes
