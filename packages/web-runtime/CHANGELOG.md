@@ -1,5 +1,14 @@
 # @party-stack/web-runtime
 
+## 0.3.6
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/db-indexeddb-persistence@0.1.5
+    - @party-stack/runtime@0.3.6
+
 ## 0.3.5
 
 ### Patch Changes

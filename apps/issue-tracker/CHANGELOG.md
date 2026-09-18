@@ -1,5 +1,20 @@
 # @party-stack/issue-tracker
 
+## 0.2.12
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/better-auth@0.2.6
+    - @party-stack/connections@0.2.6
+    - @party-stack/foundry-ontology@0.14.11
+    - @party-stack/ontology-devtools@0.4.14
+    - @party-stack/ontology@0.16.6
+    - @party-stack/remote-ontology@0.8.6
+    - @party-stack/sqlite-ontology@0.6.7
+    - @party-stack/web-runtime@0.3.6
+
 ## 0.2.11
 
 ### Patch Changes

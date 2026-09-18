@@ -1,5 +1,13 @@
 # @party-stack/oauth
 
+## 0.2.6
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/runtime@0.3.6
+
 ## 0.2.5
 
 ### Patch Changes

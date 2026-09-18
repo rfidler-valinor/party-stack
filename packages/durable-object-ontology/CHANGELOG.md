@@ -1,5 +1,14 @@
 # @party-stack/durable-object-ontology
 
+## 0.2.9
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/ontology@0.16.6
+    - @party-stack/sqlite-ontology@0.6.7
+
 ## 0.2.8
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @party-stack/ontology
 
+## 0.16.6
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/blobs@0.5.6
+    - @party-stack/connections@0.2.6
+    - @party-stack/node-runtime@0.2.6
+    - @party-stack/runtime@0.3.6
+
 ## 0.16.5
 
 ### Patch Changes
