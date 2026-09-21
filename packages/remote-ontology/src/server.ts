@@ -681,7 +681,9 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
         await ontology.ready;
         await Promise.all(
             uploads.map((upload) =>
-                ontology.attachments.stage(upload.attachment, upload.blob)
+                ontology.attachments.create(upload.blob, {
+                    id: upload.attachment.id,
+                })
             )
         );
         await waitForLiveOntologyReady(ontology);

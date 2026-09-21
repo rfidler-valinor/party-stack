@@ -3,4 +3,4 @@
 "@party-stack/remote-ontology": patch
 ---
 
-Add an explicit live ontology attachment staging API and use it for remote multipart uploads while preserving file metadata and canonical attachment ID mappings.
+Allow live ontology attachment creation to use an existing opaque ID and use it to stage remote multipart uploads while preserving file metadata and canonical attachment ID mappings.
