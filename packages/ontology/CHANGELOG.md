@@ -1,5 +1,11 @@
 # @party-stack/ontology
 
+## 0.16.7
+
+### Patch Changes
+
+- c545376: Allow live ontology attachment creation to use an existing opaque ID and use it to stage remote multipart uploads while preserving file metadata and canonical attachment ID mappings.
+
 ## 0.16.6
 
 ### Patch Changes
