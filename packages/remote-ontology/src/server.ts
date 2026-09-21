@@ -673,12 +673,17 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
             coordination,
             cleanup: () => coordination.close(),
         }),
-        initialAttachmentUploads: uploads,
         context: ctx as Record<string, unknown>,
     });
     let actionResult: OntologyApplyActionResult | void;
 
     try {
+        await ontology.ready;
+        await Promise.all(
+            uploads.map((upload) =>
+                ontology.attachments.stage(upload.attachment, upload.blob)
+            )
+        );
         await waitForLiveOntologyReady(ontology);
         const canApply = await opts.policy?.canApplyAction?.(
             ctx,

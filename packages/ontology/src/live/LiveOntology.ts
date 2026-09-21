@@ -15,11 +15,7 @@ import type { LiveOntologyAction } from "./actions/createLiveOntologyAction.js";
 import type { OntologyMutatorRegistry } from "./mutators/types.js";
 import type { OntologyCollection } from "./objects/createLiveOntologyObjectCollection.js";
 import type { OntologyObject } from "./objects/OntologyObject.js";
-import type {
-    OntologyAttachmentUpload,
-    OntologyBackendAdapter,
-    OntologyBackendAdapterProvider,
-} from "./OntologyBackendAdapter.js";
+import type { OntologyBackendAdapter, OntologyBackendAdapterProvider } from "./OntologyBackendAdapter.js";
 import type { OntologyOutbox } from "./outbox/types.js";
 import type { OntologyIR } from "../ir/index.js";
 import type { attachment } from "../utils/values.js";
@@ -115,11 +111,6 @@ export interface CreateLiveOntologyOpts<Context extends Record<string, unknown> 
     ir: OntologyIR;
     backend: OntologyBackendAdapterProvider<NoInfer<Context>>;
     runtime?: RuntimeAdapterProvider;
-    /**
-     * Attachments already uploaded by a transport. They are staged through this
-     * ontology's BlobManager before the ontology becomes ready.
-     */
-    initialAttachmentUploads?: readonly OntologyAttachmentUpload[];
     persistObjects?: boolean;
     writes?: LiveOntologyWrites;
     context?: Context;
@@ -174,11 +165,6 @@ export async function createLiveOntology<
                 : undefined,
         },
     });
-    const initialAttachmentStaging = Promise.all(
-        (opts.initialAttachmentUploads ?? []).map((upload) =>
-            blobManager.stage(upload.attachment.id, upload.blob)
-        )
-    );
     const attachments = createLiveOntologyAttachments<Ontology>({
         ir: opts.ir,
         attachmentsAdapter,
@@ -216,11 +202,7 @@ export async function createLiveOntology<
                 }),
         ])
     );
-    const ready = Promise.all([
-        actionsSubsystem.outbox.ready,
-        blobManager.ready,
-        initialAttachmentStaging,
-    ]).then(() => undefined);
+    const ready = Promise.all([actionsSubsystem.outbox.ready, blobManager.ready]).then(() => undefined);
     void ready.catch(() => undefined);
 
     let cleanupPromise:

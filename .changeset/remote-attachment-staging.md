@@ -3,4 +3,4 @@
 "@party-stack/remote-ontology": patch
 ---
 
-Stage remote multipart attachments through the live ontology BlobManager while preserving file metadata and canonical attachment ID mappings.
+Add an explicit live ontology attachment staging API and use it for remote multipart uploads while preserving file metadata and canonical attachment ID mappings.
