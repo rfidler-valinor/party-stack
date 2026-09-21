@@ -1,5 +1,16 @@
 # @party-stack/issue-tracker
 
+## 0.2.13
+
+### Patch Changes
+
+- Updated dependencies [c545376]
+    - @party-stack/ontology@0.16.7
+    - @party-stack/remote-ontology@0.8.7
+    - @party-stack/foundry-ontology@0.14.12
+    - @party-stack/ontology-devtools@0.4.15
+    - @party-stack/sqlite-ontology@0.6.8
+
 ## 0.2.12
 
 ### Patch Changes
