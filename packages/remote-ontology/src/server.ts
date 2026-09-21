@@ -307,10 +307,9 @@ async function parseRequestBody(
         const uploads: OntologyAttachmentUpload[] = [];
         for (const [key, value] of formData.entries()) {
             if (!key.startsWith("attachment:") || typeof value === "string") continue;
-            const blob = new Blob([await value.arrayBuffer()], { type: value.type });
             uploads.push({
                 attachment: { id: key.slice("attachment:".length) },
-                blob,
+                blob: value,
             });
         }
         return {
@@ -660,8 +659,6 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
         parameters: hydratedRequestParameters,
         fixedActionParameterValues: opts.policy?.fixedActionParameterValues,
     });
-    const blobBytes = new MemoryBlobBytesStore();
-    await Promise.all(uploads.map((upload) => blobBytes.write(upload.attachment.id, upload.blob)));
     const executionId = request.idempotencyKey ?? globalThis.crypto.randomUUID();
     const coordination = new SingleProcessCoordination({
         scope: `remote-ontology:${executionId}`,
@@ -672,10 +669,11 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
         runtime: () => ({
             owner: "remote-ontology",
             namespace: executionId,
-            blobBytes,
+            blobBytes: new MemoryBlobBytesStore(),
             coordination,
             cleanup: () => coordination.close(),
         }),
+        initialAttachmentUploads: uploads,
         context: ctx as Record<string, unknown>,
     });
     let actionResult: OntologyApplyActionResult | void;
@@ -705,7 +703,6 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
             idempotencyKey: executionId,
         });
     } finally {
-        coordination.close();
         await ontology.cleanup();
     }
 
