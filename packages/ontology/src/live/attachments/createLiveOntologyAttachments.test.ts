@@ -45,6 +45,31 @@ const actionIr: OntologyIR = {
 };
 
 describe("createLiveOntologyAttachments", () => {
+    it("creates attachments with an existing opaque id", async () => {
+        const stage = vi.fn(() => Promise.resolve());
+        const attachments = createLiveOntologyAttachments({
+            ir,
+            attachmentsAdapter: {} as OntologyAttachmentsAdapter,
+            blobManager: { stage } as unknown as BlobManager,
+        });
+        const file = new File(["hello"], "evidence.txt", {
+            type: "text/plain",
+        });
+
+        await expect(
+            attachments.create(file, {
+                id: "opaque-local-id",
+            })
+        ).resolves.toEqual({
+            attachment: {
+                id: "opaque-local-id",
+                type: "text/plain",
+            },
+        });
+
+        expect(stage).toHaveBeenCalledWith("opaque-local-id", file);
+    });
+
     it("rejects blobs outside a target's allowed media types", async () => {
         const constrainedIr: OntologyIR = {
             ...ir,

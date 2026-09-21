@@ -7,6 +7,7 @@ import {
 } from "@party-stack/ontology";
 import { eq, gt, IR, queryOnce } from "@tanstack/db";
 import { createRemoteOntologyServer } from "./server.js";
+import { createInProcessHttpRemoteOntologyTransport } from "./http.js";
 import { parseRemoteOntologyJson, serializeRemoteOntologyJson } from "./protocol.js";
 import type { RemoteOntologyDescription } from "./protocol.js";
 
@@ -596,6 +597,92 @@ describe("remote ontology server policy projection", () => {
                 },
             ],
         });
+    });
+
+    it("stages multipart files before materializing opaque attachment IDs", async () => {
+        const localId = "opaque-local-id";
+        const remoteId = "ri.attachments.main.attachment.remote";
+        const uploadIr: OntologyIR = {
+            ...ir,
+            actionTypes: [
+                {
+                    name: "uploadDocument",
+                    displayName: "Upload document",
+                    parameters: [
+                        {
+                            name: "file",
+                            displayName: "File",
+                            type: o.attachment({}),
+                        },
+                    ],
+                    logic: [],
+                },
+            ],
+        };
+        let appliedParameters: Record<string, unknown> | undefined;
+        let materializedFile: Blob | undefined;
+        const server = createRemoteOntologyServer<any, any>({
+            ir: uploadIr,
+            backendAdapter: {
+                name: "test",
+                getCollectionOptions: readyCollectionOptions,
+                attachments: {
+                    materializeAttachment: async (attachment, blob) => {
+                        materializedFile = blob;
+                        return {
+                            ...attachment,
+                            id: remoteId,
+                        };
+                    },
+                    getAttachmentContent: () =>
+                        Promise.reject(new Error("unexpected remote attachment read")),
+                },
+                applyAction: async (_actionType, parameters) => {
+                    appliedParameters = parameters;
+                },
+                runQueryFunction: async () => undefined,
+            },
+            policy: {
+                canApplyAction: () => true,
+            },
+        });
+        const transport = createInProcessHttpRemoteOntologyTransport(server, {
+            ir: uploadIr,
+        });
+        const file = new File(["attachment contents"], "evidence.txt", {
+            type: "text/plain",
+        });
+
+        const response = await transport.applyAction(
+            {
+                actionType: "uploadDocument",
+                parameters: {
+                    file: { id: localId },
+                },
+            },
+            {
+                attachments: [
+                    {
+                        attachment: { id: localId },
+                        blob: file,
+                    },
+                ],
+            }
+        );
+
+        expect(materializedFile).toBeInstanceOf(File);
+        expect((materializedFile as File).name).toBe("evidence.txt");
+        expect(materializedFile?.type).toBe("text/plain");
+        await expect(materializedFile?.text()).resolves.toBe("attachment contents");
+        expect(appliedParameters).toEqual({
+            file: { id: remoteId },
+        });
+        expect(response.attachmentIdMappings).toEqual([
+            {
+                localId,
+                remoteId,
+            },
+        ]);
     });
 
     it("starts on-demand collections for apply-action without hanging", async () => {

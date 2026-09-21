@@ -18,6 +18,10 @@ export interface LiveOntologyEagerAttachmentCreation {
 }
 
 interface LiveOntologyAttachmentCreateOptions {
+    /**
+     * An opaque ID to use instead of generating one.
+     */
+    id?: string;
     target?: OntologyAttachmentCreateTarget;
     eager?: boolean;
 }
@@ -144,11 +148,12 @@ export function createLiveOntologyAttachments<
             // TODO: Validate image dimensions once runtimes expose a portable media-inspection capability.
         }
         const id =
-            targetType?.kind === "attachment" && attachmentsAdapter.generateAttachmentId
+            normalizedOpts.id ??
+            (targetType?.kind === "attachment" && attachmentsAdapter.generateAttachmentId
                 ? await attachmentsAdapter.generateAttachmentId(blob, {
                       target: targetType.value,
                   })
-                : crypto.randomUUID();
+                : crypto.randomUUID());
         await blobManager.stage(id, blob);
         const attachment: v.attachment = {
             id,
