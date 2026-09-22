@@ -1,5 +1,11 @@
 # @party-stack/foundry-ontology
 
+## 0.14.13
+
+### Patch Changes
+
+- 44c26f3: properly handle nested object refs
+
 ## 0.14.12
 
 ### Patch Changes
