@@ -336,6 +336,11 @@ function convertOntologyDataType(type: OntologyDataType, required = true): TypeD
                         })),
                     },
                 };
+            case "object":
+                return {
+                    kind: "objectReference",
+                    value: { objectType: type.objectTypeApiName },
+                };
             default:
                 return stringType();
         }

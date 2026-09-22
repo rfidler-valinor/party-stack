@@ -169,6 +169,56 @@ describe("convertFoundryMetaActionType parameter validation", () => {
         });
     });
 
+    it("preserves object references nested inside array structs", () => {
+        const result = convertFoundryMetaActionType(
+            actionType({
+                entries: {
+                    displayName: "Entries",
+                    dataType: {
+                        type: "array",
+                        subType: {
+                            type: "struct",
+                            fields: [
+                                {
+                                    name: "part",
+                                    fieldType: {
+                                        type: "object",
+                                        objectTypeApiName: "Part",
+                                        objectApiName: "part",
+                                    },
+                                    required: true,
+                                },
+                            ],
+                        },
+                    },
+                    required: true,
+                    typeClasses: [],
+                },
+            })
+        );
+
+        expect(result.parameters[0]?.type).toEqual({
+            kind: "list",
+            value: {
+                elementType: {
+                    kind: "struct",
+                    value: {
+                        fields: [
+                            {
+                                name: "part",
+                                displayName: "part",
+                                type: {
+                                    kind: "objectReference",
+                                    value: { objectType: "Part" },
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+    });
+
     it("converts closed one-of string validation to an enum constraint", () => {
         const result = convertFoundryMetaActionType(
             actionType({
