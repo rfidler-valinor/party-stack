@@ -16,7 +16,9 @@ const generatedFiles = [
 ] as const;
 
 function generatedDataPlugin(): Plugin {
-    const serveGeneratedData: NonNullable<Plugin["configureServer"]> = (server) => {
+    function serveGeneratedData(
+        server: Parameters<NonNullable<Plugin["configureServer"]>>[0] | Parameters<NonNullable<Plugin["configurePreviewServer"]>>[0]
+    ) {
         server.middlewares.use("/generated-data", async (request, response, next) => {
             const fileName = path.basename(request.url?.split("?")[0] ?? "");
             if (!generatedFiles.includes(fileName as (typeof generatedFiles)[number])) {
@@ -33,12 +35,16 @@ function generatedDataPlugin(): Plugin {
                 next();
             }
         });
-    };
+    }
 
     return {
         name: "icon-lab-generated-data",
-        configureServer: serveGeneratedData,
-        configurePreviewServer: serveGeneratedData,
+        configureServer(server) {
+            serveGeneratedData(server);
+        },
+        configurePreviewServer(server) {
+            serveGeneratedData(server);
+        },
         async generateBundle() {
             for (const fileName of generatedFiles) {
                 this.emitFile({

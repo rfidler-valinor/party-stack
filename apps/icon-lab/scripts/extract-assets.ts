@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import {
     getIconPaths,
-    IconNames,
+    IconNames as BlueprintLibraryIconNames,
     IconSize,
     type IconName as BlueprintIconName,
 } from "@blueprintjs/icons";
@@ -163,7 +163,7 @@ async function buildBlueprint(concepts: ReturnType<typeof conceptMaps>): Promise
     const provider = "blueprint" as const;
     const files: Zippable = {};
     const icons: CatalogIcon[] = [];
-    const names = [...new Set(Object.values(IconNames) as string[])].sort();
+    const names = [...new Set(Object.values(BlueprintLibraryIconNames) as string[])].sort();
 
     for (const name of names) {
         const mappedConcepts = concepts.blueprint.get(name);
