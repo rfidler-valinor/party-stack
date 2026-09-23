@@ -1,5 +1,11 @@
 # @party-stack/foundry-ontology
 
+## 0.14.14
+
+### Patch Changes
+
+- 3816870: require object params that are mutation targets
+
 ## 0.14.13
 
 ### Patch Changes
