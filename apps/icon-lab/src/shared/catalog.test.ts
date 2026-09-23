@@ -22,6 +22,13 @@ describe("generated full icon catalog", () => {
             );
             expect(Object.keys(zip).length).toBeGreaterThanOrEqual(minimums[provider]);
         }
+        const sfSymbolNames = JSON.parse(
+            await readFile(
+                path.join(appRoot, "public/icon-sets/sfsymbols.json"),
+                "utf8"
+            )
+        ) as string[];
+        expect(sfSymbolNames.length).toBeGreaterThanOrEqual(9_000);
     });
 
     it("includes the Salesforce plane glyph and maps airplane to it", async () => {
