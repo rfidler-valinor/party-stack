@@ -324,6 +324,15 @@ async function buildCatalogFromSnapshot(
         .map((assetPath) => {
             const name = assetPath.slice(0, -".svg".length);
             const mappedConcepts = concepts.get(name);
+            const humanName = humanize(path.posix.basename(name));
+            const labels =
+                provider === "blueprint"
+                    ? [humanName, "blueprint icon", "foundry icon"]
+                    : provider === "lucide"
+                      ? [humanName, "lucide icon"]
+                      : provider === "material"
+                        ? [humanName, "material symbol"]
+                        : [humanName, `salesforce ${name.split("/")[0]} icon`];
             return {
                 id: `${provider}:${name}`,
                 provider,
@@ -335,7 +344,7 @@ async function buildCatalogFromSnapshot(
                     path: assetPath,
                     format: "svg" as const,
                 },
-                labels: [humanize(path.posix.basename(name)), `${provider} icon`],
+                labels,
             };
         });
 }
