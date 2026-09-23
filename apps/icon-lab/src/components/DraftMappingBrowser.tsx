@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import type { CatalogFile, DraftMappingsFile, IconProvider } from "../shared/types";
 import { IconTile } from "./IconTile";
+import {
+    createMappingFeedbackFile,
+    loadMappingFeedback,
+    mappingFeedbackKey,
+    saveMappingFeedback,
+    type MappingFeedback,
+    type MappingFeedbackDecision,
+} from "../shared/mappingFeedback";
 
 const PROVIDER_LABEL: Record<IconProvider, string> = {
     blueprint: "Blueprint / Foundry",
@@ -20,6 +28,7 @@ export function DraftMappingBrowser({
     const [query, setQuery] = useState("");
     const [show, setShow] = useState<"all" | "existing" | "generated">("all");
     const [selectedConcept, setSelectedConcept] = useState(draft.mappings[0]?.concept ?? "");
+    const [feedback, setFeedback] = useState<MappingFeedback[]>(() => loadMappingFeedback());
     const iconById = useMemo(
         () => new Map(catalog.icons.map((icon) => [icon.id, icon])),
         [catalog.icons]
@@ -38,6 +47,58 @@ export function DraftMappingBrowser({
     }, [draft.mappings, query, show]);
     const selected =
         draft.mappings.find((mapping) => mapping.concept === selectedConcept) ?? filtered[0];
+    const feedbackByKey = useMemo(
+        () =>
+            new Map(
+                feedback.map((item) => [
+                    mappingFeedbackKey(item.concept, item.provider),
+                    item,
+                ])
+            ),
+        [feedback]
+    );
+
+    function updateFeedback(
+        concept: string,
+        provider: IconProvider,
+        currentName: string,
+        update: Partial<Pick<MappingFeedback, "decision" | "replacementName" | "note">>
+    ) {
+        const key = mappingFeedbackKey(concept, provider);
+        const existing = feedbackByKey.get(key);
+        const nextItem: MappingFeedback = {
+            concept,
+            provider,
+            currentName,
+            decision: update.decision ?? existing?.decision ?? "approve",
+            replacementName:
+                "replacementName" in update
+                    ? update.replacementName
+                    : existing?.replacementName,
+            note: "note" in update ? update.note : existing?.note,
+            updatedAt: new Date().toISOString(),
+        };
+        const next = [
+            ...feedback.filter(
+                (item) => mappingFeedbackKey(item.concept, item.provider) !== key
+            ),
+            nextItem,
+        ];
+        setFeedback(next);
+        saveMappingFeedback(next);
+    }
+
+    function exportFeedback() {
+        const blob = new Blob([JSON.stringify(createMappingFeedbackFile(feedback), null, 2)], {
+            type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "icon-mapping-feedback.json";
+        link.click();
+        URL.revokeObjectURL(url);
+    }
 
     return (
         <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -119,9 +180,19 @@ export function DraftMappingBrowser({
                                     image/name similarity with lexical overlap.
                                 </p>
                             </div>
-                            <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
-                                min {selected.minScore.toFixed(3)} · mean{" "}
-                                {selected.meanScore.toFixed(3)}
+                            <div className="flex items-center gap-3">
+                                <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
+                                    min {selected.minScore.toFixed(3)} · mean{" "}
+                                    {selected.meanScore.toFixed(3)}
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={feedback.length === 0}
+                                    onClick={exportFeedback}
+                                    className="rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Export feedback · {feedback.length}
+                                </button>
                             </div>
                         </div>
 
@@ -134,6 +205,17 @@ export function DraftMappingBrowser({
                                 if (!icon) {
                                     return null;
                                 }
+                                const providerName = provider as IconProvider;
+                                const providerFeedback = feedbackByKey.get(
+                                    mappingFeedbackKey(selected.concept, providerName)
+                                );
+                                const decisions: Array<{
+                                    value: MappingFeedbackDecision;
+                                    label: string;
+                                }> = [
+                                    { value: "approve", label: "Approve" },
+                                    { value: "reject", label: "Reject" },
+                                ];
                                 return (
                                     <div
                                         key={provider}
@@ -155,6 +237,76 @@ export function DraftMappingBrowser({
                                                 embeddings
                                             </div>
                                         )}
+                                        <div className="mt-3 border-t border-[var(--line)] pt-3">
+                                            <div className="flex gap-1">
+                                                {decisions.map(({ value, label }) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            updateFeedback(
+                                                                selected.concept,
+                                                                providerName,
+                                                                match.name,
+                                                                {
+                                                                    decision: value,
+                                                                    replacementName:
+                                                                        value === "approve"
+                                                                            ? undefined
+                                                                            : providerFeedback?.replacementName,
+                                                                }
+                                                            )
+                                                        }
+                                                        className={`rounded-md px-2 py-1 text-[11px] ${
+                                                            providerFeedback?.decision === value
+                                                                ? value === "approve"
+                                                                    ? "bg-emerald-600 text-white"
+                                                                    : "bg-rose-600 text-white"
+                                                                : "bg-slate-100 text-slate-600"
+                                                        }`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <input
+                                                aria-label={`Replacement for ${providerName}`}
+                                                value={providerFeedback?.replacementName ?? ""}
+                                                onChange={(event) =>
+                                                    updateFeedback(
+                                                        selected.concept,
+                                                        providerName,
+                                                        match.name,
+                                                        {
+                                                            decision: "replace",
+                                                            replacementName:
+                                                                event.target.value || undefined,
+                                                        }
+                                                    )
+                                                }
+                                                placeholder="Replacement icon name"
+                                                className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
+                                            />
+                                            <input
+                                                aria-label={`Note for ${providerName}`}
+                                                value={providerFeedback?.note ?? ""}
+                                                onChange={(event) =>
+                                                    updateFeedback(
+                                                        selected.concept,
+                                                        providerName,
+                                                        match.name,
+                                                        { note: event.target.value || undefined }
+                                                    )
+                                                }
+                                                placeholder="Optional note"
+                                                className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
+                                            />
+                                            {providerFeedback && (
+                                                <div className="mt-2 text-[10px] font-medium tracking-wide text-[var(--muted)] uppercase">
+                                                    recorded · {providerFeedback.decision}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
