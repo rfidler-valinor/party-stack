@@ -6,7 +6,9 @@ import {
     type QueryBuilder,
     type Context as QueryBuilderContext,
 } from "@tanstack/db";
-import { createLiveOntology } from "@party-stack/ontology";
+import { QueryClient } from "@tanstack/query-core";
+import { queryCollectionOptions } from "@tanstack/query-db-collection";
+import { createLiveOntology, waitForLiveOntologyReady } from "@party-stack/ontology";
 import { decode, encode } from "@party-stack/ontology/json";
 import { MemoryBlobBytesStore, SingleProcessCoordination } from "@party-stack/runtime";
 import type {
@@ -16,16 +18,23 @@ import type {
     OntologyAttachmentUpload,
     OntologyDefinition,
     OntologyIR,
+    OntologyCollectionOptions,
     PartialAttachmentMetadata,
+    Uncertain,
+    ValidationIssue,
 } from "@party-stack/ontology";
+import type { Result } from "@party-stack/ontology/values";
+import { remoteOntologyErrorFromUnknown, RemoteOntologyError, statusToCode } from "./errors.js";
 import {
     parseRemoteOntologyJson,
     parseRemoteOntologyRequest,
     remoteOntologyEndpointSchema,
+    serializeLoadSubsetOptions,
     serializeRemoteOntologyJson,
 } from "./protocol.js";
 import {
     applyFixedActionParameterValues,
+    pickVisibleActionParameters,
     projectRemoteOntologyIR,
     type ClientContextProjectionMode,
     type FixedActionParameterValues,
@@ -38,6 +47,9 @@ import type {
     RemoteDescribeRequest,
     RemoteLoadSubsetRequest,
     RemoteLoadSubsetResponse,
+    RemoteValidateActionRequest,
+    RemoteResolveActionParametersRequest,
+    RemoteResolveActionParametersResponse,
     RemoteRunQueryFunctionRequest,
     RemoteRunQueryFunctionResponse,
     RemoteOntologyEndpoint,
@@ -133,6 +145,20 @@ export interface RemoteOntologyPolicy<Context, Ontology extends OntologyDefiniti
     allowedObjectTypeProperties?: RemoteOntologyAllowedObjectTypeProperties<Context, Ontology>;
     fixedActionParameterValues?: FixedActionParameterValues<Ontology>;
     clientContext?: RemoteOntologyClientContextPolicy<Context>;
+    /**
+     * Optional action-type visibility for describe. Defaults to all action types.
+     */
+    visibleActionTypes?:
+        | readonly string[]
+        | "all"
+        | ((ctx: Context) => readonly string[] | "all" | Promise<readonly string[] | "all">);
+    /**
+     * Optional query-function visibility for describe. Defaults to all query functions.
+     */
+    visibleQueryFunctionTypes?:
+        | readonly string[]
+        | "all"
+        | ((ctx: Context) => readonly string[] | "all" | Promise<readonly string[] | "all">);
     canApplyAction?: (
         ctx: Context,
         request: RemoteOntologyApplyActionRequest<Ontology>,
@@ -180,17 +206,31 @@ function jsonResponse(body: unknown, init?: ResponseInit): Response {
     });
 }
 
-function errorResponse(error: unknown, status: number = 500): Response {
-    if (status >= 500) {
+function errorResponse(error: unknown, status?: number): Response {
+    const remoteError = remoteOntologyErrorFromUnknown(error);
+    if (status !== undefined && status !== remoteError.status) {
+        // Preserve explicit status overrides while keeping structured fields.
+        const overridden = new RemoteOntologyError({
+            name: remoteError.name,
+            code: statusToCode(status),
+            status,
+            message: remoteError.message,
+            details: remoteError.details,
+            cause: error,
+        });
+        if (overridden.status >= 500) {
+            console.error("Remote ontology request failed.", error);
+        }
+        return jsonResponse(overridden.toJSON(), { status: overridden.status });
+    }
+    if (remoteError.status >= 500) {
         console.error("Remote ontology request failed.", error);
     }
-    const message = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ error: message }, { status });
+    return jsonResponse(remoteError.toJSON(), { status: remoteError.status });
 }
 
 function getErrorStatus(error: unknown): number {
-    if (error instanceof Error && error.name === "RemoteOntologyForbiddenError") return 403;
-    return error instanceof Error && error.name === "ZodError" ? 400 : 500;
+    return remoteOntologyErrorFromUnknown(error).status;
 }
 
 class RemoteOntologyForbiddenError extends Error {
@@ -218,20 +258,23 @@ async function resolveValue<Context, TValue>(
     return valueOrFactory;
 }
 
-async function waitForLiveOntologyReady(ontology: LiveOntology): Promise<void> {
-    await Promise.all(
-        Object.values(ontology.objects).map(async (collection) => {
-            if (collection.status === "ready") return;
-            if (collection.status === "error" || collection.status === "cleaned-up") {
-                throw new Error(`Collection "${collection.id}" is ${collection.status}.`);
-            }
-            await (
-                collection as typeof collection & {
-                    waitFor: (event: "status:ready") => Promise<unknown>;
-                }
-            ).waitFor("status:ready");
-        })
-    );
+function getInvalidatedObjectTypesFromActionLogic(ir: OntologyIR, actionType: string): string[] | undefined {
+    const action = ir.actionTypes.find((candidate) => candidate.name === actionType);
+    if (!action) return undefined;
+    const objectTypes = new Set<string>();
+    for (const step of action.logic) {
+        if (step.kind === "createObject") {
+            objectTypes.add(step.value.objectType);
+            continue;
+        }
+        if (step.kind === "updateObject" || step.kind === "deleteObject") {
+            const parameterName = step.value.object.name;
+            const parameter = action.parameters.find((candidate) => candidate.name === parameterName);
+            if (!parameter || parameter.type.kind !== "objectReference") continue;
+            objectTypes.add(parameter.type.value.objectType);
+        }
+    }
+    return objectTypes.size > 0 ? [...objectTypes] : undefined;
 }
 
 function normalizePath(pathname: string): string {
@@ -264,10 +307,9 @@ async function parseRequestBody(
         const uploads: OntologyAttachmentUpload[] = [];
         for (const [key, value] of formData.entries()) {
             if (!key.startsWith("attachment:") || typeof value === "string") continue;
-            const blob = new Blob([await value.arrayBuffer()], { type: value.type });
             uploads.push({
                 attachment: { id: key.slice("attachment:".length) },
-                blob,
+                blob: value,
             });
         }
         return {
@@ -493,13 +535,89 @@ async function handleLoadSubset<Context, Ontology extends OntologyDefinition = O
     }
 }
 
+function createPolicyReadBackendAdapter<
+    Context,
+    Ontology extends OntologyDefinition,
+>(
+    ctx: Context,
+    opts: CreateRemoteOntologyServerOptions<
+        Context,
+        Ontology
+    >,
+    ir: OntologyIR
+): OntologyBackendAdapter {
+    const queryClient = new QueryClient();
+    return {
+        name: "remote-policy-read",
+        getCollectionOptions: (objectType) => {
+            const primaryKey = getObjectTypePrimaryKey(
+                ir,
+                objectType
+            );
+            return queryCollectionOptions<
+                Record<string, unknown>
+            >({
+                queryClient,
+                getKey: (object) =>
+                    object[primaryKey] as
+                        | string
+                        | number,
+                queryKey: [
+                    "remote-ontology",
+                    "resolve-action-parameters",
+                    objectType,
+                ],
+                syncMode: "on-demand",
+                queryFn: async (queryContext) =>
+                    (
+                        await handleLoadSubset(ctx, opts, {
+                            objectType,
+                            options:
+                                serializeLoadSubsetOptions(
+                                    queryContext.meta
+                                        ?.loadSubsetOptions
+                                ),
+                        })
+                    ).objects,
+            }) as unknown as OntologyCollectionOptions;
+        },
+        applyAction: () =>
+            Promise.reject(
+                new Error(
+                    "Policy read backend cannot apply actions."
+                )
+            ),
+        runQueryFunction: () =>
+            Promise.reject(
+                new Error(
+                    "Policy read backend cannot run query functions."
+                )
+            ),
+        cleanup: () => queryClient.clear(),
+    };
+}
+
 async function handleDescribe<Context, Ontology extends OntologyDefinition = OntologyDefinition>(
     ctx: Context,
     opts: CreateRemoteOntologyServerOptions<Context, Ontology>,
-    _request: RemoteDescribeRequest
+    _request: RemoteDescribeRequest,
+    internal?: {
+        projectFixedActionParameterValuesInDefaults?: boolean;
+    }
 ): Promise<RemoteOntologyDescription> {
     const ir = await resolveValue(opts.ir, ctx);
     const clientContext = await resolveClientContext(ctx, opts.policy);
+    const hasObjectVisibilityPolicy =
+        opts.policy?.allowedObjectTypeProperties !== undefined ||
+        opts.policy?.baseObjectTypeQueries !== undefined;
+    const visibleActionTypes =
+        typeof opts.policy?.visibleActionTypes === "function"
+            ? await opts.policy.visibleActionTypes(ctx)
+            : opts.policy?.visibleActionTypes;
+    const visibleQueryFunctionTypes =
+        typeof opts.policy?.visibleQueryFunctionTypes === "function"
+            ? await opts.policy.visibleQueryFunctionTypes(ctx)
+            : opts.policy?.visibleQueryFunctionTypes;
     return {
         ir: projectRemoteOntologyIR({
             ir,
@@ -507,8 +625,17 @@ async function handleDescribe<Context, Ontology extends OntologyDefinition = Ont
             clientContext: clientContext.context,
             clientContextMode: clientContext.mode,
             fixedActionParameterValues: opts.policy?.fixedActionParameterValues,
+            projectFixedActionParameterValuesInDefaults:
+                internal?.projectFixedActionParameterValuesInDefaults,
             allowedObjectTypeProperties: resolveProjectedAllowedObjectTypeProperties(ctx, ir, opts.policy),
+            filterSchemaByAuthorization: hasObjectVisibilityPolicy,
+            visibleActionTypes,
+            visibleQueryFunctionTypes,
         }),
+        capabilities: {
+            actionValidation: true,
+            actionParameterResolution: true,
+        },
         ...(clientContext.context ? { context: clientContext.context } : {}),
     };
 }
@@ -532,8 +659,6 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
         parameters: hydratedRequestParameters,
         fixedActionParameterValues: opts.policy?.fixedActionParameterValues,
     });
-    const blobBytes = new MemoryBlobBytesStore();
-    await Promise.all(uploads.map((upload) => blobBytes.write(upload.attachment.id, upload.blob)));
     const executionId = request.idempotencyKey ?? globalThis.crypto.randomUUID();
     const coordination = new SingleProcessCoordination({
         scope: `remote-ontology:${executionId}`,
@@ -544,7 +669,7 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
         runtime: () => ({
             owner: "remote-ontology",
             namespace: executionId,
-            blobBytes,
+            blobBytes: new MemoryBlobBytesStore(),
             coordination,
             cleanup: () => coordination.close(),
         }),
@@ -553,10 +678,22 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
     let actionResult: OntologyApplyActionResult | void;
 
     try {
+        await ontology.ready;
+        await Promise.all(
+            uploads.map((upload) =>
+                ontology.attachments.create(upload.blob, {
+                    id: upload.attachment.id,
+                })
+            )
+        );
         await waitForLiveOntologyReady(ontology);
         const canApply = await opts.policy?.canApplyAction?.(
             ctx,
-            request as RemoteOntologyApplyActionRequest<Ontology>,
+            {
+                actionType: request.actionType,
+                parameters,
+                idempotencyKey: executionId,
+            } as unknown as RemoteOntologyApplyActionRequest<Ontology>,
             {
                 objects: ontology.objects,
             }
@@ -570,17 +707,221 @@ async function handleApplyAction<Context, Ontology extends OntologyDefinition = 
             throw new Error(`Unknown action "${request.actionType}".`);
         }
         actionResult = await action(parameters, {
-            idempotencyKey: request.idempotencyKey,
+            idempotencyKey: executionId,
         });
     } finally {
         coordination.close();
         await ontology.cleanup();
     }
 
+    const invalidatedObjectTypes =
+        getInvalidatedObjectTypesFromActionLogic(ir, request.actionType) ??
+        ir.objectTypes.map((objectType) => objectType.name);
+
     return {
-        invalidatedObjectTypes: ir.objectTypes.map((objectType) => objectType.name),
+        invalidatedObjectTypes,
         attachmentIdMappings: actionResult?.attachmentIdMappings,
     };
+}
+
+function toRemoteActionValidation(
+    validation: Uncertain<Result<void, readonly ValidationIssue[]>>
+): Uncertain<Result<null, readonly ValidationIssue[]>> {
+    if (!validation.certain) {
+        return validation;
+    }
+    if (validation.value.kind === "err") {
+        return {
+            certain: true,
+            value: {
+                kind: "err",
+                value: validation.value.value,
+            },
+        };
+    }
+    return {
+        certain: true,
+        value: {
+            kind: "ok",
+            value: null,
+        },
+    };
+}
+
+async function handleValidateAction<Context, Ontology extends OntologyDefinition = OntologyDefinition>(
+    ctx: Context,
+    opts: CreateRemoteOntologyServerOptions<Context, Ontology>,
+    request: RemoteValidateActionRequest
+): Promise<Uncertain<Result<null, readonly ValidationIssue[]>>> {
+    const ir = await resolveValue(opts.ir, ctx);
+    const backendAdapter = await resolveValue(opts.backendAdapter, ctx);
+    const hydratedRequestParameters = decode({
+        ir,
+        target: { kind: "actionParameters", actionType: request.actionType },
+        value: request.parameters,
+    }) as Record<string, unknown>;
+    const parameters = await applyFixedActionParameterValues({
+        ctx,
+        actionType: request.actionType,
+        parameters: hydratedRequestParameters,
+        fixedActionParameterValues: opts.policy?.fixedActionParameterValues,
+    });
+    const ontology = await createLiveOntology<Ontology>({
+        ir,
+        backend: () => backendAdapter,
+        context: ctx as Record<string, unknown>,
+    });
+
+    try {
+        await waitForLiveOntologyReady(ontology);
+        const canApply = await opts.policy?.canApplyAction?.(
+            ctx,
+            {
+                actionType: request.actionType,
+                parameters,
+            } as RemoteOntologyApplyActionRequest<Ontology>,
+            {
+                objects: ontology.objects,
+            }
+        );
+        if (canApply !== true) {
+            return {
+                certain: true,
+                value: {
+                    kind: "err",
+                    value: [{
+                        message: `Action "${request.actionType}" is not allowed.`,
+                    }],
+                },
+            };
+        }
+
+        const action = ontology.actions[request.actionType];
+        if (!action) {
+            throw new Error(`Unknown action "${request.actionType}".`);
+        }
+        return toRemoteActionValidation(await action.validate(parameters));
+    } finally {
+        await ontology.cleanup();
+    }
+}
+
+async function handleResolveActionParameters<Context, Ontology extends OntologyDefinition = OntologyDefinition>(
+    ctx: Context,
+    opts: CreateRemoteOntologyServerOptions<Context, Ontology>,
+    request: RemoteResolveActionParametersRequest
+): Promise<RemoteResolveActionParametersResponse> {
+    const description = await handleDescribe(ctx, opts, {});
+    const projectedAction = description.ir.actionTypes.find(
+        (candidate) => candidate.name === request.actionType
+    );
+    if (!projectedAction) {
+        throw new RemoteOntologyForbiddenError(`Action "${request.actionType}" is not allowed.`);
+    }
+    const resolutionDescription = await handleDescribe(
+        ctx,
+        opts,
+        {},
+        {
+            projectFixedActionParameterValuesInDefaults:
+                true,
+        }
+    );
+    const resolutionProjectedAction =
+        resolutionDescription.ir.actionTypes.find(
+            (candidate) =>
+                candidate.name === request.actionType
+        );
+    if (!resolutionProjectedAction) {
+        throw new RemoteOntologyForbiddenError(
+            `Action "${request.actionType}" is not allowed.`
+        );
+    }
+
+    const ir = await resolveValue(opts.ir, ctx);
+    const sourceAction = ir.actionTypes.find(
+        (candidate) => candidate.name === request.actionType
+    );
+    if (!sourceAction) {
+        throw new Error(
+            `Unknown action "${request.actionType}".`
+        );
+    }
+    const projectedParametersByName = new Map(
+        resolutionProjectedAction.parameters.map(
+            (parameter) => [
+                parameter.name,
+                parameter,
+            ]
+        )
+    );
+    const resolutionAction = {
+        ...sourceAction,
+        parameters: sourceAction.parameters.map(
+            (parameter) =>
+                projectedParametersByName.get(
+                    parameter.name
+                )?.defaultValue
+                    ? parameter
+                    : {
+                          ...parameter,
+                          defaultValue: undefined,
+                      }
+        ),
+    };
+    const resolutionIr: OntologyIR = {
+        ...ir,
+        actionTypes: ir.actionTypes.map((action) =>
+            action.name === request.actionType
+                ? resolutionAction
+                : action
+        ),
+    };
+    const hydratedRequestParameters = decode({
+        ir,
+        target: { kind: "actionParameters", actionType: request.actionType },
+        value: request.parameters,
+    }) as Record<string, unknown>;
+    const parameters = await applyFixedActionParameterValues({
+        ctx,
+        actionType: request.actionType,
+        parameters: hydratedRequestParameters,
+        fixedActionParameterValues: opts.policy?.fixedActionParameterValues,
+    });
+    const ontology = await createLiveOntology<Ontology>({
+        ir: resolutionIr,
+        backend: () =>
+            createPolicyReadBackendAdapter(
+                ctx,
+                opts,
+                resolutionIr
+            ),
+        context: ctx as Record<string, unknown>,
+    });
+
+    try {
+        await waitForLiveOntologyReady(ontology);
+        const action = ontology.actions[request.actionType];
+        if (!action) {
+            throw new Error(`Unknown action "${request.actionType}".`);
+        }
+        const resolvedParameters = await action.resolveParameters(parameters);
+        const visibleParameters = pickVisibleActionParameters(
+            request.actionType,
+            resolvedParameters,
+            opts.policy?.fixedActionParameterValues,
+            projectedAction.parameters
+        );
+        return {
+            parameters: encode({
+                ir: description.ir,
+                target: { kind: "actionParameters", actionType: request.actionType },
+                value: visibleParameters,
+            }) as Record<string, unknown>,
+        };
+    } finally {
+        await ontology.cleanup();
+    }
 }
 
 async function handleRunQueryFunction<Context, Ontology extends OntologyDefinition = OntologyDefinition>(
@@ -744,6 +1085,18 @@ export function createRemoteOntologyServer<
                     ctx,
                     opts,
                     input as RemoteLoadSubsetRequest
+                )) as RemoteOntologyResponseByEndpoint[TEndpoint];
+            case "validate-action":
+                return (await handleValidateAction(
+                    ctx,
+                    opts,
+                    input as RemoteValidateActionRequest
+                )) as RemoteOntologyResponseByEndpoint[TEndpoint];
+            case "resolve-action-parameters":
+                return (await handleResolveActionParameters(
+                    ctx,
+                    opts,
+                    input as RemoteResolveActionParametersRequest
                 )) as RemoteOntologyResponseByEndpoint[TEndpoint];
             case "apply-action":
                 return (await handleApplyAction(

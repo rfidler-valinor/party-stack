@@ -12,6 +12,7 @@ export async function runOptimisticAction(options: {
     actionTypeName: string;
     parameters: Record<string, unknown>;
     context: Record<string, unknown>;
+    idempotencyKey: string;
     objects: Record<
         string,
         OntologyCollection<OntologyObject>
@@ -35,6 +36,8 @@ export async function runOptimisticAction(options: {
         actionTypeName: options.actionTypeName,
         parameters: options.parameters,
         context: options.context,
+        idempotencyKey:
+            options.idempotencyKey,
         objects: options.objects,
         tx,
     });

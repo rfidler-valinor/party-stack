@@ -6,13 +6,22 @@ import { createLiveOntology } from "@party-stack/ontology";
 import type {
     CreateLiveOntologyOpts,
     LiveOntology,
+    LiveOntologyAction,
     OntologyDefinition,
     OntologyBackendAdapter,
     OntologyBackendAdapterProvider,
     OntologyCollectionOptions,
     OntologyIR,
+    OntologyApplyActionResult,
+    Uncertain,
+    ValidationIssue,
 } from "@party-stack/ontology";
+import type { Result } from "@party-stack/ontology/values";
 import { serializeLoadSubsetOptions, type RemoteOntologyTransport } from "./protocol.js";
+
+export interface OntologyApplyActionClientResult extends OntologyApplyActionResult {
+    invalidatedObjectTypes?: string[];
+}
 
 export interface CreateRemoteOntologyBackendAdapterOptions {
     ir: OntologyIR;
@@ -40,7 +49,6 @@ export interface CreateRemoteLiveOntologyOptions<
     runtime?: CreateLiveOntologyOpts<Context>["runtime"];
     persistObjects?: CreateLiveOntologyOpts<Context>["persistObjects"];
     writes?: CreateLiveOntologyOpts<Context>["writes"];
-    getUserId?: CreateLiveOntologyOpts<Context>["getUserId"];
 }
 
 function getObjectTypePrimaryKey(ir: OntologyIR, objectType: string): string {
@@ -49,6 +57,52 @@ function getObjectTypePrimaryKey(ir: OntologyIR, objectType: string): string {
         throw new Error(`Unknown ontology object type "${objectType}".`);
     }
     return objectTypeDef.primaryKey;
+}
+
+async function refreshInvalidatedCollections(opts: {
+    objectTypes: string[];
+    objects: Record<string, Collection<Record<string, unknown>>>;
+}): Promise<void> {
+    await Promise.all(
+        opts.objectTypes.map(async (objectType) => {
+            const collection = opts.objects[objectType] as
+                | Collection<Record<string, unknown>, string | number, QueryCollectionUtils<Record<string, unknown>>>
+                | undefined;
+            if (!collection?.utils?.refetch) {
+                return;
+            }
+            try {
+                await collection.utils.refetch({ throwOnError: true });
+            } catch {
+                // The remote action is already confirmed. Refresh remains
+                // best-effort and must not turn it into a failed write.
+            }
+        })
+    );
+}
+
+function fromRemoteActionValidation(
+    validation: Uncertain<Result<null, readonly ValidationIssue[]>>
+): Uncertain<Result<void, readonly ValidationIssue[]>> {
+    if (!validation.certain) {
+        return validation;
+    }
+    if (validation.value.kind === "err") {
+        return {
+            certain: true,
+            value: {
+                kind: "err",
+                value: validation.value.value,
+            },
+        };
+    }
+    return {
+        certain: true,
+        value: {
+            kind: "ok",
+            value: undefined,
+        },
+    };
 }
 
 export function createRemoteOntologyBackendAdapter(
@@ -97,19 +151,26 @@ export function createRemoteOntologyBackendAdapter(
                     ? response.invalidatedObjectTypes
                     : opts.ir.objectTypes.map((objectType) => objectType.name);
 
-            await Promise.all(
-                invalidatedObjectTypes.map((objectType) => {
-                    const collection = live.objects[objectType] as Collection<
-                        Record<string, unknown>,
-                        string | number,
-                        QueryCollectionUtils<Record<string, unknown>>
-                    >;
-                    return collection.utils.refetch({ throwOnError: true });
+            // A confirmed remote write remains successful even when its
+            // best-effort local cache refresh fails or is aborted.
+            await refreshInvalidatedCollections({
+                objectTypes: invalidatedObjectTypes,
+                objects: live.objects,
+            });
+
+            const result: OntologyApplyActionClientResult = {
+                attachmentIdMappings: response.attachmentIdMappings,
+                invalidatedObjectTypes,
+            };
+            return result;
+        },
+        validateAction: async (actionType, parameters) => {
+            return fromRemoteActionValidation(
+                await transport.validateAction({
+                    actionType,
+                    parameters,
                 })
             );
-            return {
-                attachmentIdMappings: response.attachmentIdMappings,
-            };
         },
         runQueryFunction: async (queryFunctionType, parameters) => {
             const response = await transport.runQueryFunction({
@@ -146,7 +207,12 @@ export async function createRemoteLiveOntology<
     const backend = createRemoteOntologyBackend<Context>({
         transport: opts.transport,
     });
-    return createLiveOntology<Ontology, Context>({
+    const resolveActionParameters =
+        opts.transport.resolveActionParameters;
+    const ontology = await createLiveOntology<
+        Ontology,
+        Context
+    >({
         ir: description.ir,
         backend,
         id: opts.id,
@@ -154,6 +220,32 @@ export async function createRemoteLiveOntology<
         persistObjects: opts.persistObjects,
         writes: opts.writes,
         context: (description.context ?? {}) as Context,
-        getUserId: opts.getUserId,
     });
+    if (
+        description.capabilities
+            ?.actionParameterResolution === true &&
+        resolveActionParameters
+    ) {
+        for (const actionType of description.ir
+            .actionTypes) {
+            const action =
+                (
+                    ontology.actions as Record<
+                        string,
+                        LiveOntologyAction
+                    >
+                )[actionType.name];
+            if (!action) continue;
+            action.resolveParameters = async (
+                parameters
+            ) =>
+                (
+                    await resolveActionParameters({
+                        actionType: actionType.name,
+                        parameters,
+                    })
+                ).parameters;
+        }
+    }
+    return ontology;
 }

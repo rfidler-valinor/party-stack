@@ -5,52 +5,65 @@ import * as v from "@party-stack/ontology/values";
 /** A tracked unit of work that can optionally belong to a project and progress through a simple status lifecycle. */
 export type Issue = {
     /** Timestamp when the issue entered the Completed state; empty while the issue is not completed. */
-    issueCompletedAt: v.timestamp;
+    issueCompletedAt?: v.timestamp;
     /** Current workflow state of the issue: Open, In Progress, Waiting, or Completed. */
-    issueStatus: string;
+    issueStatus?: string;
     /** Timestamp of the most recent update made to the issue. */
-    issueUpdatedAt: v.timestamp;
+    issueUpdatedAt?: v.timestamp;
     /** Stable system-generated identifier for an issue. */
     issueId: string;
-    createdBy: string;
+    issueLabels?: Array<string>;
+    createdBy?: string;
     /** Short, human-readable summary used to identify the issue in lists and workflows. */
-    issueTitle: string;
-    assignee: string;
+    issueTitle?: string;
+    assignee?: string;
     /** Files that provide supporting material or evidence for the issue. */
-    issueAttachments: Array<v.attachment<"image/png" | "image/jpeg">>;
+    issueAttachments?: Array<v.attachment<"image/png" | "image/jpeg">>;
     /** Identifier of the optional project that groups this issue. */
-    projectId: string;
+    projectId?: string;
     /** Timestamp when the issue was created through the operational workflow. */
-    issueCreatedAt: v.timestamp;
+    issueCreatedAt?: v.timestamp;
     /** Detailed context, requirements, or notes explaining the work represented by the issue. */
-    issueDescription: string;
+    issueDescription?: string;
 };
 
 /** A collection of related issues organized around a shared objective or body of work. */
 export type Project = {
     /** Timestamp of the most recent update made to the project. */
-    projectUpdatedAt: v.timestamp;
+    projectUpdatedAt?: v.timestamp;
     /** Summary of the project's purpose, scope, or intended outcome. */
-    projectDescription: string;
+    projectDescription?: string;
     /** Display color used to visually distinguish the project, stored as a hexadecimal color value such as #2D72D2. */
-    projectColor: string;
+    projectColor?: string;
     /** Stable system-generated identifier for a project. */
     projectId: string;
     /** Timestamp when the project was created through the operational workflow. */
-    projectCreatedAt: v.timestamp;
+    projectCreatedAt?: v.timestamp;
     /** Short, human-readable name used to identify the project. */
-    projectTitle: string;
+    projectTitle?: string;
 };
 
+export type User = {
+    id: string;
+    givenName?: string;
+    familyName?: string;
+    email?: string;
+    avatar?: v.attachment<"image/png" | "image/jpeg" | "image/gif" | "image/svg+xml">;
+};
+
+export type IssueTrackerOntologyContext = {
+    user: string;
+} & Record<string, unknown>;
 export type CreateIssueParameters = {
     completedAt?: v.timestamp | null;
     attachments?: Array<v.attachment<"image/png" | "image/jpeg">> | null;
     createdBy?: string | null;
+    issueLabels?: Array<string> | null;
     project?: string | null;
     description?: string | null;
     assignee?: string | null;
     title: string;
-    status: "Open" | "In Progress" | "Waiting" | "Completed";
+    status?: "Open" | "In Progress" | "Waiting" | "Completed";
     "__uuid_0df17cad-fc40-4f4b-b755-dfccb968d615"?: string;
     __now?: v.timestamp;
 };
@@ -71,24 +84,27 @@ export type UpdateIssueParameters = {
     completedAt?: v.timestamp | null;
     attachments?: Array<v.attachment<"image/png" | "image/jpeg">> | null;
     issue: string;
+    issueLabels?: Array<string> | null;
     description?: string | null;
     project?: string | null;
     assignee?: string | null;
-    title: string;
-    status: "Open" | "In Progress" | "Waiting" | "Completed";
+    title?: string;
+    status?: "Open" | "In Progress" | "Waiting" | "Completed";
     __now?: v.timestamp;
 };
 export type UpdateProjectParameters = {
     color?: string | null;
     project: string;
     description?: string | null;
-    title: string;
+    title?: string;
     __now?: v.timestamp;
 };
 export type IssueTrackerOntology = {
+    context: IssueTrackerOntologyContext;
     objectTypes: {
         Issue: Issue;
         Project: Project;
+        User: User;
     };
     actionTypes: {
         createIssue: {

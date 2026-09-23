@@ -1,11 +1,15 @@
 {
     "name": "@party-stack/sqlite-ontology",
-    "version": "0.2.0",
+    "version": "0.6.8",
     "type": "module",
     "exports": {
         ".": {
             "types": "./lib/index.d.ts",
             "default": "./lib/index.js"
+        },
+        "./testing": {
+            "types": "./lib/testing/index.d.ts",
+            "default": "./lib/testing/index.js"
         }
     },
     "files": [
@@ -22,7 +26,7 @@
     },
     "devDependencies": {
         "@bobbyfidz/universal-build-config": "^0.1.1",
-        "@tanstack/db": "^0.6.14",
+        "@tanstack/db": "0.8.6",
         "@types/node": "^24.10.1",
         "better-sqlite3": "^12.4.6",
         "eslint": "^9.25.0",
@@ -30,7 +34,12 @@
         "vitest": "^3.1.1"
     },
     "peerDependencies": {
-        "@tanstack/db": "^0.6.14",
+        "@tanstack/db": "0.8.6",
         "better-sqlite3": "^12.4.6"
+    },
+    "peerDependenciesMeta": {
+        "better-sqlite3": {
+            "optional": true
+        }
     }
 }

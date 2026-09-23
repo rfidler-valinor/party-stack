@@ -4,15 +4,20 @@ node_modules
 # Local env files
 .env
 .env*.local
+.dev.vars
 
 # Testing
 coverage
+.wrangler
 
 # Turbo
 .turbo
 
 # Vercel
 .vercel
+
+# Cloudflare
+.wrangler
 
 # Next.js
 .next

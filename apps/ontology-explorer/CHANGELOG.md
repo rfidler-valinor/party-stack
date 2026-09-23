@@ -1,5 +1,207 @@
 # @party-stack/ontology-explorer
 
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies [3816870]
+    - @party-stack/foundry-ontology@0.14.14
+
+## 0.1.20
+
+### Patch Changes
+
+- Updated dependencies [44c26f3]
+    - @party-stack/foundry-ontology@0.14.13
+
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [c545376]
+    - @party-stack/ontology@0.16.7
+    - @party-stack/foundry-ontology@0.14.12
+
+## 0.1.18
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/foundry-ontology@0.14.11
+    - @party-stack/ontology@0.16.6
+
+## 0.1.17
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/foundry-ontology@0.14.10
+    - @party-stack/ontology@0.16.5
+
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies [ccf3bcd]
+    - @party-stack/foundry-ontology@0.14.9
+
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies [cd0b360]
+    - @party-stack/foundry-ontology@0.14.8
+    - @party-stack/ontology@0.16.4
+
+## 0.1.14
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/foundry-ontology@0.14.7
+    - @party-stack/ontology@0.16.3
+
+## 0.1.13
+
+### Patch Changes
+
+- Updated dependencies [07bf6ce]
+    - @party-stack/foundry-ontology@0.14.6
+
+## 0.1.12
+
+### Patch Changes
+
+- Updated dependencies [1d842ab]
+    - @party-stack/foundry-ontology@0.14.5
+
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [98faee7]
+    - @party-stack/foundry-ontology@0.14.4
+    - @party-stack/ontology@0.16.2
+
+## 0.1.10
+
+### Patch Changes
+
+- Updated dependencies [c366eb9]
+    - @party-stack/foundry-ontology@0.14.3
+    - @party-stack/ontology@0.16.1
+
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [2538365]
+    - @party-stack/ontology@0.16.0
+    - @party-stack/foundry-ontology@0.14.2
+
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [9eca335]
+    - @party-stack/foundry-ontology@0.14.1
+
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [81d84bb]
+    - @party-stack/foundry-ontology@0.14.0
+    - @party-stack/ontology@0.15.0
+
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [05ff1a7]
+    - @party-stack/foundry-ontology@0.13.0
+    - @party-stack/ontology@0.14.0
+
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [8791727]
+    - @party-stack/ontology@0.13.2
+    - @party-stack/foundry-ontology@0.12.2
+
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [52d8adc]
+    - @party-stack/ontology@0.13.1
+    - @party-stack/foundry-ontology@0.12.1
+
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [07fbbce]
+    - @party-stack/ontology@0.13.0
+    - @party-stack/foundry-ontology@0.12.0
+
+## 0.1.2
+
+### Patch Changes
+
+- 45bcf88: upgrade tanstack db deps
+- Updated dependencies [45bcf88]
+    - @party-stack/foundry-ontology@0.11.1
+    - @party-stack/ontology@0.12.1
+
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [b8fb08e]
+    - @party-stack/foundry-ontology@0.11.0
+    - @party-stack/ontology@0.12.0
+
+## 0.1.0
+
+### Minor Changes
+
+- 33f6858: auth + connections
+
+### Patch Changes
+
+- Updated dependencies [33f6858]
+    - @party-stack/foundry-ontology@0.10.0
+    - @party-stack/ontology@0.11.0
+
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [46268bc]
+    - @party-stack/ontology@0.10.0
+    - @party-stack/foundry-ontology@0.9.0
+
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [bc97879]
+    - @party-stack/foundry-ontology@0.8.1
+
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [515f8dc]
+    - @party-stack/ontology@0.9.0
+    - @party-stack/foundry-ontology@0.8.0
+
 ## 0.0.10
 
 ### Patch Changes

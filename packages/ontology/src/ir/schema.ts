@@ -51,6 +51,24 @@ export default {
             }),
         },
         {
+            name: "StringSuggestion",
+            description: "A suggested value for a string.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "value",
+                        displayName: "Value",
+                        type: o.string({}),
+                    },
+                    {
+                        name: "label",
+                        displayName: "Label",
+                        type: o.optional({ type: o.string({}) }),
+                    },
+                ],
+            }),
+        },
+        {
             name: "StringEnumConstraint",
             description: "Constrains a string to a set of allowed values.",
             type: o.struct({
@@ -59,16 +77,7 @@ export default {
                         name: "options",
                         displayName: "Options",
                         type: o.list({
-                            elementType: o.struct({
-                                fields: [
-                                    { name: "value", displayName: "Value", type: o.string({}) },
-                                    {
-                                        name: "label",
-                                        displayName: "Label",
-                                        type: o.optional({ type: o.string({}) }),
-                                    },
-                                ],
-                            }),
+                            elementType: o.ref({ name: "StringSuggestion" }),
                         }),
                     },
                 ],
@@ -106,6 +115,15 @@ export default {
                         name: "constraint",
                         displayName: "Constraint",
                         type: o.optional({ type: o.ref({ name: "StringConstraint" }) }),
+                    },
+                    {
+                        name: "suggestions",
+                        displayName: "Suggestions",
+                        type: o.optional({
+                            type: o.list({
+                                elementType: o.ref({ name: "StringSuggestion" }),
+                            }),
+                        }),
                     },
                 ],
             }),
@@ -386,6 +404,8 @@ export default {
                         { value: "image/jp2", label: "JPEG 2000" },
                         { value: "image/jpeg", label: "JPEG" },
                         { value: "image/png", label: "PNG" },
+                        { value: "image/gif", label: "GIF" },
+                        { value: "image/svg+xml", label: "SVG" },
                         { value: "image/webp", label: "WebP" },
                     ],
                 }),
@@ -766,23 +786,54 @@ export default {
             }),
         },
         {
-            name: "ValueReferenceExpression",
-            description: "Reads a value from scope by path.",
+            name: "InputReferenceExpression",
+            description: "Reads a named input from the root expression scope.",
             type: o.struct({
                 fields: [
                     {
-                        name: "path",
-                        displayName: "Path",
-                        type: o.list({ elementType: o.string({}) }),
+                        name: "name",
+                        displayName: "Name",
+                        type: o.string({}),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "LocalReferenceExpression",
+            description: "Reads a named lexically scoped expression binding.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "name",
+                        displayName: "Name",
+                        type: o.string({}),
                     },
                 ],
             }),
         },
         {
             name: "ContextReferenceExpression",
-            description: "Reads a value from context by path.",
+            description: "Reads a named value from the expression context.",
             type: o.struct({
                 fields: [
+                    {
+                        name: "name",
+                        displayName: "Name",
+                        type: o.string({}),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "GetAtExpression",
+            description: "Reads a structural path from a source expression.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "source",
+                        displayName: "Source",
+                        type: o.ref({ name: "Expression" }),
+                    },
                     {
                         name: "path",
                         displayName: "Path",
@@ -792,14 +843,103 @@ export default {
             }),
         },
         {
-            name: "UuidFunctionCall",
+            name: "ObjectLookupExpression",
+            description: "Resolves an object reference to its ontology object.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "reference",
+                        displayName: "Reference",
+                        type: o.ref({ name: "Expression" }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "LinkHopExpression",
+            description: "Follows one named to-one ontology link from a source object.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "source",
+                        displayName: "Source",
+                        type: o.ref({ name: "Expression" }),
+                    },
+                    {
+                        name: "link",
+                        displayName: "Link",
+                        type: o.string({}),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "StructExpressionField",
+            description: "A named field constructed by a struct expression.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "name",
+                        displayName: "Name",
+                        type: o.string({}),
+                    },
+                    {
+                        name: "value",
+                        displayName: "Value",
+                        type: o.ref({ name: "Expression" }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "StructExpression",
+            description: "Constructs a struct value from field expressions.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "fields",
+                        displayName: "Fields",
+                        type: o.list({
+                            elementType: o.ref({
+                                name: "StructExpressionField",
+                            }),
+                        }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "MapExpression",
+            description: "Maps each element of a list to a new value.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "source",
+                        displayName: "Source",
+                        type: o.ref({ name: "Expression" }),
+                    },
+                    {
+                        name: "binding",
+                        displayName: "Binding",
+                        type: o.string({}),
+                    },
+                    {
+                        name: "body",
+                        displayName: "Body",
+                        type: o.ref({ name: "Expression" }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "UuidExpression",
             description: "Generates a UUID value.",
             type: o.struct({
                 fields: [],
             }),
         },
         {
-            name: "NowFunctionCall",
+            name: "NowExpression",
             description: "Returns the current timestamp.",
             type: o.struct({
                 fields: [],
@@ -820,31 +960,49 @@ export default {
             }),
         },
         {
-            name: "FunctionCallExpression",
-            description: "Calls a function within an expression.",
-            type: o.union({
-                variants: [
-                    { name: "uuid", type: o.ref({ name: "UuidFunctionCall" }) },
-                    { name: "now", type: o.ref({ name: "NowFunctionCall" }) },
-                ],
-            }),
-        },
-        {
             name: "Expression",
             description: "An expression that resolves to a value.",
             type: o.union({
                 variants: [
                     {
-                        name: "valueReference",
-                        type: o.ref({ name: "ValueReferenceExpression" }),
+                        name: "inputReference",
+                        type: o.ref({ name: "InputReferenceExpression" }),
                     },
                     {
                         name: "contextReference",
                         type: o.ref({ name: "ContextReferenceExpression" }),
                     },
                     {
-                        name: "functionCall",
-                        type: o.ref({ name: "FunctionCallExpression" }),
+                        name: "localReference",
+                        type: o.ref({ name: "LocalReferenceExpression" }),
+                    },
+                    {
+                        name: "getAt",
+                        type: o.ref({ name: "GetAtExpression" }),
+                    },
+                    {
+                        name: "objectLookup",
+                        type: o.ref({ name: "ObjectLookupExpression" }),
+                    },
+                    {
+                        name: "linkHop",
+                        type: o.ref({ name: "LinkHopExpression" }),
+                    },
+                    {
+                        name: "struct",
+                        type: o.ref({ name: "StructExpression" }),
+                    },
+                    {
+                        name: "map",
+                        type: o.ref({ name: "MapExpression" }),
+                    },
+                    {
+                        name: "uuid",
+                        type: o.ref({ name: "UuidExpression" }),
+                    },
+                    {
+                        name: "now",
+                        type: o.ref({ name: "NowExpression" }),
                     },
                     {
                         name: "literal",
@@ -897,7 +1055,7 @@ export default {
                     {
                         name: "object",
                         displayName: "Object",
-                        type: o.ref({ name: "ValueReferenceExpression" }),
+                        type: o.ref({ name: "InputReferenceExpression" }),
                     },
                     {
                         name: "values",
@@ -915,7 +1073,7 @@ export default {
                     {
                         name: "object",
                         displayName: "Object",
-                        type: o.ref({ name: "ValueReferenceExpression" }),
+                        type: o.ref({ name: "InputReferenceExpression" }),
                     },
                 ],
             }),
@@ -945,6 +1103,18 @@ export default {
             description: "An action type in the ontology.",
             type: o.struct({
                 fields: [
+                    {
+                        name: "meta",
+                        displayName: "Meta",
+                        type: o.optional({
+                            type: o.map({
+                                keyType: o.string({}),
+                                valueType: o.unknown({}),
+                            }),
+                        }),
+                        description:
+                            "Provider-specific metadata used to execute this action.",
+                    },
                     {
                         name: "name",
                         displayName: "Name",
@@ -1075,6 +1245,60 @@ export default {
             }),
         },
         {
+            name: "MoveLensOp",
+            description: "Moves a property from one path to another.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "from",
+                        displayName: "From",
+                        type: o.list({ elementType: o.string({}) }),
+                    },
+                    {
+                        name: "to",
+                        displayName: "To",
+                        type: o.list({ elementType: o.string({}) }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "SelectLensOp",
+            description: "Retains only the selected top-level properties.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "properties",
+                        displayName: "Properties",
+                        type: o.list({ elementType: o.string({}) }),
+                    },
+                ],
+            }),
+        },
+        {
+            name: "LensOp",
+            description: "One schema and value transformation operation.",
+            type: o.union({
+                variants: [
+                    { name: "move", type: o.ref({ name: "MoveLensOp" }) },
+                    { name: "select", type: o.ref({ name: "SelectLensOp" }) },
+                ],
+            }),
+        },
+        {
+            name: "Lens",
+            description: "An ordered sequence of source-to-target transformation operations.",
+            type: o.struct({
+                fields: [
+                    {
+                        name: "operations",
+                        displayName: "Operations",
+                        type: o.list({ elementType: o.ref({ name: "LensOp" }) }),
+                    },
+                ],
+            }),
+        },
+        {
             name: "OntologyIR",
             description: "The root ontology definition containing all type definitions.",
             type: o.struct({
@@ -1108,6 +1332,12 @@ export default {
                         displayName: "Query function types",
                         type: o.list({ elementType: o.ref({ name: "QueryFunctionTypeDef" }) }),
                         description: "Query function type definitions.",
+                    },
+                    {
+                        name: "contextType",
+                        displayName: "Context type",
+                        type: o.optional({ type: o.ref({ name: "TypeDef" }) }),
+                        description: "Optional typed execution context available to ontology expressions.",
                     },
                 ],
             }),

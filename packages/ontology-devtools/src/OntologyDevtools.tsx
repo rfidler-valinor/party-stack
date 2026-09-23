@@ -2,6 +2,14 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
 import { Tabs } from "@base-ui/react/tabs";
 import { Tooltip } from "@base-ui/react/tooltip";
+import {
+    Graph,
+    layout as layoutGraph,
+    type EdgeLabel,
+    type GraphLabel,
+    type NodeLabel,
+    type Point,
+} from "@dagrejs/dagre";
 import NumberFlow from "@number-flow/react";
 import { LucideIcon } from "@party-stack/icons-lucide/react";
 import { createReactPlugin } from "@tanstack/devtools-utils/react";
@@ -45,13 +53,11 @@ import {
     useEffect,
     useId,
     useMemo,
-    useRef,
     useState,
     type ComponentType,
     type CSSProperties,
     type ReactNode,
 } from "react";
-import { flushSync } from "react-dom";
 import type { IconName } from "@party-stack/icons";
 import type {
     AttachmentMetadata,
@@ -67,14 +73,22 @@ import type * as v from "@party-stack/ontology/values";
 import type { TanStackDevtoolsReactPlugin } from "@tanstack/react-devtools";
 import "./styles.css";
 
-export interface OntologyDevtoolsPanelProps<Ontology extends OntologyDefinition = OntologyDefinition> {
+export interface OntologyDevtoolsPanelProps<
+    Ontology extends OntologyDefinition = OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+> {
     ontology: LiveOntology<Ontology>;
+    metaOntology?: LiveOntology<MetaOntology>;
     theme?: "light" | "dark";
 }
 
-export interface OntologyDevtoolsPluginOptions<Ontology extends OntologyDefinition = OntologyDefinition> {
+export interface OntologyDevtoolsPluginOptions<
+    Ontology extends OntologyDefinition = OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+> {
     ontology: LiveOntology<Ontology>;
     id?: string;
+    metaOntology?: LiveOntology<MetaOntology>;
     name?: TanStackDevtoolsReactPlugin["name"];
     defaultOpen?: boolean;
 }
@@ -224,6 +238,7 @@ export function OntologyDevtoolsTrigger({ theme }: OntologyDevtoolsChromeProps) 
                     : "linear-gradient(145deg, #fff, #f5f5f4)",
                 border: dark ? "1px solid rgba(255,255,255,.16)" : "1px solid rgba(23,23,23,.14)",
                 borderRadius: "999px",
+                boxSizing: "border-box",
                 boxShadow: dark
                     ? "0 10px 30px rgba(0,0,0,.34), 0 0 0 4px rgba(232,59,50,.11)"
                     : "0 10px 28px rgba(28,25,23,.16), 0 0 0 4px rgba(232,59,50,.09)",
@@ -384,76 +399,17 @@ function OutboxEntryCard({
     );
 }
 
-function outboxSnapshotKey(entries: OntologyOutboxEntry[]): string {
-    return entries
-        .map((entry) => `${entry.id}:${entry.status}:${entry.updatedAt}:${entry.attempts}`)
-        .join("|");
-}
-
-function useTransitionedEntries(entries: OntologyOutboxEntry[]): OntologyOutboxEntry[] {
-    const [visibleEntries, setVisibleEntries] = useState(entries);
-    const snapshotKey = outboxSnapshotKey(entries);
-    const previousKey = useRef(snapshotKey);
-
-    useEffect(() => {
-        if (snapshotKey === previousKey.current) {
-            return;
-        }
-        previousKey.current = snapshotKey;
-        let cancelled = false;
-
-        queueMicrotask(() => {
-            if (cancelled) return;
-            if (
-                window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-                !document.startViewTransition
-            ) {
-                setVisibleEntries(entries);
-                return;
-            }
-
-            document.documentElement.dataset.psOutboxTransition = "";
-            try {
-                const transition = document.startViewTransition(() => {
-                    flushSync(() => {
-                        setVisibleEntries(entries);
-                    });
-                });
-                void transition.finished.finally(() => {
-                    delete document.documentElement.dataset.psOutboxTransition;
-                });
-            } catch {
-                delete document.documentElement.dataset.psOutboxTransition;
-                setVisibleEntries(entries);
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [entries, snapshotKey]);
-
-    return visibleEntries;
-}
-
 function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" | "dark" }) {
     const now = useRelativeTimeNow();
-    const transitionScope = `ps-outbox-${useId().replaceAll(":", "")}`;
     const { data } = useLiveQuery(
         (query) => query.from({ entry: outbox.collection }).orderBy(({ entry }) => entry.sequence, "asc"),
         [outbox]
     );
-    const visibleData = useTransitionedEntries(data);
 
     return (
         <OutboxPanel theme={theme}>
-            {visibleData.length === 0 ? (
-                <div
-                    className="ps-outbox-empty"
-                    style={{
-                        viewTransitionName: `${transitionScope}-empty`,
-                    }}
-                >
+            {data.length === 0 ? (
+                <div className="ps-outbox-empty">
                     <div>
                         <span className="ps-outbox-empty-mark">
                             <CheckIcon aria-hidden="true" />
@@ -464,17 +420,8 @@ function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" 
                 </div>
             ) : (
                 <div className="ps-outbox-track">
-                    {visibleData.map((entry, index) => (
-                        <div
-                            className="ps-outbox-step"
-                            key={entry.id}
-                            style={{
-                                viewTransitionName: `${transitionScope}-entry-${entry.id.replaceAll(
-                                    /[^a-zA-Z0-9_-]/g,
-                                    "-"
-                                )}`,
-                            }}
-                        >
+                    {data.map((entry, index) => (
+                        <div className="ps-outbox-step" key={entry.id}>
                             {index > 0 ? <span aria-hidden="true" className="ps-outbox-connector" /> : null}
                             <div className="ps-outbox-node">
                                 <OutboxEntryCard entry={entry} now={now} outbox={outbox} />
@@ -487,7 +434,7 @@ function OutboxRows({ outbox, theme }: { outbox: OntologyOutbox; theme: "light" 
     );
 }
 
-type OntologyDevtoolsView = "objects" | "schema" | "outbox";
+type OntologyDevtoolsView = "objects" | "schema" | "outbox" | "meta";
 type OutboxActivity = "idle" | "draining" | "paused";
 
 export function getOutboxActivity(entries: OntologyOutboxEntry[]): OutboxActivity {
@@ -914,10 +861,12 @@ function ObjectTable({
     collection,
     objectType,
     ontology,
+    pageSize,
 }: {
     collection: LiveOntology["objects"][string];
     objectType: ObjectTypeDef;
     ontology: LiveOntology;
+    pageSize: number;
 }) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -951,8 +900,8 @@ function ObjectTable({
                 )
                 .select(({ row }) => row as Record<string, unknown>);
         },
-        { pageSize: 50 },
-        [collection.id, objectType.primaryKey, selectedSort?.id, selectedSort?.desc]
+        { pageSize },
+        [collection.id, objectType.primaryKey, pageSize, selectedSort?.id, selectedSort?.desc]
     );
     const rows = data as Array<Record<string, unknown>>;
     const columns = useMemo(
@@ -1288,9 +1237,11 @@ function ObjectTable({
                                     className="ps:rounded-md ps:border ps:border-zinc-600 ps:bg-zinc-900 ps:px-3 ps:py-1.5 ps:text-xs ps:text-zinc-200 ps:hover:border-rose-400 ps:hover:text-rose-300 ps:disabled:opacity-50"
                                     disabled={isFetchingNextPage}
                                     type="button"
-                                    onClick={fetchNextPage}
+                                    onClick={() => void fetchNextPage()}
                                 >
-                                    {isFetchingNextPage ? "Loading…" : "Load 50 more"}
+                                    {isFetchingNextPage
+                                        ? "Loading…"
+                                        : `Load ${pageSize} more`}
                                 </button>
                             </div>
                         ) : null}
@@ -1312,7 +1263,13 @@ function ObjectTable({
     );
 }
 
-function ObjectsView({ ontology }: { ontology: LiveOntology }) {
+function ObjectsView({
+    ontology,
+    pageSize = 50,
+}: {
+    ontology: LiveOntology;
+    pageSize?: number;
+}) {
     const objectTypes = ontology.ir.objectTypes;
     const [selectedName, setSelectedName] = useState(() => objectTypes[0]?.name);
     const selected = objectTypes.find((objectType) => objectType.name === selectedName) ?? objectTypes[0];
@@ -1360,6 +1317,7 @@ function ObjectsView({ ontology }: { ontology: LiveOntology }) {
                 key={selected.name}
                 objectType={selected}
                 ontology={ontology}
+                pageSize={pageSize}
             />
         </div>
     );
@@ -1371,32 +1329,143 @@ interface SchemaNode {
     y: number;
 }
 
-export function layoutSchema(ir: OntologyIR): {
-    nodes: SchemaNode[];
+interface SchemaEdge {
+    id: string;
+    label: string;
+    labelWidth: number;
+    labelX: number;
+    labelY: number;
+    points: Point[];
+}
+
+interface SchemaGraphEdgeLabel extends EdgeLabel {
+    label: string;
+}
+
+const SCHEMA_CARD_WIDTH = 230;
+const SCHEMA_CARD_HEIGHT = 176;
+
+function schemaEdgeLabel(link: OntologyIR["linkTypes"][number]): {
+    label: string;
     width: number;
-    height: number;
 } {
-    const cardWidth = 230;
-    const cardHeight = 176;
-    const gapX = 110;
-    const gapY = 90;
-    const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(ir.objectTypes.length))));
-    const rows = Math.max(1, Math.ceil(ir.objectTypes.length / columns));
-    const nodes = ir.objectTypes.map((objectType, index) => ({
-        objectType,
-        x: 40 + (index % columns) * (cardWidth + gapX),
-        y: 40 + Math.floor(index / columns) * (cardHeight + gapY),
-    }));
+    const label = `${link.source.displayName} · ${link.cardinality}`;
     return {
-        nodes,
-        width: 80 + columns * cardWidth + (columns - 1) * gapX,
-        height: 80 + rows * cardHeight + (rows - 1) * gapY,
+        label,
+        width: Math.min(180, Math.max(72, label.length * 6 + 16)),
     };
 }
 
+export function layoutSchema(ir: OntologyIR): {
+    nodes: SchemaNode[];
+    edges: SchemaEdge[];
+    width: number;
+    height: number;
+} {
+    const graph = new Graph<GraphLabel, NodeLabel, SchemaGraphEdgeLabel>({ multigraph: true })
+        .setGraph({
+            marginx: 40,
+            marginy: 40,
+            nodesep: 72,
+            rankdir: "LR",
+            ranksep: 120,
+        })
+        .setDefaultEdgeLabel(() => ({ label: "" }));
+
+    for (const objectType of ir.objectTypes) {
+        graph.setNode(objectType.name, {
+            height: SCHEMA_CARD_HEIGHT,
+            width: SCHEMA_CARD_WIDTH,
+        });
+    }
+    for (const link of ir.linkTypes) {
+        const edgeLabel = schemaEdgeLabel(link);
+        graph.setEdge(
+            link.source.objectType,
+            link.target.objectType,
+            {
+                height: 24,
+                label: edgeLabel.label,
+                width: edgeLabel.width,
+            },
+            link.id
+        );
+    }
+
+    layoutGraph(graph);
+
+    const objectTypeByName = new Map(
+        ir.objectTypes.map((objectType) => [objectType.name, objectType])
+    );
+    const nodes = graph
+        .nodes()
+        .map((name) => {
+            const objectType = objectTypeByName.get(name);
+            const node = graph.node(name);
+            if (!objectType || !node) return undefined;
+            return {
+                objectType,
+                x: (node.x ?? 0) - SCHEMA_CARD_WIDTH / 2,
+                y: (node.y ?? 0) - SCHEMA_CARD_HEIGHT / 2,
+            };
+        })
+        .filter((node): node is SchemaNode => node !== undefined);
+    const edges = graph.edges().map((edge) => {
+        const value = graph.edge(edge);
+        return {
+            id: edge.name ?? `${edge.v}-${edge.w}`,
+            label: value.label ?? "",
+            labelWidth: value.width ?? 72,
+            labelX: value.x ?? (value.points?.[0]?.x ?? 0),
+            labelY: value.y ?? (value.points?.[0]?.y ?? 0),
+            points: value.points ?? [],
+        };
+    });
+    const graphSize = graph.graph();
+
+    return {
+        nodes,
+        edges,
+        width: Math.max(310, graphSize.width ?? 0),
+        height: Math.max(256, graphSize.height ?? 0),
+    };
+}
+
+export function schemaEdgePath(points: Point[], cornerRadius = 12): string {
+    if (points.length === 0) return "";
+    const first = points[0]!;
+    if (points.length === 1) return `M ${first.x} ${first.y}`;
+
+    const path = [`M ${first.x} ${first.y}`];
+    for (let index = 1; index < points.length - 1; index += 1) {
+        const previous = points[index - 1]!;
+        const current = points[index]!;
+        const next = points[index + 1]!;
+        const incoming = Math.hypot(current.x - previous.x, current.y - previous.y);
+        const outgoing = Math.hypot(next.x - current.x, next.y - current.y);
+        if (incoming === 0 || outgoing === 0) {
+            path.push(`L ${current.x} ${current.y}`);
+            continue;
+        }
+        const radius = Math.min(cornerRadius, incoming / 2, outgoing / 2);
+        const before = {
+            x: current.x + ((previous.x - current.x) / incoming) * radius,
+            y: current.y + ((previous.y - current.y) / incoming) * radius,
+        };
+        const after = {
+            x: current.x + ((next.x - current.x) / outgoing) * radius,
+            y: current.y + ((next.y - current.y) / outgoing) * radius,
+        };
+        path.push(`L ${before.x} ${before.y}`, `Q ${current.x} ${current.y} ${after.x} ${after.y}`);
+    }
+    const end = points.at(-1);
+    if (end) path.push(`L ${end.x} ${end.y}`);
+    return path.join(" ");
+}
+
 function SchemaView({ ir }: { ir: OntologyIR }) {
-    const layout = layoutSchema(ir);
-    const nodeByName = new Map(layout.nodes.map((node) => [node.objectType.name, node]));
+    const schemaLayout = useMemo(() => layoutSchema(ir), [ir]);
+    const markerId = `ps-schema-arrow-${useId().replaceAll(":", "")}`;
 
     if (ir.objectTypes.length === 0) {
         return (
@@ -1410,60 +1479,57 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
         <div className="ps:h-full ps:overflow-auto ps:p-5">
             <div
                 className="ps:relative ps:rounded-2xl ps:border ps:border-zinc-500/20 ps:bg-zinc-950/25 ps:in-[.ps-theme-light]:bg-white/45"
-                style={{ height: layout.height, minWidth: layout.width }}
+                style={{ height: schemaLayout.height, width: schemaLayout.width }}
             >
                 <svg
                     aria-label="Ontology relations"
                     className="ps:absolute ps:inset-0 ps:size-full ps:overflow-visible"
                     role="img"
-                    viewBox={`0 0 ${layout.width} ${layout.height}`}
+                    viewBox={`0 0 ${schemaLayout.width} ${schemaLayout.height}`}
                 >
                     <defs>
                         <marker
-                            id="ps-schema-arrow"
-                            markerHeight="7"
-                            markerWidth="7"
-                            orient="auto-start-reverse"
-                            refX="6"
-                            refY="3.5"
+                            id={markerId}
+                            markerHeight="8"
+                            markerWidth="8"
+                            orient="auto"
+                            refX="7"
+                            refY="4"
                         >
-                            <path className="ps:fill-rose-400" d="M0,0 L7,3.5 L0,7 Z" />
+                            <path className="ps:fill-rose-400" d="M0,0 L8,4 L0,8 Z" />
                         </marker>
                     </defs>
-                    {ir.linkTypes.map((link) => {
-                        const source = nodeByName.get(link.source.objectType);
-                        const target = nodeByName.get(link.target.objectType);
-                        if (!source || !target) return null;
-                        const sourceX = source.x + 115;
-                        const sourceY = source.y + 88;
-                        const targetX = target.x + 115;
-                        const targetY = target.y + 88;
-                        const labelX = (sourceX + targetX) / 2;
-                        const labelY = (sourceY + targetY) / 2;
-                        return (
-                            <g key={link.id}>
-                                <line
-                                    className="ps:stroke-rose-400/70"
-                                    markerEnd="url(#ps-schema-arrow)"
-                                    strokeWidth="1.5"
-                                    x1={sourceX}
-                                    x2={targetX}
-                                    y1={sourceY}
-                                    y2={targetY}
-                                />
-                                <text
-                                    className="ps:fill-zinc-400 ps:text-[10px]"
-                                    textAnchor="middle"
-                                    x={labelX}
-                                    y={labelY - 6}
-                                >
-                                    {link.source.displayName} · {link.cardinality}
-                                </text>
-                            </g>
-                        );
-                    })}
+                    {schemaLayout.edges.map((edge) => (
+                        <g key={edge.id}>
+                            <path
+                                className="ps:fill-none ps:stroke-rose-400/80"
+                                d={schemaEdgePath(edge.points)}
+                                markerEnd={`url(#${markerId})`}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                            />
+                            <rect
+                                className="ps:fill-zinc-900 ps:stroke-zinc-700 ps:in-[.ps-theme-light]:fill-white ps:in-[.ps-theme-light]:stroke-stone-300"
+                                height="22"
+                                rx="7"
+                                width={edge.labelWidth}
+                                x={edge.labelX - edge.labelWidth / 2}
+                                y={edge.labelY - 11}
+                            />
+                            <text
+                                className="ps:fill-zinc-300 ps:text-[10px] ps:font-medium ps:in-[.ps-theme-light]:fill-stone-600"
+                                dominantBaseline="middle"
+                                textAnchor="middle"
+                                x={edge.labelX}
+                                y={edge.labelY}
+                            >
+                                {edge.label}
+                            </text>
+                        </g>
+                    ))}
                 </svg>
-                {layout.nodes.map(({ objectType, x, y }) => (
+                {schemaLayout.nodes.map(({ objectType, x, y }) => (
                     <article
                         className="ps:absolute ps:h-44 ps:w-[230px] ps:overflow-hidden ps:rounded-xl ps:border ps:border-zinc-500/30 ps:bg-zinc-900/95 ps:shadow-xl ps:in-[.ps-theme-light]:bg-white/95"
                         key={objectType.name}
@@ -1503,10 +1569,14 @@ function SchemaView({ ir }: { ir: OntologyIR }) {
     );
 }
 
-export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
+export function OntologyDevtoolsPanel<
+    Ontology extends OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+>({
+    metaOntology,
     ontology,
     theme = "dark",
-}: OntologyDevtoolsPanelProps<Ontology>) {
+}: OntologyDevtoolsPanelProps<Ontology, MetaOntology>) {
     const { data: outboxEntries } = useLiveQuery(
         (query) => query.from({ entry: ontology.outbox.collection }),
         [ontology.outbox]
@@ -1527,7 +1597,18 @@ export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
                     className="ps:flex ps:flex-none ps:items-center ps:gap-1 ps:border-b ps:border-zinc-500/20 ps:px-4"
                     style={{ height: 40 }}
                 >
-                    {ontologyViews.map((view) => {
+                    {[
+                        ...ontologyViews,
+                        ...(metaOntology
+                            ? [
+                                  {
+                                      id: "meta" as const,
+                                      label: "Meta",
+                                      icon: CodeBracketSquareIcon,
+                                  },
+                              ]
+                            : []),
+                    ].map((view) => {
                         const Icon = view.icon;
                         return (
                             <Tabs.Tab
@@ -1572,22 +1653,45 @@ export function OntologyDevtoolsPanel<Ontology extends OntologyDefinition>({
                 <Tabs.Panel className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden" value="objects">
                     <ObjectsView ontology={ontology as LiveOntology} />
                 </Tabs.Panel>
+                {metaOntology ? (
+                    <Tabs.Panel
+                        className="ps:min-h-0 ps:min-w-0 ps:flex-1 ps:overflow-hidden"
+                        value="meta"
+                    >
+                        <ObjectsView
+                            ontology={
+                                metaOntology as LiveOntology
+                            }
+                            pageSize={25}
+                        />
+                    </Tabs.Panel>
+                ) : null}
             </Tabs.Root>
         </Tooltip.Provider>
     );
 }
 
-export function createOntologyDevtoolsPlugin<Ontology extends OntologyDefinition>({
+export function createOntologyDevtoolsPlugin<
+    Ontology extends OntologyDefinition,
+    MetaOntology extends OntologyDefinition = OntologyDefinition,
+>({
     ontology,
     id = "party-stack-ontology",
+    metaOntology,
     name,
     defaultOpen,
-}: OntologyDevtoolsPluginOptions<Ontology>): TanStackDevtoolsReactPlugin {
+}: OntologyDevtoolsPluginOptions<Ontology, MetaOntology>): TanStackDevtoolsReactPlugin {
     const [createPlugin] = createReactPlugin({
         id,
         name: "Ontology",
         defaultOpen,
-        Component: ({ theme }) => <OntologyDevtoolsPanel ontology={ontology} theme={theme} />,
+        Component: ({ theme }) => (
+            <OntologyDevtoolsPanel
+                metaOntology={metaOntology}
+                ontology={ontology}
+                theme={theme}
+            />
+        ),
     });
 
     return {

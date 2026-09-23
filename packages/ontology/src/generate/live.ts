@@ -16,7 +16,17 @@ export function generateLive(ir: OntologyIR, opts: GenerateLiveOpts): string {
 
     sourceFile.addImportDeclaration({
         moduleSpecifier: opts.ontologyRuntimeImportPath,
-        namedImports: [{ name: "createLiveOntology" }, { name: "LiveOntology", isTypeOnly: true }],
+        namedImports: [
+            { name: "createLiveOntology" },
+            {
+                name: "CreateLiveOntologyOpts",
+                isTypeOnly: true,
+            },
+            {
+                name: "LiveOntology",
+                isTypeOnly: true,
+            },
+        ],
     });
     sourceFile.addImportDeclaration({
         moduleSpecifier: opts.ontologyImportPath,
@@ -24,34 +34,21 @@ export function generateLive(ir: OntologyIR, opts: GenerateLiveOpts): string {
     });
     sourceFile.addImportDeclaration({
         moduleSpecifier: opts.ontologyTypesImportPath,
-        namedImports: [opts.ontologyTypeName],
+        namedImports: [opts.ontologyTypeName, `${opts.ontologyTypeName}Context`],
         isTypeOnly: true,
     });
-    sourceFile.addImportDeclaration({
-        moduleSpecifier: opts.ontologyRuntimeImportPath,
-        namedImports: ["CreateLiveOntologyOpts"],
-        isTypeOnly: true,
-    });
-
     sourceFile.addFunction({
         name: opts.outputFactoryName,
         isExported: true,
         isAsync: true,
-        typeParameters: [
-            {
-                name: "Context",
-                constraint: "Record<string, unknown>",
-                default: "Record<string, unknown>",
-            },
-        ],
         parameters: [
             {
                 name: "opts",
-                type: 'Omit<CreateLiveOntologyOpts<Context>, "ir">',
+                type: `Omit<CreateLiveOntologyOpts<${opts.ontologyTypeName}Context>, "ir">`,
             },
         ],
         returnType: `Promise<LiveOntology<${opts.ontologyTypeName}>>`,
-        statements: `return createLiveOntology<${opts.ontologyTypeName}, Context>({
+        statements: `return createLiveOntology<${opts.ontologyTypeName}, ${opts.ontologyTypeName}Context>({
             ...opts,
             ir: ${ontologyImportName},
         });`,

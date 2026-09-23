@@ -1,16 +1,29 @@
 import { createTransaction, type Collection, type Transaction } from "@tanstack/db";
 import type { BlobManager } from "@party-stack/blobs";
+import type { ConnectionMonitor } from "@party-stack/connections";
 import type { RuntimeAdapter } from "@party-stack/runtime";
+import { resolveActionParameters } from "../expression.js";
+import { createReadTx } from "../mutators/createMutatorTx.js";
 import { runOptimisticAction } from "../mutators/runOptimisticAction.js";
 import { createOntologyOutbox, type OutboxProjection } from "../outbox/createOntologyOutbox.js";
 import { createLiveOntologyAction } from "./createLiveOntologyAction.js";
 import { prepareActionParameters } from "./prepareActionParameters.js";
-import type { LiveOntologyAction, LiveOntologyActionOptions } from "./createLiveOntologyAction.js";
+import type {
+    LiveOntologyAction,
+    LiveOntologyActionDraftValidationOptions,
+    LiveOntologyActionOptions,
+} from "./createLiveOntologyAction.js";
 import type { OntologyIR } from "../../ir/index.js";
+import type { Uncertain } from "../../utils/uncertain.js";
+import type { ValidationIssue } from "../../utils/validation.js";
+import type { Result } from "../../utils/values.js";
 import type { LiveOntologyWrites, LiveOntologyWriteVisibility } from "../LiveOntology.js";
 import type { OntologyCollection } from "../objects/createLiveOntologyObjectCollection.js";
 import type { OntologyObject } from "../objects/OntologyObject.js";
-import type { OntologyApplyActionResult, OntologyBackendAdapter } from "../OntologyBackendAdapter.js";
+import type {
+    OntologyApplyActionResult,
+    OntologyBackendAdapter,
+} from "../OntologyBackendAdapter.js";
 import type { OntologyActionRequest, OntologyOutbox, OntologyOutboxEntry } from "../outbox/types.js";
 
 export interface LiveOntologyActionsSubsystem {
@@ -26,6 +39,7 @@ export function createLiveOntologyActions(options: {
     objects: Record<string, OntologyCollection<OntologyObject>>;
     blobManager: BlobManager;
     writes?: LiveOntologyWrites;
+    connection?: ConnectionMonitor;
 }): LiveOntologyActionsSubsystem {
     const defaultMode = options.writes?.defaultMode ?? "direct";
     const defaultVisibility = options.writes?.defaultVisibility ?? "confirmed";
@@ -66,12 +80,21 @@ export function createLiveOntologyActions(options: {
         request: OntologyActionRequest
     ): Promise<boolean> => {
         try {
+            const parameters = await resolveActionParameters({
+                ir: options.ir,
+                actionTypeName: request.actionTypeName,
+                initialParameters: request.parameters,
+                context: options.context,
+                tx: createReadTx(options.objects),
+            });
             await runOptimisticAction({
                 transaction,
                 ir: options.ir,
                 actionTypeName: request.actionTypeName,
-                parameters: request.parameters,
+                parameters,
                 context: options.context,
+                idempotencyKey:
+                    request.idempotencyKey,
                 objects: options.objects,
                 mutators: options.writes?.mutators,
             });
@@ -107,6 +130,10 @@ export function createLiveOntologyActions(options: {
             settle(error) {
                 if (error) reject(error);
                 else resolve();
+                return transaction.isPersisted.promise.then(
+                    () => undefined,
+                    () => undefined
+                );
             },
         };
     };
@@ -117,6 +144,7 @@ export function createLiveOntologyActions(options: {
         project,
         failureStrategy: options.writes?.outbox?.failureStrategy ?? "discard-all",
         maxRetries: options.writes?.outbox?.maxRetries,
+        connection: options.connection,
     });
 
     const executeDirect = async (
@@ -154,6 +182,38 @@ export function createLiveOntologyActions(options: {
         return executeDirect(request, visibility);
     };
 
+    const validate = (
+        actionTypeName: string,
+        parameters: Record<string, unknown>
+    ): Promise<Uncertain<Result<void, readonly ValidationIssue[]>>> => {
+        if (!options.backendAdapter.validateAction) {
+            return Promise.resolve({
+                certain: false,
+            });
+        }
+        return options.backendAdapter.validateAction(actionTypeName, parameters, {
+            objects: options.objects as Record<string, Collection<Record<string, unknown>>>,
+            context: options.context,
+        });
+    };
+
+    const validateDraft = (
+        actionTypeName: string,
+        parameters: Record<string, unknown>,
+        validationOptions?: LiveOntologyActionDraftValidationOptions<Record<string, unknown>>
+    ): Promise<Uncertain<Result<void, readonly ValidationIssue[]>>> => {
+        if (!options.backendAdapter.validateActionDraft) {
+            return Promise.resolve({
+                certain: false,
+            });
+        }
+        return options.backendAdapter.validateActionDraft(actionTypeName, parameters, {
+            objects: options.objects as Record<string, Collection<Record<string, unknown>>>,
+            context: options.context,
+            knownParameters: validationOptions?.knownParameters ?? [],
+        });
+    };
+
     const actions = Object.fromEntries(
         options.ir.actionTypes.map((action) => [
             action.name,
@@ -163,6 +223,8 @@ export function createLiveOntologyActions(options: {
                 context: options.context,
                 objects: options.objects,
                 submit,
+                validate,
+                validateDraft,
             }),
         ])
     );

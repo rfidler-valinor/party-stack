@@ -156,6 +156,12 @@ function renderType(type: TypeDef): string {
                     name: "constraint",
                     value: type.value.constraint ? renderStringConstraint(type.value.constraint) : undefined,
                 },
+                {
+                    name: "suggestions",
+                    value: type.value.suggestions
+                        ? renderPlainValue(type.value.suggestions)
+                        : undefined,
+                },
             ])})`;
         case "boolean":
             return `o.boolean(${renderPlainValue(type.value)})`;
@@ -325,6 +331,7 @@ function renderActionPropertyAssignment(assignment: PropertyAssignment, ctx?: Re
 
 function renderActionType(actionType: ActionTypeDef, ctx?: RenderContext): string {
     return renderObject([
+        { name: "meta", value: actionType.meta ? renderPlainValue(actionType.meta) : undefined },
         { name: "name", value: renderPlainValue(actionType.name) },
         { name: "displayName", value: renderPlainValue(actionType.displayName) },
         { name: "icon", value: actionType.icon ? renderPlainValue(actionType.icon) : undefined },
@@ -517,6 +524,14 @@ export function generateOntology(ir: OntologyIR, opts: GenerateOntologyOpts = {}
                     )
                 ),
             },
+            ...(ir.contextType
+                ? [
+                      {
+                          name: "contextType",
+                          value: renderType(ir.contextType),
+                      },
+                  ]
+                : []),
         ]);
         writer.write(");");
         writer.newLine();

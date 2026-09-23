@@ -1,5 +1,236 @@
 # @party-stack/foundry-ontology
 
+## 0.14.14
+
+### Patch Changes
+
+- 3816870: require object params that are mutation targets
+
+## 0.14.13
+
+### Patch Changes
+
+- 44c26f3: properly handle nested object refs
+
+## 0.14.12
+
+### Patch Changes
+
+- Updated dependencies [c545376]
+    - @party-stack/ontology@0.16.7
+
+## 0.14.11
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/connections@0.2.6
+    - @party-stack/oauth@0.2.6
+    - @party-stack/ontology@0.16.6
+    - @party-stack/runtime@0.3.6
+
+## 0.14.10
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/connections@0.2.5
+    - @party-stack/ontology@0.16.5
+    - @party-stack/runtime@0.3.5
+    - @party-stack/oauth@0.2.5
+
+## 0.14.9
+
+### Patch Changes
+
+- ccf3bcd: Fix generated CurrentTime override serialization across bundled module instances.
+
+## 0.14.8
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/ontology@0.16.4
+    - @party-stack/oauth@0.2.4
+    - @party-stack/connections@0.2.4
+    - @party-stack/runtime@0.3.4
+
+## 0.14.7
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- d2e1dbd: clarify attachment id contract + fix foundry impl
+- Updated dependencies [81d897a]
+- Updated dependencies [d2e1dbd]
+    - @party-stack/connections@0.2.3
+    - @party-stack/ontology@0.16.3
+    - @party-stack/runtime@0.3.3
+    - @party-stack/oauth@0.2.3
+
+## 0.14.6
+
+### Patch Changes
+
+- 07bf6ce: make struct fields properly optional on object types
+
+## 0.14.5
+
+### Patch Changes
+
+- 1d842ab: fix optionals in foundry generation
+
+## 0.14.4
+
+### Patch Changes
+
+- 98faee7: fix authoritative action param resolution, foundry codec issues, and foundry sync resolution
+- Updated dependencies [98faee7]
+    - @party-stack/ontology@0.16.2
+
+## 0.14.3
+
+### Patch Changes
+
+- c366eb9: fix foundry user loading, null handling, and object-set-watcher crashes
+- Updated dependencies [c366eb9]
+    - @party-stack/foundry-object-set-watcher@0.5.1
+    - @party-stack/ontology@0.16.1
+
+## 0.14.2
+
+### Patch Changes
+
+- Updated dependencies [2538365]
+    - @party-stack/ontology@0.16.0
+
+## 0.14.1
+
+### Patch Changes
+
+- 9eca335: Include function-backed Foundry actions in ontology pulls.
+
+## 0.14.0
+
+### Minor Changes
+
+- 81d84bb: Rename expression inputs to `inputReference`, promote UUID and current-time expressions to direct variants, convert Foundry list-of-struct action assignments with backend-neutral map and struct expressions, and safely apply structured property changes to sparse objects.
+
+### Patch Changes
+
+- Updated dependencies [81d84bb]
+    - @party-stack/foundry-object-set-watcher@0.5.0
+    - @party-stack/ontology@0.15.0
+
+## 0.13.0
+
+### Minor Changes
+
+- 05ff1a7: add server-authoritative validation hooks
+
+### Patch Changes
+
+- Updated dependencies [05ff1a7]
+    - @party-stack/ontology@0.14.0
+
+## 0.12.2
+
+### Patch Changes
+
+- Updated dependencies [8791727]
+    - @party-stack/ontology@0.13.2
+
+## 0.12.1
+
+### Patch Changes
+
+- Updated dependencies [52d8adc]
+    - @party-stack/ontology@0.13.1
+    - @party-stack/runtime@0.3.2
+    - @party-stack/connections@0.2.2
+    - @party-stack/oauth@0.2.2
+
+## 0.12.0
+
+### Minor Changes
+
+- 07fbbce: Convert Foundry OMS parameter prefills into provider-neutral action defaults and preserve string constraints and suggestions.
+
+### Patch Changes
+
+- Updated dependencies [07fbbce]
+    - @party-stack/ontology@0.13.0
+
+## 0.11.1
+
+### Patch Changes
+
+- 45bcf88: upgrade tanstack db deps
+- Updated dependencies [45bcf88]
+    - @party-stack/connections@0.2.1
+    - @party-stack/ontology@0.12.1
+    - @party-stack/runtime@0.3.1
+    - @party-stack/oauth@0.2.1
+
+## 0.11.0
+
+### Minor Changes
+
+- b8fb08e: node runtime + add meta ontology to installations
+
+### Patch Changes
+
+- Updated dependencies [b8fb08e]
+    - @party-stack/ontology@0.12.0
+
+## 0.10.0
+
+### Minor Changes
+
+- 33f6858: auth + connections
+
+### Patch Changes
+
+- Updated dependencies [33f6858]
+    - @party-stack/foundry-object-set-watcher@0.4.0
+    - @party-stack/foundry-client@0.3.0
+    - @party-stack/connections@0.2.0
+    - @party-stack/ontology@0.11.0
+    - @party-stack/runtime@0.3.0
+    - @party-stack/errors@0.2.0
+    - @party-stack/oauth@0.2.0
+
+## 0.9.0
+
+### Minor Changes
+
+- 46268bc: Keep collection readiness helpers internal, scope action refresh metadata to remote ontology, and derive secured schema projection directly from policy configuration.
+
+### Patch Changes
+
+- Updated dependencies [46268bc]
+    - @party-stack/ontology@0.10.0
+
+## 0.8.1
+
+### Patch Changes
+
+- bc97879: Safely translate two-sided LIKE and ILIKE predicates into Foundry contains queries while preserving downstream exact filtering.
+
+## 0.8.0
+
+### Minor Changes
+
+- 515f8dc: OSDK-free LiveOntology Gateway MVP: collection readiness and race-safe cleanup, non-blocking action refresh, structured remote errors, policy-aware describe projection, precise invalidation, attachments, and public Foundry action metadata. No generic link traversal, object-query helpers, or OMS/prefill metadata.
+
+### Patch Changes
+
+- Updated dependencies [515f8dc]
+    - @party-stack/ontology@0.9.0
+
 ## 0.7.0
 
 ### Minor Changes

@@ -2,21 +2,35 @@ import type {
     RemoteApplyActionResponse,
     RemoteAttachmentMetadataRequest,
     RemoteAttachmentRequest,
+    RemoteResolveActionParametersResponse,
     RemoteRunQueryFunctionResponse,
     RemoteLoadSubsetResponse,
     RemoteOntologyDescription,
-    RemoteOntologyTransport,
     RemoteOntologyTransportOptions,
+    ResolvableRemoteOntologyTransport,
 } from "./protocol.js";
-import type { OntologyIR, PartialAttachmentMetadata } from "@party-stack/ontology";
+import type {
+    OntologyIR,
+    PartialAttachmentMetadata,
+    Uncertain,
+    ValidationIssue,
+} from "@party-stack/ontology";
+import type { Result } from "@party-stack/ontology/values";
 import { decode, encode } from "@party-stack/ontology/json";
+import { parseRemoteOntologyErrorBody } from "./errors.js";
 import { parseRemoteOntologyJson, serializeRemoteOntologyJson } from "./protocol.js";
+import type { RemoteOntologyServer } from "./server.js";
 
 export interface HttpRemoteOntologyTransportOptions {
     url: string | URL;
     ir?: OntologyIR;
     fetch?: typeof fetch;
     headers?: HeadersInit | (() => HeadersInit);
+}
+
+export interface InProcessHttpRemoteOntologyTransportOptions {
+    headers?: HeadersInit | (() => HeadersInit);
+    ir?: OntologyIR;
 }
 
 function resolveEndpoint(baseUrl: string | URL, path: string): string {
@@ -26,6 +40,12 @@ function resolveEndpoint(baseUrl: string | URL, path: string): string {
         return new URL(path, normalizedBase).toString();
     }
     return `${normalizedBase}${path}`;
+}
+
+async function throwIfNotOk(response: Response): Promise<void> {
+    if (response.ok) return;
+    const message = await response.text();
+    throw parseRemoteOntologyErrorBody(message, response.status);
 }
 
 async function postJson<TResponse>(
@@ -45,11 +65,7 @@ async function postJson<TResponse>(
         signal: options?.signal,
     });
 
-    if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Remote ontology request failed with status ${response.status}.`);
-    }
-
+    await throwIfNotOk(response);
     return parseRemoteOntologyJson(await response.text()) as TResponse;
 }
 
@@ -79,11 +95,7 @@ async function postMultipart<TResponse>(
         signal: options?.signal,
     });
 
-    if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Remote ontology request failed with status ${response.status}.`);
-    }
-
+    await throwIfNotOk(response);
     return parseRemoteOntologyJson(await response.text()) as TResponse;
 }
 
@@ -104,20 +116,18 @@ async function postBlob(
         signal: options?.signal,
     });
 
-    if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Remote ontology request failed with status ${response.status}.`);
-    }
-
+    await throwIfNotOk(response);
     return response.blob();
 }
 
 export function createHttpRemoteOntologyTransport(
     opts: HttpRemoteOntologyTransportOptions
-): RemoteOntologyTransport {
+): ResolvableRemoteOntologyTransport {
     const fetchImpl = opts.fetch ?? globalThis.fetch;
     const getHeaders = () => (typeof opts.headers === "function" ? opts.headers() : opts.headers);
     let ir = opts.ir;
+    let actionValidationSupported: boolean | undefined;
+    let actionParameterResolutionSupported: boolean | undefined;
     const getIr = () => {
         if (!ir) {
             throw new Error(
@@ -137,6 +147,10 @@ export function createHttpRemoteOntologyTransport(
                 options
             );
             ir = description.ir;
+            actionValidationSupported =
+                description.capabilities?.actionValidation === true;
+            actionParameterResolutionSupported =
+                description.capabilities?.actionParameterResolution === true;
             return description;
         },
         loadSubset: async (request, options) => {
@@ -186,6 +200,57 @@ export function createHttpRemoteOntologyTransport(
                       options
                   );
         },
+        validateAction: (request, options) => {
+            if (actionValidationSupported === false) {
+                return Promise.resolve({
+                    certain: false,
+                });
+            }
+            const ontology = getIr();
+            return postJson<Uncertain<Result<null, readonly ValidationIssue[]>>>(
+                fetchImpl,
+                resolveEndpoint(opts.url, "validate-action"),
+                {
+                    ...request,
+                    parameters: encode({
+                        ir: ontology,
+                        target: { kind: "actionParameters", actionType: request.actionType },
+                        value: request.parameters,
+                    }) as Record<string, unknown>,
+                },
+                getHeaders(),
+                options
+            );
+        },
+        resolveActionParameters: async (request, options) => {
+            if (actionParameterResolutionSupported === false) {
+                throw new Error(
+                    "Remote ontology server does not support action parameter resolution."
+                );
+            }
+            const ontology = getIr();
+            const response = await postJson<RemoteResolveActionParametersResponse>(
+                fetchImpl,
+                resolveEndpoint(opts.url, "resolve-action-parameters"),
+                {
+                    ...request,
+                    parameters: encode({
+                        ir: ontology,
+                        target: { kind: "actionParameters", actionType: request.actionType },
+                        value: request.parameters,
+                    }) as Record<string, unknown>,
+                },
+                getHeaders(),
+                options
+            );
+            return {
+                parameters: decode({
+                    ir: ontology,
+                    target: { kind: "actionParameters", actionType: request.actionType },
+                    value: response.parameters,
+                }) as Record<string, unknown>,
+            };
+        },
         runQueryFunction: async (request, options) => {
             const ontology = getIr();
             const response = await postJson<RemoteRunQueryFunctionResponse>(
@@ -231,4 +296,16 @@ export function createHttpRemoteOntologyTransport(
                 options
             ),
     };
+}
+
+export function createInProcessHttpRemoteOntologyTransport(
+    server: RemoteOntologyServer,
+    opts: InProcessHttpRemoteOntologyTransportOptions = {}
+): ResolvableRemoteOntologyTransport {
+    return createHttpRemoteOntologyTransport({
+        ...opts,
+        url: "http://remote-ontology.in-process/",
+        fetch: (input, init) =>
+            server.handleRequest(new Request(input, init)),
+    });
 }

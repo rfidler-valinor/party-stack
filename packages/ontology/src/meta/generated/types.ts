@@ -130,12 +130,15 @@ export type Deprecation = {
     message: string;
 };
 
+/** A suggested value for a string. */
+export type StringSuggestion = {
+    value: string;
+    label?: string;
+};
+
 /** Constrains a string to a set of allowed values. */
 export type StringEnumConstraint = {
-    options: Array<{
-        value: string;
-        label?: string;
-    }>;
+    options: Array<StringSuggestion>;
 };
 
 /** Constrains a string to a regex. */
@@ -152,6 +155,7 @@ export type StringConstraint = v.Union<{
 /** A string type with optional constraints. */
 export type StringTypeDef = {
     constraint?: StringConstraint;
+    suggestions?: Array<StringSuggestion>;
 };
 
 /** A boolean type. */
@@ -273,6 +277,8 @@ export type ImageMediaType =
     | "image/jp2"
     | "image/jpeg"
     | "image/png"
+    | "image/gif"
+    | "image/svg+xml"
     | "image/webp";
 
 /** Constrains intrinsic pixel dimensions. */
@@ -358,21 +364,61 @@ export type ActionParameterDef = {
     defaultValue?: Expression;
 };
 
-/** Reads a value from scope by path. */
-export type ValueReferenceExpression = {
+/** Reads a named input from the root expression scope. */
+export type InputReferenceExpression = {
+    name: string;
+};
+
+/** Reads a named lexically scoped expression binding. */
+export type LocalReferenceExpression = {
+    name: string;
+};
+
+/** Reads a named value from the expression context. */
+export type ContextReferenceExpression = {
+    name: string;
+};
+
+/** Reads a structural path from a source expression. */
+export type GetAtExpression = {
+    source: Expression;
     path: Array<string>;
 };
 
-/** Reads a value from context by path. */
-export type ContextReferenceExpression = {
-    path: Array<string>;
+/** Resolves an object reference to its ontology object. */
+export type ObjectLookupExpression = {
+    reference: Expression;
+};
+
+/** Follows one named to-one ontology link from a source object. */
+export type LinkHopExpression = {
+    source: Expression;
+    link: string;
+};
+
+/** A named field constructed by a struct expression. */
+export type StructExpressionField = {
+    name: string;
+    value: Expression;
+};
+
+/** Constructs a struct value from field expressions. */
+export type StructExpression = {
+    fields: Array<StructExpressionField>;
+};
+
+/** Maps each element of a list to a new value. */
+export type MapExpression = {
+    source: Expression;
+    binding: string;
+    body: Expression;
 };
 
 /** Generates a UUID value. */
-export type UuidFunctionCall = Record<never, never>;
+export type UuidExpression = Record<never, never>;
 
 /** Returns the current timestamp. */
-export type NowFunctionCall = Record<never, never>;
+export type NowExpression = Record<never, never>;
 
 /** A static literal value. */
 export type LiteralExpression = {
@@ -380,17 +426,18 @@ export type LiteralExpression = {
     value: unknown;
 };
 
-/** Calls a function within an expression. */
-export type FunctionCallExpression = v.Union<{
-    uuid: UuidFunctionCall;
-    now: NowFunctionCall;
-}>;
-
 /** An expression that resolves to a value. */
 export type Expression = v.Union<{
-    valueReference: ValueReferenceExpression;
+    inputReference: InputReferenceExpression;
     contextReference: ContextReferenceExpression;
-    functionCall: FunctionCallExpression;
+    localReference: LocalReferenceExpression;
+    getAt: GetAtExpression;
+    objectLookup: ObjectLookupExpression;
+    linkHop: LinkHopExpression;
+    struct: StructExpression;
+    map: MapExpression;
+    uuid: UuidExpression;
+    now: NowExpression;
     literal: LiteralExpression;
 }>;
 
@@ -408,13 +455,13 @@ export type CreateObjectActionLogicStep = {
 
 /** Updates a referenced object and assigns property values. */
 export type UpdateObjectActionLogicStep = {
-    object: ValueReferenceExpression;
+    object: InputReferenceExpression;
     values: Array<PropertyAssignment>;
 };
 
 /** Deletes a referenced object. */
 export type DeleteObjectActionLogicStep = {
-    object: ValueReferenceExpression;
+    object: InputReferenceExpression;
 };
 
 /** A logic step performed by an action. */
@@ -434,6 +481,28 @@ export type QueryFunctionParameterDef = {
     /** Optional description. */
     description?: string;
     deprecated?: Deprecation;
+};
+
+/** Moves a property from one path to another. */
+export type MoveLensOp = {
+    from: Array<string>;
+    to: Array<string>;
+};
+
+/** Retains only the selected top-level properties. */
+export type SelectLensOp = {
+    properties: Array<string>;
+};
+
+/** One schema and value transformation operation. */
+export type LensOp = v.Union<{
+    move: MoveLensOp;
+    select: SelectLensOp;
+}>;
+
+/** An ordered sequence of source-to-target transformation operations. */
+export type Lens = {
+    operations: Array<LensOp>;
 };
 
 /** A named type definition that can be referenced by other types. */
@@ -486,6 +555,8 @@ export type LinkType = {
 export type ActionType = {
     /** The provider-assigned stable identifier for this action type. */
     id: string;
+    /** Provider-specific metadata used to execute this action. */
+    meta?: Record<string, unknown>;
     /** The object type's programmatic name. */
     name: string;
     /** Human-readable name. */
@@ -518,7 +589,9 @@ export type QueryFunctionType = {
     deprecated?: Deprecation;
 };
 
+export type MetaOntologyContext = Record<string, unknown>;
 export type MetaOntology = {
+    context: MetaOntologyContext;
     objectTypes: {
         ValueType: ValueType;
         ObjectType: ObjectType;

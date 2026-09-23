@@ -5,8 +5,13 @@ import type { OntologyClient } from "@party-stack/foundry-client";
 import { createFoundryMetaOntologyBackendAdapter } from "./createFoundryMetaOntologyBackendAdapter.js";
 
 const mocks = vi.hoisted(() => ({
-    getFullMetadata: vi.fn(),
+    bulkLoadOntologyEntities: vi.fn(),
+    getFullMetadataBatch: vi.fn(),
     searchActionTypes: vi.fn(),
+}));
+
+vi.mock("@osdk/client.unstable", () => ({
+    bulkLoadOntologyEntities: mocks.bulkLoadOntologyEntities,
 }));
 
 vi.mock("@osdk/foundry.ontologies", async (importOriginal) => {
@@ -17,9 +22,10 @@ vi.mock("@osdk/foundry.ontologies", async (importOriginal) => {
             ...original.ActionTypesV2,
             search: mocks.searchActionTypes,
         },
-        OntologiesV2: {
-            ...original.OntologiesV2,
-            getFullMetadata: mocks.getFullMetadata,
+        ActionTypesFullMetadata: {
+            ...original.ActionTypesFullMetadata,
+            getFullMetadataBatch:
+                mocks.getFullMetadataBatch,
         },
     };
 });
@@ -32,16 +38,16 @@ const client: OntologyClient = {
 };
 
 beforeEach(() => {
-    mocks.getFullMetadata.mockReset();
+    mocks.bulkLoadOntologyEntities.mockReset();
+    mocks.getFullMetadataBatch.mockReset();
     mocks.searchActionTypes.mockReset();
-    mocks.getFullMetadata.mockResolvedValue({
-        objectTypes: {},
-        valueTypes: {},
+    mocks.bulkLoadOntologyEntities.mockResolvedValue({
+        actionTypes: [],
     });
 });
 
 describe("Foundry ActionType metadata ID queries", () => {
-    it("pushes an ID predicate into ActionTypesV2.search", async () => {
+    it("includes a function-backed action returned by ActionTypesV2.search", async () => {
         mocks.searchActionTypes.mockResolvedValue({
             data: [
                 {
@@ -83,12 +89,75 @@ describe("Foundry ActionType metadata ID queries", () => {
                 }),
                 { preview: true }
             );
+            expect(
+                mocks.getFullMetadataBatch
+            ).not.toHaveBeenCalled();
             expect(rows).toEqual([
                 expect.objectContaining({
                     id: "ri.actions.main.action-type.create-task",
                     name: "createTask",
                 }),
             ]);
+        } finally {
+            await meta.cleanup();
+        }
+    });
+
+    it("loads declarative action metadata in batches", async () => {
+        const actionType = {
+            apiName: "create-task",
+            displayName: "Create task",
+            status: "ACTIVE",
+            parameters: {},
+            rid: "ri.actions.main.action-type.create-task",
+            operations: [
+                {
+                    type: "createObject",
+                    objectTypeApiName: "Task",
+                },
+            ],
+        };
+        mocks.searchActionTypes.mockResolvedValue({
+            data: [actionType],
+            nextPageToken: undefined,
+        });
+        mocks.getFullMetadataBatch.mockResolvedValue({
+            data: [
+                {
+                    actionType,
+                    fullLogicRules: [],
+                },
+            ],
+        });
+        const meta = await createMetaLiveOntology({
+            backend: () =>
+                createFoundryMetaOntologyBackendAdapter({
+                    client,
+                }),
+            persistObjects: false,
+        });
+
+        try {
+            await queryOnce((q) =>
+                q.from({
+                    ActionType: meta.objects.ActionType,
+                })
+            );
+
+            expect(
+                mocks.getFullMetadataBatch
+            ).toHaveBeenCalledWith(
+                expect.anything(),
+                "ri.ontology.main.ontology.example",
+                {
+                    requests: [
+                        {
+                            actionType: "create-task",
+                        },
+                    ],
+                },
+                { preview: true }
+            );
         } finally {
             await meta.cleanup();
         }

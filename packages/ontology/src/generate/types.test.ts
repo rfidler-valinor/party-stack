@@ -69,7 +69,7 @@ describe("generateTypes", () => {
             'export type Image = v.attachment<"image/png" | "image/jpeg">;'
         );
         expect(generateTypeDefinitions(ontology)).toContain(
-            'export type AnyImage = v.attachment<"image/bmp" | "image/tiff" | "image/nitf" | "image/jp2" | "image/jpeg" | "image/png" | "image/webp">;'
+            'export type AnyImage = v.attachment<"image/bmp" | "image/tiff" | "image/nitf" | "image/jp2" | "image/jpeg" | "image/png" | "image/gif" | "image/svg+xml" | "image/webp">;'
         );
     });
 
@@ -212,7 +212,7 @@ describe("generateTypes", () => {
                             name: "postId",
                             displayName: "Post ID",
                             type: o.string({}),
-                            defaultValue: o.Expression.functionCall(o.FunctionCallExpression.uuid({})),
+                            defaultValue: o.Expression.uuid({}),
                         },
                     ],
                     logic: [],
@@ -252,7 +252,7 @@ describe("generateTypes", () => {
                             name: "taskId",
                             displayName: "Task ID",
                             type: o.string({}),
-                            defaultValue: o.Expression.functionCall(o.FunctionCallExpression.uuid({})),
+                            defaultValue: o.Expression.uuid({}),
                         },
                     ],
                     logic: [],
@@ -282,7 +282,7 @@ describe("generateTypes", () => {
                             name: "__uuid_9131b78a-d4a1-443b-9fca-a3f70c2355ef",
                             displayName: "Generated UUID 1",
                             type: o.string({}),
-                            defaultValue: o.Expression.functionCall(o.FunctionCallExpression.uuid({})),
+                            defaultValue: o.Expression.uuid({}),
                         },
                     ],
                     logic: [],

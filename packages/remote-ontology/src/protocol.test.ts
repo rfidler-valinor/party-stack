@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "temporal-polyfill";
-import { o, type OntologyIR } from "@party-stack/ontology";
+import {
+    o,
+    type OntologyBackendAdapter,
+    type OntologyIR,
+} from "@party-stack/ontology";
 import { eq, gt, IR } from "@tanstack/db";
-import { createHttpRemoteOntologyTransport } from "./http.js";
+import {
+    createHttpRemoteOntologyTransport,
+    createInProcessHttpRemoteOntologyTransport,
+} from "./http.js";
 import { parseRemoteOntologyRequest, serializeLoadSubsetOptions } from "./protocol.js";
+import { createRemoteOntologyServer } from "./server.js";
 
 describe("createHttpRemoteOntologyTransport", () => {
     it("serializes and hydrates typed ontology values", async () => {
@@ -36,10 +44,18 @@ describe("createHttpRemoteOntologyTransport", () => {
             queryFunctionTypes: [],
         };
         let applyActionBody: unknown;
+        let validateActionBody: unknown;
         const fetchImpl: typeof fetch = async (input, init) => {
             const endpoint = String(input).split("/").pop();
             if (endpoint === "describe") {
-                return new Response(JSON.stringify({ ir }));
+                return new Response(
+                    JSON.stringify({
+                        ir,
+                        capabilities: {
+                            actionValidation: true,
+                        },
+                    })
+                );
             }
             if (endpoint === "load-subset") {
                 return new Response(
@@ -52,6 +68,18 @@ describe("createHttpRemoteOntologyTransport", () => {
             if (endpoint === "apply-action") {
                 applyActionBody = JSON.parse(String(init?.body));
                 return new Response(JSON.stringify({}));
+            }
+            if (endpoint === "validate-action") {
+                validateActionBody = JSON.parse(String(init?.body));
+                return new Response(
+                    JSON.stringify({
+                        certain: true,
+                        value: {
+                            kind: "ok",
+                            value: null,
+                        },
+                    })
+                );
             }
             return new Response("Not found", { status: 404 });
         };
@@ -69,6 +97,21 @@ describe("createHttpRemoteOntologyTransport", () => {
                 dueDate: Temporal.PlainDate.from("2026-05-30"),
             },
         });
+        await expect(
+            transport.validateAction!({
+                actionType: "createTask",
+                parameters: {
+                    id: "task-3",
+                    dueDate: Temporal.PlainDate.from("2026-05-31"),
+                },
+            })
+        ).resolves.toEqual({
+            certain: true,
+            value: {
+                kind: "ok",
+                value: null,
+            },
+        });
 
         expect(response.objects[0]!.dueDate).toBeInstanceOf(Temporal.PlainDate);
         expect((response.objects[0]!.dueDate as Temporal.PlainDate).equals("2026-05-29")).toBe(true);
@@ -79,6 +122,35 @@ describe("createHttpRemoteOntologyTransport", () => {
                 dueDate: "2026-05-30",
             },
         });
+        expect(validateActionBody).toEqual({
+            actionType: "createTask",
+            parameters: {
+                id: "task-3",
+                dueDate: "2026-05-31",
+            },
+        });
+
+        let requestedLegacyValidation = false;
+        const legacyTransport = createHttpRemoteOntologyTransport({
+            url: "https://legacy.example.test/remote/",
+            fetch: async (input) => {
+                if (String(input).endsWith("/describe")) {
+                    return new Response(JSON.stringify({ ir }));
+                }
+                requestedLegacyValidation = true;
+                return new Response("Not found", { status: 404 });
+            },
+        });
+        await legacyTransport.describe();
+        await expect(
+            legacyTransport.validateAction({
+                actionType: "createTask",
+                parameters: {},
+            })
+        ).resolves.toEqual({
+            certain: false,
+        });
+        expect(requestedLegacyValidation).toBe(false);
     });
 
     it("preserves load subset cursor expressions and removes only subscriptions", () => {
@@ -113,6 +185,101 @@ describe("createHttpRemoteOntologyTransport", () => {
                 },
                 offset: 2,
                 limit: 3,
+            },
+        });
+    });
+});
+
+describe("createInProcessHttpRemoteOntologyTransport", () => {
+    it("routes requests through the HTTP server adapter", async () => {
+        const ir: OntologyIR = {
+            types: [],
+            objectTypes: [],
+            linkTypes: [],
+            actionTypes: [
+                {
+                    name: "createNote",
+                    displayName: "Create note",
+                    parameters: [
+                        {
+                            name: "title",
+                            displayName: "Title",
+                            type: o.string({}),
+                        },
+                        {
+                            name: "ownerEmail",
+                            displayName: "Owner",
+                            type: o.string({}),
+                        },
+                    ],
+                    logic: [],
+                },
+            ],
+            queryFunctionTypes: [],
+        };
+        const server = createRemoteOntologyServer<
+            any,
+            any
+        >({
+            ir,
+            backendAdapter: {
+                name: "test",
+                getCollectionOptions:
+                    (): ReturnType<
+                        OntologyBackendAdapter["getCollectionOptions"]
+                    > => ({
+                        syncMode: "eager",
+                        sync: {
+                            sync: ({
+                                markReady,
+                            }) => {
+                                markReady();
+                            },
+                        },
+                    }),
+                applyAction: async () => {},
+                runQueryFunction: async () =>
+                    undefined,
+            },
+            getContext: () => ({
+                user: {
+                    email: "alice@example.com",
+                },
+            }),
+            policy: {
+                fixedActionParameterValues: {
+                    createNote: {
+                        ownerEmail:
+                            o.Expression.getAt({
+                                source: o.Expression.contextReference(
+                                    {
+                                        name: "user",
+                                    }
+                                ),
+                                path: ["email"],
+                            }),
+                    },
+                },
+            },
+        });
+        const transport =
+            createInProcessHttpRemoteOntologyTransport(
+                server
+            );
+
+        await transport.describe();
+        await expect(
+            transport.resolveActionParameters({
+                actionType: "createNote",
+                parameters: {
+                    title: "Hello",
+                    ownerEmail:
+                        "mallory@example.com",
+                },
+            })
+        ).resolves.toEqual({
+            parameters: {
+                title: "Hello",
             },
         });
     });

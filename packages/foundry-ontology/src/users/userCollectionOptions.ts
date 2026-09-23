@@ -1,32 +1,42 @@
 import { User, Users } from "@osdk/foundry.admin";
-import {
-    FieldPath,
-    LoadSubsetOptions,
-    parseOrderByExpression,
-    parseWhereExpression,
-} from "@tanstack/db";
+import { applyLensToObject, mapTargetPathToSourceWithLens, type Lens } from "@party-stack/ontology";
+import { FieldPath, LoadSubsetOptions, parseOrderByExpression, parseWhereExpression } from "@tanstack/db";
 import { QueryClient } from "@tanstack/query-core";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { Client } from "@party-stack/foundry-client";
 import * as AsyncIterable from "../utils/AsyncIterable.js";
 import { chunk } from "../utils/chunk.js";
+import { foundryUserProfilePictureAttachment } from "./foundryUser.js";
 
 type UsersQuery = { type: "getBatch"; ids: string[] } | { type: "search"; query: string } | { type: "list" };
 
-export interface UserCollectionOpts {
-    client: Client;
+function rewriteFieldPath(field: FieldPath, lens: Lens): FieldPath {
+    return mapTargetPathToSourceWithLens(field.map(String), lens);
 }
 
-export function userCollectionOptions({ client }: UserCollectionOpts) {
-    return queryCollectionOptions<User>({
+export interface UserCollectionOpts {
+    client: Client;
+    lens: Lens;
+}
+
+export function userCollectionOptions({ client, lens }: UserCollectionOpts) {
+    const project = (user: User) =>
+        applyLensToObject(
+            {
+                ...user,
+                profilePicture: foundryUserProfilePictureAttachment(user.id),
+            },
+            lens
+        );
+    return queryCollectionOptions<Record<string, unknown>>({
         queryClient: new QueryClient(),
-        getKey: (user) => user.id,
+        getKey: (user) => user.id as string,
         queryKey: ["foundry", "users"],
         syncMode: "on-demand",
         queryFn: async (ctx) => {
             const loadSubsetOptions = ctx.meta?.loadSubsetOptions;
 
-            const query = convertQuery(loadSubsetOptions);
+            const query = convertQuery(loadSubsetOptions, lens);
 
             if (query.type === "getBatch") {
                 // The max batch size here is 500 (https://www.palantir.com/docs/foundry/api/v2/admin-v2-resources/users/get-users-batch)
@@ -39,7 +49,7 @@ export function userCollectionOptions({ client }: UserCollectionOpts) {
                         )
                     )
                 );
-                return results.flatMap((result) => Object.values(result.data));
+                return results.flatMap((result) => Object.values(result.data)).map(project);
             }
 
             const queryString = query.type === "search" ? query.query : "";
@@ -56,7 +66,7 @@ export function userCollectionOptions({ client }: UserCollectionOpts) {
                 }
             }
 
-            return AsyncIterable.toArray(
+            const users = await AsyncIterable.toArray(
                 AsyncIterable.fromPagination(
                     (pageSize, pageToken: string | undefined) =>
                         Users.search(client, {
@@ -70,11 +80,12 @@ export function userCollectionOptions({ client }: UserCollectionOpts) {
                     limit
                 )
             );
+            return users.map(project);
         },
     });
 }
 
-function convertQuery(options?: LoadSubsetOptions): UsersQuery {
+export function convertQuery(options: LoadSubsetOptions | undefined, lens: Lens): UsersQuery {
     if (!options) {
         return { type: "list" };
     }
@@ -83,11 +94,13 @@ function convertQuery(options?: LoadSubsetOptions): UsersQuery {
         parseWhereExpression<UsersQuery | undefined>(options.where, {
             handlers: {
                 eq: (field: FieldPath, value: unknown) => {
+                    field = rewriteFieldPath(field, lens);
                     if (field.join(".") === "id") {
                         return { type: "getBatch", ids: [value as string] };
                     }
                 },
                 in: (field: FieldPath, value: unknown[]) => {
+                    field = rewriteFieldPath(field, lens);
                     if (field.join(".") === "id") {
                         return {
                             type: "getBatch",
@@ -105,10 +118,25 @@ function convertQuery(options?: LoadSubsetOptions): UsersQuery {
     const maybeSearchQuery =
         parseWhereExpression<UsersQuery | undefined>(options.where, {
             handlers: {
-                like: (field: FieldPath, value: string) => getLikeQuery(field, value),
-                ilike: (field: FieldPath, value: string) => getLikeQuery(field, value),
-                onUnknownOperator: () => undefined,
+                or: (...queries: (UsersQuery | undefined)[]) => {
+                    if (
+                        queries.length > 0 &&
+                        queries.every(
+                            (query): query is Extract<UsersQuery, { type: "search" }> =>
+                                query?.type === "search"
+                        ) &&
+                        queries.every((query) => query.query === queries[0]!.query)
+                    ) {
+                        // Foundry's user search applies one query across the supported name fields,
+                        // so ORs over those fields can share one server-side search when their terms match.
+                        return queries[0];
+                    }
+                },
+                like: (field: FieldPath, value: string) => getLikeQuery(rewriteFieldPath(field, lens), value),
+                ilike: (field: FieldPath, value: string) =>
+                    getLikeQuery(rewriteFieldPath(field, lens), value),
             },
+            onUnknownOperator: () => undefined,
         }) ?? undefined;
     if (maybeSearchQuery) {
         return maybeSearchQuery;

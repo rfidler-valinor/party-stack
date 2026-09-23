@@ -1,40 +1,19 @@
 import { o, type OntologyIR } from "@party-stack/ontology";
-import { describe, expect, it, vi } from "vitest";
-import { createFoundryOntologyClient, foundryOntologyConfigAdapter } from "./index.js";
+import { describe, expect, it } from "vitest";
+import { createFoundryOntologyPullSource, type CreateFoundryOntologyPullSourceOptions } from "./index.js";
 
-vi.mock("@bobbyfidz/local-oauth-flow", () => ({
-    performLocalOAuthFlow: vi.fn(() => Promise.resolve({ accessToken: "oauth-token" })),
-}));
-
-describe("createFoundryOntologyClient", () => {
-    it("uses a supplied token instead of the interactive OAuth flow", async () => {
-        const { performLocalOAuthFlow } = await import("@bobbyfidz/local-oauth-flow");
-
-        const client = await createFoundryOntologyClient({
-            foundryUrl: "https://foundry.example.com",
-            foundryOntologyRid: "ri.ontology.main.ontology.example",
-            foundryClientId: "",
-            foundryRedirectUrl: "",
-            foundryToken: "provided-token",
-        });
-
-        expect(performLocalOAuthFlow).not.toHaveBeenCalled();
-        await expect(client.tokenProvider()).resolves.toBe("provided-token");
+function createSource(options: Partial<CreateFoundryOntologyPullSourceOptions>) {
+    return createFoundryOntologyPullSource({
+        baseUrl: "https://foundry.example",
+        ontologyRid: "ri.ontology.main",
+        connection: {
+            token: "token",
+        },
+        ...options,
     });
+}
 
-    it("falls back to the OAuth flow when no token is supplied", async () => {
-        const client = await createFoundryOntologyClient({
-            foundryUrl: "https://foundry.example.com",
-            foundryOntologyRid: "ri.ontology.main.ontology.example",
-            foundryClientId: "client",
-            foundryRedirectUrl: "http://localhost:8080/callback",
-        });
-
-        await expect(client.tokenProvider()).resolves.toBe("oauth-token");
-    });
-});
-
-describe("foundryOntologyConfigAdapter", () => {
+describe("createFoundryOntologyPullSource", () => {
     it("applies targeted attachment constraints after pull", async () => {
         const ir: OntologyIR = {
             types: [],
@@ -50,7 +29,11 @@ describe("foundryOntologyConfigAdapter", () => {
                             name: "media",
                             displayName: "Media",
                             type: o.attachment({
-                                meta: { type: "media" },
+                                meta: {
+                                    foundry: {
+                                        kind: "media",
+                                    },
+                                },
                             }),
                         },
                     ],
@@ -67,7 +50,11 @@ describe("foundryOntologyConfigAdapter", () => {
                             displayName: "Media",
                             type: o.optional({
                                 type: o.attachment({
-                                    meta: { type: "media" },
+                                    meta: {
+                                        foundry: {
+                                            kind: "media",
+                                        },
+                                    },
                                 }),
                             }),
                         },
@@ -83,7 +70,7 @@ describe("foundryOntologyConfigAdapter", () => {
             }),
         };
 
-        const transformed = await foundryOntologyConfigAdapter.transformOntology!(ir, {
+        const transformed = await createSource({
             attachmentConstraints: [
                 {
                     target: {
@@ -102,21 +89,108 @@ describe("foundryOntologyConfigAdapter", () => {
                     constraint,
                 },
             ],
-        });
+        }).transformPulledOntology!(ir);
 
         expect(transformed.objectTypes[0]?.properties[1]?.type).toEqual(
             o.attachment({
                 constraint,
-                meta: { type: "media" },
+                meta: {
+                    foundry: {
+                        kind: "media",
+                    },
+                },
             })
         );
         expect(transformed.actionTypes[0]?.parameters[0]?.type).toEqual(
             o.optional({
                 type: o.attachment({
                     constraint,
-                    meta: { type: "media" },
+                    meta: {
+                        foundry: {
+                            kind: "media",
+                        },
+                    },
                 }),
             })
         );
+    });
+
+    it("adds the configured User type and context", async () => {
+        const ir: OntologyIR = {
+            types: [],
+            objectTypes: [
+                {
+                    name: "Task",
+                    displayName: "Task",
+                    pluralDisplayName: "Tasks",
+                    primaryKey: "id",
+                    properties: [
+                        { name: "id", displayName: "ID", type: o.string({}) },
+                        {
+                            name: "createdBy",
+                            displayName: "Created by",
+                            type: o.objectReference({ objectType: "User" }),
+                        },
+                    ],
+                },
+            ],
+            linkTypes: [],
+            actionTypes: [
+                {
+                    name: "createTask",
+                    displayName: "Create task",
+                    parameters: [],
+                    logic: [
+                        o.ActionLogicStep.createObject({
+                            objectType: "Task",
+                            values: [
+                                {
+                                    property: ["createdBy"],
+                                    value: o.Expression.contextReference({
+                                        name: "user",
+                                    }),
+                                },
+                            ],
+                        }),
+                    ],
+                },
+            ],
+            queryFunctionTypes: [],
+        };
+
+        const transformed = await createSource({
+            users: {
+                objectType: "User",
+                lens: {
+                    operations: [
+                        o.LensOp.move({
+                            from: ["profilePicture"],
+                            to: ["avatar"],
+                        }),
+                        o.LensOp.select({
+                            properties: ["id", "avatar"],
+                        }),
+                    ],
+                },
+            },
+        }).transformPulledOntology!(ir);
+
+        expect(transformed.objectTypes.map((type) => type.name)).toContain("User");
+        expect(transformed.contextType).toEqual(
+            o.struct({
+                fields: [
+                    {
+                        name: "user",
+                        displayName: "User",
+                        type: o.objectReference({ objectType: "User" }),
+                    },
+                ],
+            })
+        );
+        expect(
+            transformed.actionTypes[0]?.logic[0]?.kind === "createObject"
+                ? transformed.actionTypes[0].logic[0].value.values[0]?.value
+                : undefined
+        ).toEqual(o.Expression.contextReference({ name: "user" }));
     });
 });

@@ -60,11 +60,24 @@ describe("convertFoundryMetaObjectType", () => {
             expect.objectContaining({
                 id: "ri.ontology.main.property.employee-id",
                 name: "id",
+                type: {
+                    kind: "string",
+                    value: {},
+                },
             }),
             expect.objectContaining({
                 id: "ri.ontology.main.property.employee-name",
                 name: "fullName",
                 displayName: "Full name",
+                type: {
+                    kind: "optional",
+                    value: {
+                        type: {
+                            kind: "string",
+                            value: {},
+                        },
+                    },
+                },
             }),
         ]);
     });
@@ -94,6 +107,176 @@ describe("convertFoundryMetaObjectType", () => {
                 },
             },
             color: "#000000",
+        });
+    });
+
+    it("treats non-primary attachment and value-type properties as optional", () => {
+        const metadata = {
+            objectType: objectType(),
+            linkTypes: [],
+            implementsInterfaces: [],
+            implementsInterfaces2: {},
+            sharedPropertyTypeMapping: {},
+        } as ObjectTypeFullMetadata;
+        metadata.objectType.properties.profileImage = {
+            dataType: { type: "attachment" },
+            rid: "ri.ontology.main.property.employee-profile-image",
+            status: { type: "active" },
+            typeClasses: [],
+        };
+        metadata.objectType.properties.departmentCode = {
+            dataType: { type: "string" },
+            rid: "ri.ontology.main.property.employee-department-code",
+            status: { type: "active" },
+            typeClasses: [],
+            valueTypeApiName: "DepartmentCode",
+        };
+
+        const result = convertFoundryMetaObjectType(metadata);
+
+        expect(result.properties.find((property) => property.name === "profileImage")?.type).toEqual({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "attachment",
+                    value: {
+                        meta: {
+                            foundry: {
+                                kind: "attachment",
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        expect(
+            result.properties.find((property) => property.name === "departmentCode")?.type
+        ).toEqual({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "ref",
+                    value: { name: "DepartmentCode" },
+                },
+            },
+        });
+    });
+
+    it("treats nested struct fields as optional", () => {
+        const metadata = {
+            objectType: objectType(),
+            linkTypes: [],
+            implementsInterfaces: [],
+            implementsInterfaces2: {},
+            sharedPropertyTypeMapping: {},
+        } as ObjectTypeFullMetadata;
+        metadata.objectType.properties.address = {
+            dataType: {
+                type: "struct",
+                structFieldTypes: [
+                    {
+                        apiName: "city",
+                        rid: "ri.ontology.main.struct-field.address-city",
+                        dataType: { type: "string" },
+                        typeClasses: [],
+                    },
+                    {
+                        apiName: "coordinates",
+                        rid: "ri.ontology.main.struct-field.address-coordinates",
+                        dataType: {
+                            type: "struct",
+                            structFieldTypes: [
+                                {
+                                    apiName: "latitude",
+                                    rid: "ri.ontology.main.struct-field.coordinates-latitude",
+                                    dataType: { type: "double" },
+                                    typeClasses: [],
+                                },
+                            ],
+                        },
+                        typeClasses: [],
+                    },
+                ],
+            },
+            rid: "ri.ontology.main.property.employee-address",
+            status: { type: "active" },
+            typeClasses: [],
+        };
+
+        const result = convertFoundryMetaObjectType(metadata);
+        const address = result.properties.find((property) => property.name === "address");
+
+        expect(address?.type).toMatchObject({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "struct",
+                    value: {
+                        fields: [
+                            {
+                                name: "city",
+                                type: {
+                                    kind: "optional",
+                                    value: { type: { kind: "string" } },
+                                },
+                            },
+                            {
+                                name: "coordinates",
+                                type: {
+                                    kind: "optional",
+                                    value: {
+                                        type: {
+                                            kind: "struct",
+                                            value: {
+                                                fields: [
+                                                    {
+                                                        name: "latitude",
+                                                        type: {
+                                                            kind: "optional",
+                                                            value: {
+                                                                type: { kind: "double" },
+                                                            },
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+    });
+
+    it("preserves the underlying type of Foundry-formatted identifiers", () => {
+        const metadata = {
+            objectType: objectType(),
+            linkTypes: [],
+            implementsInterfaces: [],
+            implementsInterfaces2: {},
+            sharedPropertyTypeMapping: {},
+        } as ObjectTypeFullMetadata;
+        (
+            metadata.objectType.properties.id as unknown as Record<
+                string,
+                unknown
+            >
+        ).valueFormatting = {
+            type: "knownType",
+            knownType: "USER_OR_GROUP_ID",
+        };
+
+        const result =
+            convertFoundryMetaObjectType(
+                metadata
+            );
+
+        expect(result.properties[0]?.type).toEqual({
+            kind: "string",
+            value: {},
         });
     });
 });

@@ -23,21 +23,27 @@ export default defineOntology({
                 {
                     name: "issueCompletedAt",
                     displayName: "Issue Completed At",
-                    type: o.timestamp({}),
+                    type: o.optional({
+                        type: o.timestamp({}),
+                    }),
                     description:
                         "Timestamp when the issue entered the Completed state; empty while the issue is not completed.",
                 },
                 {
                     name: "issueStatus",
                     displayName: "Issue Status",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description:
                         "Current workflow state of the issue: Open, In Progress, Waiting, or Completed.",
                 },
                 {
                     name: "issueUpdatedAt",
                     displayName: "Issue Updated At",
-                    type: o.timestamp({}),
+                    type: o.optional({
+                        type: o.timestamp({}),
+                    }),
                     description: "Timestamp of the most recent update made to the issue.",
                 },
                 {
@@ -47,38 +53,57 @@ export default defineOntology({
                     description: "Stable system-generated identifier for an issue.",
                 },
                 {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
+                },
+                {
                     name: "createdBy",
                     displayName: "Created by",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                 },
                 {
                     name: "issueTitle",
                     displayName: "Issue Title",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description:
                         "Short, human-readable summary used to identify the issue in lists and workflows.",
                 },
                 {
                     name: "assignee",
                     displayName: "Assignee",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                 },
                 {
                     name: "issueAttachments",
                     displayName: "Issue Attachments",
-                    type: o.list({
-                        elementType: o.attachment({
-                            meta: {
-                                type: "attachment",
-                            },
-                            constraint: {
-                                content: {
-                                    kind: "image",
-                                    value: {
-                                        mediaTypes: ["image/png", "image/jpeg"],
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.attachment({
+                                meta: {
+                                    foundry: {
+                                        kind: "attachment",
                                     },
                                 },
-                            },
+                                constraint: {
+                                    content: {
+                                        kind: "image",
+                                        value: {
+                                            mediaTypes: ["image/png", "image/jpeg"],
+                                        },
+                                    },
+                                },
+                            }),
                         }),
                     }),
                     description: "Files that provide supporting material or evidence for the issue.",
@@ -86,19 +111,25 @@ export default defineOntology({
                 {
                     name: "projectId",
                     displayName: "Project ID",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description: "Identifier of the optional project that groups this issue.",
                 },
                 {
                     name: "issueCreatedAt",
                     displayName: "Issue Created At",
-                    type: o.timestamp({}),
+                    type: o.optional({
+                        type: o.timestamp({}),
+                    }),
                     description: "Timestamp when the issue was created through the operational workflow.",
                 },
                 {
                     name: "issueDescription",
                     displayName: "Issue Description",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description:
                         "Detailed context, requirements, or notes explaining the work represented by the issue.",
                 },
@@ -125,19 +156,25 @@ export default defineOntology({
                 {
                     name: "projectUpdatedAt",
                     displayName: "Project Updated At",
-                    type: o.timestamp({}),
+                    type: o.optional({
+                        type: o.timestamp({}),
+                    }),
                     description: "Timestamp of the most recent update made to the project.",
                 },
                 {
                     name: "projectDescription",
                     displayName: "Project Description",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description: "Summary of the project's purpose, scope, or intended outcome.",
                 },
                 {
                     name: "projectColor",
                     displayName: "Project Color",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description:
                         "Display color used to visually distinguish the project, stored as a hexadecimal color value such as #2D72D2.",
                 },
@@ -150,18 +187,72 @@ export default defineOntology({
                 {
                     name: "projectCreatedAt",
                     displayName: "Project Created At",
-                    type: o.timestamp({}),
+                    type: o.optional({
+                        type: o.timestamp({}),
+                    }),
                     description: "Timestamp when the project was created through the operational workflow.",
                 },
                 {
                     name: "projectTitle",
                     displayName: "Project Title",
-                    type: o.string({}),
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
                     description: "Short, human-readable name used to identify the project.",
                 },
             ],
             description:
                 "A collection of related issues organized around a shared objective or body of work.",
+        },
+        {
+            name: "User",
+            displayName: "User",
+            pluralDisplayName: "Users",
+            primaryKey: "id",
+            properties: [
+                {
+                    name: "id",
+                    displayName: "ID",
+                    type: o.string({}),
+                },
+                {
+                    name: "givenName",
+                    displayName: "Given name",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
+                    name: "familyName",
+                    displayName: "Family name",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
+                    name: "email",
+                    displayName: "Email",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                },
+                {
+                    name: "avatar",
+                    displayName: "Avatar",
+                    type: o.optional({
+                        type: o.attachment({
+                            constraint: {
+                                content: {
+                                    kind: "image",
+                                    value: {
+                                        mediaTypes: ["image/png", "image/jpeg", "image/gif", "image/svg+xml"],
+                                    },
+                                },
+                            },
+                        }),
+                    }),
+                },
+            ],
         },
     ],
     linkTypes: [
@@ -201,7 +292,9 @@ export default defineOntology({
                         type: o.list({
                             elementType: o.attachment({
                                 meta: {
-                                    type: "attachment",
+                                    foundry: {
+                                        kind: "attachment",
+                                    },
                                 },
                                 constraint: {
                                     content: {
@@ -215,6 +308,15 @@ export default defineOntology({
                         }),
                     }),
                     description: "Optional files that support or explain the issue.",
+                },
+                {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
                 },
                 {
                     name: "createdBy",
@@ -280,24 +382,21 @@ export default defineOntology({
                         }),
                     }),
                     description: "Initial workflow state for the issue.",
+                    defaultValue: o.Expression.literal({
+                        value: "Open",
+                    }),
                 },
                 {
                     name: "__uuid_0df17cad-fc40-4f4b-b755-dfccb968d615",
                     displayName: "Generated UUID 1",
                     type: o.string({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "uuid",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.uuid({}),
                 },
                 {
                     name: "__now",
                     displayName: "Current time",
                     type: o.timestamp({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "now",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.now({}),
                 },
             ],
             logic: [
@@ -306,68 +405,85 @@ export default defineOntology({
                     values: [
                         {
                             property: ["issueCompletedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["completedAt"],
+                            value: o.Expression.inputReference({
+                                name: "completedAt",
                             }),
                         },
                         {
                             property: ["issueStatus"],
-                            value: o.Expression.valueReference({
-                                path: ["status"],
+                            value: o.Expression.inputReference({
+                                name: "status",
                             }),
                         },
                         {
                             property: ["issueUpdatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
                             }),
                         },
                         {
                             property: ["issueId"],
-                            value: o.Expression.valueReference({
-                                path: ["__uuid_0df17cad-fc40-4f4b-b755-dfccb968d615"],
+                            value: o.Expression.inputReference({
+                                name: "__uuid_0df17cad-fc40-4f4b-b755-dfccb968d615",
                             }),
                         },
                         {
                             property: ["createdBy"],
                             value: o.Expression.contextReference({
-                                path: ["userId"],
+                                name: "user",
+                            }),
+                        },
+                        {
+                            property: ["issueLabels"],
+                            value: o.Expression.inputReference({
+                                name: "issueLabels",
                             }),
                         },
                         {
                             property: ["issueTitle"],
-                            value: o.Expression.valueReference({
-                                path: ["title"],
+                            value: o.Expression.inputReference({
+                                name: "title",
                             }),
                         },
                         {
                             property: ["assignee"],
-                            value: o.Expression.valueReference({
-                                path: ["assignee"],
+                            value: o.Expression.inputReference({
+                                name: "assignee",
                             }),
                         },
                         {
                             property: ["issueAttachments"],
-                            value: o.Expression.valueReference({
-                                path: ["attachments"],
+                            value: o.Expression.inputReference({
+                                name: "attachments",
                             }),
                         },
                         {
                             property: ["projectId"],
-                            value: o.Expression.valueReference({
-                                path: ["project", "projectId"],
+                            value: o.Expression.getAt({
+                                source: {
+                                    kind: "objectLookup",
+                                    value: {
+                                        reference: {
+                                            kind: "inputReference",
+                                            value: {
+                                                name: "project",
+                                            },
+                                        },
+                                    },
+                                },
+                                path: ["projectId"],
                             }),
                         },
                         {
                             property: ["issueCreatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
                             }),
                         },
                         {
                             property: ["issueDescription"],
-                            value: o.Expression.valueReference({
-                                path: ["description"],
+                            value: o.Expression.inputReference({
+                                name: "description",
                             }),
                         },
                     ],
@@ -410,19 +526,13 @@ export default defineOntology({
                     name: "__uuid_7af1b7e1-9b8f-470d-bcf1-e02376d353c1",
                     displayName: "Generated UUID 1",
                     type: o.string({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "uuid",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.uuid({}),
                 },
                 {
                     name: "__now",
                     displayName: "Current time",
                     type: o.timestamp({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "now",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.now({}),
                 },
             ],
             logic: [
@@ -431,38 +541,38 @@ export default defineOntology({
                     values: [
                         {
                             property: ["projectUpdatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
                             }),
                         },
                         {
                             property: ["projectDescription"],
-                            value: o.Expression.valueReference({
-                                path: ["description"],
+                            value: o.Expression.inputReference({
+                                name: "description",
                             }),
                         },
                         {
                             property: ["projectColor"],
-                            value: o.Expression.valueReference({
-                                path: ["color"],
+                            value: o.Expression.inputReference({
+                                name: "color",
                             }),
                         },
                         {
                             property: ["projectId"],
-                            value: o.Expression.valueReference({
-                                path: ["__uuid_7af1b7e1-9b8f-470d-bcf1-e02376d353c1"],
+                            value: o.Expression.inputReference({
+                                name: "__uuid_7af1b7e1-9b8f-470d-bcf1-e02376d353c1",
                             }),
                         },
                         {
                             property: ["projectCreatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
                             }),
                         },
                         {
                             property: ["projectTitle"],
-                            value: o.Expression.valueReference({
-                                path: ["title"],
+                            value: o.Expression.inputReference({
+                                name: "title",
                             }),
                         },
                     ],
@@ -487,7 +597,7 @@ export default defineOntology({
             logic: [
                 o.ActionLogicStep.deleteObject({
                     object: {
-                        path: ["issue"],
+                        name: "issue",
                     },
                 }),
             ],
@@ -509,7 +619,7 @@ export default defineOntology({
             logic: [
                 o.ActionLogicStep.deleteObject({
                     object: {
-                        path: ["project"],
+                        name: "project",
                     },
                 }),
             ],
@@ -526,6 +636,20 @@ export default defineOntology({
                         type: o.timestamp({}),
                     }),
                     description: "Completion timestamp; clear this value when the issue is not completed.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueCompletedAt"],
+                    }),
                 },
                 {
                     name: "attachments",
@@ -534,7 +658,9 @@ export default defineOntology({
                         type: o.list({
                             elementType: o.attachment({
                                 meta: {
-                                    type: "attachment",
+                                    foundry: {
+                                        kind: "attachment",
+                                    },
                                 },
                                 constraint: {
                                     content: {
@@ -548,6 +674,20 @@ export default defineOntology({
                         }),
                     }),
                     description: "Files that support or explain the issue.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueAttachments"],
+                    }),
                 },
                 {
                     name: "issue",
@@ -558,12 +698,49 @@ export default defineOntology({
                     description: "Issue to update.",
                 },
                 {
+                    name: "issueLabels",
+                    displayName: "Issue Labels",
+                    type: o.optional({
+                        type: o.list({
+                            elementType: o.string({}),
+                        }),
+                    }),
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueLabels"],
+                    }),
+                },
+                {
                     name: "description",
                     displayName: "Issue Description",
                     type: o.optional({
                         type: o.string({}),
                     }),
                     description: "Detailed context or requirements for the issue.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueDescription"],
+                    }),
                 },
                 {
                     name: "project",
@@ -574,6 +751,41 @@ export default defineOntology({
                         }),
                     }),
                     description: "Optional project used to group the issue.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["projectId"],
+                    }),
+                },
+                {
+                    name: "assignee",
+                    displayName: "Assignee",
+                    type: o.optional({
+                        type: o.string({}),
+                    }),
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["assignee"],
+                    }),
                 },
                 {
                     name: "assignee",
@@ -587,6 +799,20 @@ export default defineOntology({
                     displayName: "Issue Title",
                     type: o.string({}),
                     description: "Short summary of the issue.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueTitle"],
+                    }),
                 },
                 {
                     name: "status",
@@ -614,69 +840,97 @@ export default defineOntology({
                         }),
                     }),
                     description: "New workflow state for the issue.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "issue",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["issueStatus"],
+                    }),
                 },
                 {
                     name: "__now",
                     displayName: "Current time",
                     type: o.timestamp({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "now",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.now({}),
                 },
             ],
             logic: [
                 o.ActionLogicStep.updateObject({
                     object: {
-                        path: ["issue"],
+                        name: "issue",
                     },
                     values: [
                         {
                             property: ["issueCompletedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["completedAt"],
+                            value: o.Expression.inputReference({
+                                name: "completedAt",
                             }),
                         },
                         {
                             property: ["issueStatus"],
-                            value: o.Expression.valueReference({
-                                path: ["status"],
+                            value: o.Expression.inputReference({
+                                name: "status",
                             }),
                         },
                         {
                             property: ["issueUpdatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
+                            }),
+                        },
+                        {
+                            property: ["issueLabels"],
+                            value: o.Expression.inputReference({
+                                name: "issueLabels",
                             }),
                         },
                         {
                             property: ["issueTitle"],
-                            value: o.Expression.valueReference({
-                                path: ["title"],
+                            value: o.Expression.inputReference({
+                                name: "title",
                             }),
                         },
                         {
                             property: ["assignee"],
-                            value: o.Expression.valueReference({
-                                path: ["assignee"],
+                            value: o.Expression.inputReference({
+                                name: "assignee",
                             }),
                         },
                         {
                             property: ["issueAttachments"],
-                            value: o.Expression.valueReference({
-                                path: ["attachments"],
+                            value: o.Expression.inputReference({
+                                name: "attachments",
                             }),
                         },
                         {
                             property: ["projectId"],
-                            value: o.Expression.valueReference({
-                                path: ["project", "projectId"],
+                            value: o.Expression.getAt({
+                                source: {
+                                    kind: "objectLookup",
+                                    value: {
+                                        reference: {
+                                            kind: "inputReference",
+                                            value: {
+                                                name: "project",
+                                            },
+                                        },
+                                    },
+                                },
+                                path: ["projectId"],
                             }),
                         },
                         {
                             property: ["issueDescription"],
-                            value: o.Expression.valueReference({
-                                path: ["description"],
+                            value: o.Expression.inputReference({
+                                name: "description",
                             }),
                         },
                     ],
@@ -700,6 +954,20 @@ export default defineOntology({
                         }),
                     }),
                     description: "Optional hexadecimal display color, such as #2D72D2.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "project",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["projectColor"],
+                    }),
                 },
                 {
                     name: "project",
@@ -716,51 +984,76 @@ export default defineOntology({
                         type: o.string({}),
                     }),
                     description: "Summary of the project's purpose and scope.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "project",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["projectDescription"],
+                    }),
                 },
                 {
                     name: "title",
                     displayName: "Project Title",
                     type: o.string({}),
                     description: "Human-readable project name.",
+                    defaultValue: o.Expression.getAt({
+                        source: {
+                            kind: "objectLookup",
+                            value: {
+                                reference: {
+                                    kind: "inputReference",
+                                    value: {
+                                        name: "project",
+                                    },
+                                },
+                            },
+                        },
+                        path: ["projectTitle"],
+                    }),
                 },
                 {
                     name: "__now",
                     displayName: "Current time",
                     type: o.timestamp({}),
-                    defaultValue: o.Expression.functionCall({
-                        kind: "now",
-                        value: {},
-                    }),
+                    defaultValue: o.Expression.now({}),
                 },
             ],
             logic: [
                 o.ActionLogicStep.updateObject({
                     object: {
-                        path: ["project"],
+                        name: "project",
                     },
                     values: [
                         {
                             property: ["projectUpdatedAt"],
-                            value: o.Expression.valueReference({
-                                path: ["__now"],
+                            value: o.Expression.inputReference({
+                                name: "__now",
                             }),
                         },
                         {
                             property: ["projectDescription"],
-                            value: o.Expression.valueReference({
-                                path: ["description"],
+                            value: o.Expression.inputReference({
+                                name: "description",
                             }),
                         },
                         {
                             property: ["projectColor"],
-                            value: o.Expression.valueReference({
-                                path: ["color"],
+                            value: o.Expression.inputReference({
+                                name: "color",
                             }),
                         },
                         {
                             property: ["projectTitle"],
-                            value: o.Expression.valueReference({
-                                path: ["title"],
+                            value: o.Expression.inputReference({
+                                name: "title",
                             }),
                         },
                     ],
@@ -771,4 +1064,15 @@ export default defineOntology({
         },
     ],
     queryFunctionTypes: [],
+    contextType: o.struct({
+        fields: [
+            {
+                name: "user",
+                displayName: "User",
+                type: o.objectReference({
+                    objectType: "User",
+                }),
+            },
+        ],
+    }),
 });

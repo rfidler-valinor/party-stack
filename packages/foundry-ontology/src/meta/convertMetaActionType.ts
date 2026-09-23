@@ -6,9 +6,17 @@ import type {
     MetaActionType,
     PropertyAssignment,
     StringConstraint,
+    StringSuggestion,
     TypeDef,
 } from "@party-stack/ontology";
 import { toOntologyActionTypeName } from "../utils/actionTypeName.js";
+import {
+    convertOmsActionParameterDefaults,
+    convertOmsActionParameterStringConstraint,
+    convertOmsActionParameterStringSuggestions,
+} from "./convertOmsActionParameterMetadata.js";
+import { foundryAttachmentMeta } from "./foundryAttachmentMetadata.js";
+import type { ActionTypeOmsMetadata } from "./loadActionTypeOmsMetadata.js";
 import type {
     ActionLogicRule,
     ActionParameterValidation,
@@ -19,16 +27,87 @@ import type {
     StructFieldArgument,
 } from "@osdk/foundry.ontologies";
 
-const FOUNDRY_CURRENT_USER_CONTEXT_PATH = ["userId"];
+const FOUNDRY_CURRENT_USER_CONTEXT_PATH = ["user"];
 const FOUNDRY_UUID_PARAMETER_PREFIX = "__uuid_";
 const FOUNDRY_NOW_PARAMETER_NAME = "__now";
+const FOUNDRY_LIST_ITEM_BINDING = "item";
 
 function maybeOptional(type: TypeDef, required: boolean): TypeDef {
     return required ? type : { kind: "optional", value: { type } };
 }
 
-function stringType(constraint?: StringConstraint): TypeDef {
-    return { kind: "string", value: { constraint } };
+function stringType(constraint?: StringConstraint, suggestions?: StringSuggestion[]): TypeDef {
+    return {
+        kind: "string",
+        value: {
+            constraint,
+            suggestions,
+        },
+    };
+}
+
+function applyStringConstraintFallback(type: TypeDef, constraint: StringConstraint | undefined): TypeDef {
+    if (!constraint) return type;
+    switch (type.kind) {
+        case "string":
+            return type.value.constraint
+                ? type
+                : {
+                      ...type,
+                      value: {
+                          ...type.value,
+                          constraint,
+                      },
+                  };
+        case "optional":
+            return {
+                ...type,
+                value: {
+                    type: applyStringConstraintFallback(type.value.type, constraint),
+                },
+            };
+        case "list":
+            return {
+                ...type,
+                value: {
+                    elementType: applyStringConstraintFallback(type.value.elementType, constraint),
+                },
+            };
+        default:
+            return type;
+    }
+}
+
+function applyStringSuggestionsFallback(type: TypeDef, suggestions: StringSuggestion[] | undefined): TypeDef {
+    if (!suggestions) return type;
+    switch (type.kind) {
+        case "string":
+            return type.value.suggestions
+                ? type
+                : {
+                      ...type,
+                      value: {
+                          ...type.value,
+                          suggestions,
+                      },
+                  };
+        case "optional":
+            return {
+                ...type,
+                value: {
+                    type: applyStringSuggestionsFallback(type.value.type, suggestions),
+                },
+            };
+        case "list":
+            return {
+                ...type,
+                value: {
+                    elementType: applyStringSuggestionsFallback(type.value.elementType, suggestions),
+                },
+            };
+        default:
+            return type;
+    }
 }
 
 function booleanType(): TypeDef {
@@ -62,7 +141,7 @@ function geopointType(): TypeDef {
 function attachmentType(type: "attachment" | "media"): TypeDef {
     return {
         kind: "attachment",
-        value: { meta: { type } },
+        value: { meta: foundryAttachmentMeta(type) },
     };
 }
 
@@ -96,7 +175,14 @@ function convertActionParameterType(
     const baseType: TypeDef = (() => {
         switch (type.type) {
             case "string":
-                return stringType(convertActionParameterStringConstraint(validation));
+                // TODO: Convert Foundry "user input" parameters to a principal
+                // reference once Ontologies V2 exposes that setting in action
+                // metadata. It currently returns an unconstrained string.
+                // https://valinor-enterprises.slack.com/archives/C08549X3VDM/p1787718253341589
+                return stringType(
+                    convertActionParameterStringConstraint(validation),
+                    convertActionParameterStringSuggestions(validation)
+                );
             case "boolean":
                 return booleanType();
             case "integer":
@@ -104,6 +190,10 @@ function convertActionParameterType(
                 return integerType();
             case "double":
                 return doubleType();
+            case "decimal":
+                // Preserve the exact value until Party Stack has a decimal
+                // type with explicit precision and scale.
+                return stringType();
             case "date":
                 return dateType();
             case "timestamp":
@@ -148,6 +238,10 @@ function convertActionParameterType(
             case "objectSet":
             case "scenarioReference":
                 return stringType();
+            default: {
+                const unsupported: never = type;
+                return unsupported;
+            }
         }
     })();
 
@@ -161,9 +255,7 @@ function convertActionParameterStringConstraint(
     if (allowedValues?.type === "oneOf" && !allowedValues.otherValuesAllowed) {
         const options = allowedValues.options.flatMap((option) => {
             const value: unknown = option.value;
-            return typeof value === "string"
-                ? [{ value, label: option.displayName }]
-                : [];
+            return typeof value === "string" ? [{ value, label: option.displayName }] : [];
         });
         return options.length > 0
             ? {
@@ -179,6 +271,27 @@ function convertActionParameterStringConstraint(
         };
     }
     return undefined;
+}
+
+function convertActionParameterStringSuggestions(
+    validation?: ActionParameterValidation
+): StringSuggestion[] | undefined {
+    const allowedValues = validation?.defaultValidation.allowedValues;
+    if (allowedValues?.type !== "oneOf" || !allowedValues.otherValuesAllowed) {
+        return undefined;
+    }
+    const suggestions = allowedValues.options.flatMap((option) => {
+        const value: unknown = option.value;
+        return typeof value === "string"
+            ? [
+                  {
+                      value,
+                      label: option.displayName,
+                  },
+              ]
+            : [];
+    });
+    return suggestions.length > 0 ? suggestions : undefined;
 }
 
 function convertOntologyDataType(type: OntologyDataType, required = true): TypeDef {
@@ -223,6 +336,11 @@ function convertOntologyDataType(type: OntologyDataType, required = true): TypeD
                         })),
                     },
                 };
+            case "object":
+                return {
+                    kind: "objectReference",
+                    value: { objectType: type.objectTypeApiName },
+                };
             default:
                 return stringType();
         }
@@ -242,6 +360,27 @@ function collectRuleArguments(rule: ActionLogicRule): Array<LogicRuleArgument | 
         default:
             return [];
     }
+}
+
+function collectMutationTargetParameterNames(rules: ActionLogicRule[]): Set<string> {
+    const parameterNames = new Set<string>();
+    for (const rule of rules) {
+        switch (rule.type) {
+            case "modifyObject":
+                parameterNames.add(rule.objectToModify);
+                break;
+            case "deleteObject":
+                parameterNames.add(rule.objectToDelete);
+                break;
+        }
+    }
+    return parameterNames;
+}
+
+function requireObjectReferenceMutationTarget(type: TypeDef, isMutationTarget: boolean): TypeDef {
+    return isMutationTarget && type.kind === "optional" && type.value.type.kind === "objectReference"
+        ? type.value.type
+        : type;
 }
 
 function createSyntheticParameters(actionType: ActionTypeFullMetadata): {
@@ -274,8 +413,8 @@ function createSyntheticParameters(actionType: ActionTypeFullMetadata): {
             displayName: `Generated UUID ${index + 1}`,
             type: { kind: "string", value: {} },
             defaultValue: {
-                kind: "functionCall",
-                value: { kind: "uuid", value: {} },
+                kind: "uuid",
+                value: {},
             },
         })
     );
@@ -286,8 +425,8 @@ function createSyntheticParameters(actionType: ActionTypeFullMetadata): {
             displayName: "Current time",
             type: { kind: "timestamp", value: {} },
             defaultValue: {
-                kind: "functionCall",
-                value: { kind: "now", value: {} },
+                kind: "now",
+                value: {},
             },
         });
     }
@@ -303,10 +442,10 @@ export function getFoundryActionOverrideParameterMapping(actionType: ActionTypeD
     let nowParameterName: string | undefined;
 
     for (const parameter of actionType.parameters) {
-        if (parameter.defaultValue?.kind !== "functionCall") {
+        if (parameter.defaultValue?.kind !== "uuid" && parameter.defaultValue?.kind !== "now") {
             continue;
         }
-        switch (parameter.defaultValue.value.kind) {
+        switch (parameter.defaultValue.kind) {
             case "uuid": {
                 const linkId = getUniqueIdentifierLinkIdFromParameterName(parameter.name);
                 if (linkId) {
@@ -323,11 +462,36 @@ export function getFoundryActionOverrideParameterMapping(actionType: ActionTypeD
     return { uuidByParameterName, nowParameterName };
 }
 
-function valueReference(path: string[]): Expression {
+function inputReference(name: string): Expression {
     return {
-        kind: "valueReference",
-        value: { path },
+        kind: "inputReference",
+        value: { name },
     };
+}
+
+function getAtExpression(
+    source: Expression,
+    path: string[]
+): Expression {
+    return {
+        kind: "getAt",
+        value: { source, path },
+    };
+}
+
+function objectField(
+    parameterName: string,
+    path: string[]
+): Expression {
+    return getAtExpression(
+        {
+            kind: "objectLookup",
+            value: {
+                reference: inputReference(parameterName),
+            },
+        },
+        path
+    );
 }
 
 // TODO: This uses regex heuristics to infer the type of static literal values without
@@ -376,29 +540,34 @@ function convertLogicRuleArgument(
 ): Expression {
     switch (argument.type) {
         case "parameterId":
-            return valueReference([argument.parameterId]);
+            return inputReference(argument.parameterId);
         case "objectParameterPropertyValue":
-            return valueReference([argument.parameterId, argument.propertyTypeApiName]);
+            return objectField(argument.parameterId, [
+                argument.propertyTypeApiName,
+            ]);
         case "structParameterFieldValue":
+            return getAtExpression(inputReference(argument.parameterId), [
+                argument.structParameterFieldApiName,
+            ]);
         case "structListParameterFieldValue":
-            return valueReference([argument.parameterId, argument.structParameterFieldApiName]);
+            throw new Error("Foundry list-of-struct field arguments must be converted as a list mapping.");
         case "uniqueIdentifier": {
             const parameterName = argument.linkId
                 ? syntheticParameters.uniqueIdentifierParametersByLinkId.get(argument.linkId)
                 : undefined;
             return parameterName
-                ? valueReference([parameterName])
+                ? inputReference(parameterName)
                 : {
-                      kind: "functionCall",
-                      value: { kind: "uuid", value: {} },
+                      kind: "uuid",
+                      value: {},
                   };
         }
         case "currentTime":
             return syntheticParameters.nowParameterName
-                ? valueReference([syntheticParameters.nowParameterName])
+                ? inputReference(syntheticParameters.nowParameterName)
                 : {
-                      kind: "functionCall",
-                      value: { kind: "now", value: {} },
+                      kind: "now",
+                      value: {},
                   };
         case "staticValue":
             return {
@@ -408,7 +577,7 @@ function convertLogicRuleArgument(
         case "currentUser":
             return {
                 kind: "contextReference",
-                value: { path: FOUNDRY_CURRENT_USER_CONTEXT_PATH },
+                value: { name: FOUNDRY_CURRENT_USER_CONTEXT_PATH[0]! },
             };
         default:
             throw new Error(`Unsupported Foundry action argument "${argument.type}".`);
@@ -417,6 +586,7 @@ function convertLogicRuleArgument(
 
 function convertAssignments(
     rule: Extract<ActionLogicRule, { type: "createObject" | "modifyObject" }>,
+    parameters: ActionTypeFullMetadata["actionType"]["parameters"],
     syntheticParameters: {
         uniqueIdentifierParametersByLinkId: Map<string, string>;
         nowParameterName?: string;
@@ -428,16 +598,98 @@ function convertAssignments(
             value: convertLogicRuleArgument(argument, syntheticParameters),
         })),
         ...Object.entries(rule.structPropertyArguments).flatMap(([property, fields]) =>
-            Object.entries(fields).map(([field, argument]) => ({
-                property: [property, field],
-                value: convertLogicRuleArgument(argument, syntheticParameters),
-            }))
+            convertStructPropertyAssignments(property, fields, parameters, syntheticParameters)
         ),
+    ];
+}
+
+function unsupportedListStructAssignment(property: string, reason: string): never {
+    throw new Error(
+        `Unsupported Foundry list-of-struct assignment for property "${property}": ${reason}. ` +
+            "Party Stack only supports mappings driven by one list-of-struct parameter."
+    );
+}
+
+function convertStructPropertyAssignments(
+    property: string,
+    fields: Record<string, StructFieldArgument>,
+    parameters: ActionTypeFullMetadata["actionType"]["parameters"],
+    syntheticParameters: {
+        uniqueIdentifierParametersByLinkId: Map<string, string>;
+        nowParameterName?: string;
+    }
+): PropertyAssignment[] {
+    const entries = Object.entries(fields);
+    const listEntries = entries.filter(
+        (entry): entry is [string, Extract<StructFieldArgument, { type: "structListParameterFieldValue" }>] =>
+            entry[1].type === "structListParameterFieldValue"
+    );
+
+    if (listEntries.length === 0) {
+        return entries.map(([field, argument]) => ({
+            property: [property, field],
+            value: convertLogicRuleArgument(argument, syntheticParameters),
+        }));
+    }
+
+    if (listEntries.length !== entries.length) {
+        return unsupportedListStructAssignment(
+            property,
+            "list fields are mixed with non-list struct field arguments"
+        );
+    }
+
+    const parameterIds = new Set(listEntries.map(([, argument]) => argument.parameterId));
+    if (parameterIds.size !== 1) {
+        return unsupportedListStructAssignment(property, "fields are mapped from multiple list parameters");
+    }
+
+    const parameterId = listEntries[0]![1].parameterId;
+    const parameter = parameters[parameterId];
+    if (parameter?.dataType.type !== "array" || parameter.dataType.subType.type !== "struct") {
+        return unsupportedListStructAssignment(
+            property,
+            `source parameter "${parameterId}" is not a list of structs`
+        );
+    }
+
+    return [
+        {
+            property: [property],
+            value: {
+                kind: "map",
+                value: {
+                    source: inputReference(parameterId),
+                    binding: FOUNDRY_LIST_ITEM_BINDING,
+                    body: {
+                        kind: "struct",
+                        value: {
+                            fields: entries.map(([field, argument]) => ({
+                                name: field,
+                                value:
+                                    argument.type === "structListParameterFieldValue"
+                                        ? getAtExpression(
+                                              {
+                                                  kind: "localReference",
+                                                  value: {
+                                                      name: FOUNDRY_LIST_ITEM_BINDING,
+                                                  },
+                                              },
+                                              [argument.structParameterFieldApiName]
+                                          )
+                                        : convertLogicRuleArgument(argument, syntheticParameters),
+                            })),
+                        },
+                    },
+                },
+            },
+        },
     ];
 }
 
 function convertLogicStep(
     rule: ActionLogicRule,
+    parameters: ActionTypeFullMetadata["actionType"]["parameters"],
     syntheticParameters: {
         uniqueIdentifierParametersByLinkId: Map<string, string>;
         nowParameterName?: string;
@@ -449,7 +701,7 @@ function convertLogicStep(
                 kind: "createObject",
                 value: {
                     objectType: rule.objectTypeApiName,
-                    values: convertAssignments(rule, syntheticParameters),
+                    values: convertAssignments(rule, parameters, syntheticParameters),
                 },
             };
         case "modifyObject":
@@ -457,9 +709,9 @@ function convertLogicStep(
                 kind: "updateObject",
                 value: {
                     object: {
-                        path: [rule.objectToModify],
+                        name: rule.objectToModify,
                     },
-                    values: convertAssignments(rule, syntheticParameters),
+                    values: convertAssignments(rule, parameters, syntheticParameters),
                 },
             };
         case "deleteObject":
@@ -467,7 +719,7 @@ function convertLogicStep(
                 kind: "deleteObject",
                 value: {
                     object: {
-                        path: [rule.objectToDelete],
+                        name: rule.objectToDelete,
                     },
                 },
             };
@@ -476,11 +728,44 @@ function convertLogicStep(
     }
 }
 
-export function convertFoundryMetaActionType(actionType: ActionTypeFullMetadata): MetaActionType {
+export function convertFoundryMetaActionType(
+    actionType: ActionTypeFullMetadata,
+    omsMetadata?: ActionTypeOmsMetadata
+): MetaActionType {
     const syntheticParameters = createSyntheticParameters(actionType);
+    const mutationTargetParameterNames = collectMutationTargetParameterNames(actionType.fullLogicRules);
     const fullLogicRules = actionType.fullLogicRules
-        .map((rule) => convertLogicStep(rule, syntheticParameters))
+        .map((rule) => convertLogicStep(rule, actionType.actionType.parameters, syntheticParameters))
         .filter((rule): rule is NonNullable<typeof rule> => rule !== null);
+    const parameters = Object.entries(actionType.actionType.parameters).map(
+        ([name, parameter]): ActionParameterDef => {
+            const type = requireObjectReferenceMutationTarget(
+                convertActionParameterType(
+                    parameter.dataType,
+                    parameter.required,
+                    parameter.validation
+                ),
+                mutationTargetParameterNames.has(name)
+            );
+            return {
+                name,
+                displayName: parameter.displayName ?? name,
+                type: applyStringSuggestionsFallback(
+                    applyStringConstraintFallback(
+                        type,
+                        convertOmsActionParameterStringConstraint(omsMetadata, name)
+                    ),
+                    convertOmsActionParameterStringSuggestions(omsMetadata, name)
+                ),
+                description: parameter.description,
+            };
+        }
+    );
+    const defaultsByParameter =
+        convertOmsActionParameterDefaults(
+            omsMetadata,
+            parameters
+        );
 
     return {
         id: actionType.actionType.rid,
@@ -490,18 +775,10 @@ export function convertFoundryMetaActionType(actionType: ActionTypeFullMetadata)
         deprecated:
             actionType.actionType.status === "DEPRECATED" ? { message: "Deprecated in Foundry." } : undefined,
         parameters: [
-            ...Object.entries(actionType.actionType.parameters).map(
-                ([name, parameter]): ActionParameterDef => ({
-                    name,
-                    displayName: parameter.displayName ?? name,
-                    type: convertActionParameterType(
-                        parameter.dataType,
-                        parameter.required,
-                        parameter.validation
-                    ),
-                    description: parameter.description,
-                })
-            ),
+            ...parameters.map((parameter) => ({
+                ...parameter,
+                defaultValue: defaultsByParameter.get(parameter.name),
+            })),
             ...syntheticParameters.parameters,
         ],
         logic: fullLogicRules,

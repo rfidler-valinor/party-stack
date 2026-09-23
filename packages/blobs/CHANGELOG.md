@@ -1,5 +1,69 @@
 # @party-stack/blobs
 
+## 0.5.6
+
+### Patch Changes
+
+- 316b641: Downgrade TanStack DB and its adapters to the versions used by the working Streamline development environment.
+- Updated dependencies [316b641]
+    - @party-stack/runtime@0.3.6
+
+## 0.5.5
+
+### Patch Changes
+
+- 6e2e337: downgrade db deps
+- Updated dependencies [6e2e337]
+    - @party-stack/runtime@0.3.5
+
+## 0.5.4
+
+### Patch Changes
+
+- cd0b360: improve salesforce integration, fix outbox settlement + handle missing pks
+- Updated dependencies [cd0b360]
+    - @party-stack/runtime@0.3.4
+
+## 0.5.3
+
+### Patch Changes
+
+- 81d897a: update db deps + start handling contains pushdown in foundry
+- Updated dependencies [81d897a]
+    - @party-stack/runtime@0.3.3
+
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [52d8adc]
+    - @party-stack/runtime@0.3.2
+
+## 0.5.1
+
+### Patch Changes
+
+- 45bcf88: upgrade tanstack db deps
+- Updated dependencies [45bcf88]
+    - @party-stack/runtime@0.3.1
+
+## 0.5.0
+
+### Minor Changes
+
+- 33f6858: auth + connections
+
+### Patch Changes
+
+- Updated dependencies [33f6858]
+    - @party-stack/runtime@0.3.0
+
+## 0.4.1
+
+### Patch Changes
+
+- 515f8dc: OSDK-free LiveOntology Gateway MVP: collection readiness and race-safe cleanup, non-blocking action refresh, structured remote errors, policy-aware describe projection, precise invalidation, attachments, and public Foundry action metadata. No generic link traversal, object-query helpers, or OMS/prefill metadata.
+
 ## 0.4.0
 
 ### Minor Changes

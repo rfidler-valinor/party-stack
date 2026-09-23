@@ -12,6 +12,7 @@ import {
     OntologyDevtoolsPluginName,
     ontologyDevtoolsTrigger,
     OntologyDevtoolsTrigger,
+    schemaEdgePath,
     timestampPreview,
     typeDisplayName,
     type OntologyDevtoolsPanelProps,
@@ -55,18 +56,30 @@ describe("createOntologyDevtoolsPlugin", () => {
         expect(title.props).toMatchObject({ theme: "light" });
     });
 
-    it("forwards plugin metadata", () => {
+    it("forwards plugin metadata and related meta ontology", () => {
+        const metaOntology = {} as LiveOntology;
         const plugin = createOntologyDevtoolsPlugin({
             ontology: {} as LiveOntology,
             id: "custom-ontology",
-            name: "Data model",
+            metaOntology,
             defaultOpen: true,
         });
 
         expect(plugin).toMatchObject({
             id: "custom-ontology",
-            name: "Data model",
             defaultOpen: true,
+        });
+        if (typeof plugin.render !== "function") {
+            throw new Error("Expected a plugin renderer.");
+        }
+        const panel = plugin.render({} as HTMLElement, {
+            devtoolsOpen: true,
+            theme: "light",
+        });
+        const Component = panel.type as (props: typeof panel.props) => ReactElement;
+        const ontologyPanel = Component(panel.props);
+        expect(ontologyPanel.props).toMatchObject({
+            metaOntology,
         });
     });
 
@@ -101,7 +114,7 @@ describe("OntologyIcon", () => {
 });
 
 describe("layoutSchema", () => {
-    it("places every object type on the graph canvas", () => {
+    it("places every object type on a relationship-aware graph canvas", () => {
         const ir: OntologyIR = {
             types: [],
             objectTypes: ["Task", "User", "Project", "Comment"].map((name) => ({
@@ -111,12 +124,30 @@ describe("layoutSchema", () => {
                 primaryKey: "id",
                 properties: [],
             })),
-            linkTypes: [],
+            linkTypes: [
+                {
+                    id: "project-tasks",
+                    source: {
+                        objectType: "Project",
+                        name: "tasks",
+                        displayName: "Tasks",
+                    },
+                    target: {
+                        objectType: "Task",
+                        name: "project",
+                        displayName: "Project",
+                    },
+                    foreignKey: "projectId",
+                    cardinality: "many",
+                },
+            ],
             actionTypes: [],
             queryFunctionTypes: [],
         };
 
         const layout = layoutSchema(ir);
+        const project = layout.nodes.find((node) => node.objectType.name === "Project");
+        const task = layout.nodes.find((node) => node.objectType.name === "Task");
 
         expect(layout.nodes.map((node) => node.objectType.name)).toEqual([
             "Task",
@@ -127,6 +158,72 @@ describe("layoutSchema", () => {
         expect(new Set(layout.nodes.map((node) => `${node.x}:${node.y}`)).size).toBe(4);
         expect(layout.width).toBeGreaterThan(0);
         expect(layout.height).toBeGreaterThan(0);
+        expect(project?.x).toBeLessThan(task?.x ?? 0);
+        expect(layout.edges).toHaveLength(1);
+        expect(layout.edges[0]!.label).toBe("Tasks · many");
+    });
+
+    it("routes relationship arrows to the object card boundaries", () => {
+        const objectTypes = ["Project", "Task"].map((name) => ({
+            name,
+            displayName: name,
+            pluralDisplayName: `${name}s`,
+            primaryKey: "id",
+            properties: [],
+        }));
+        const ir: OntologyIR = {
+            types: [],
+            objectTypes,
+            linkTypes: [
+                {
+                    id: "project-tasks",
+                    source: { objectType: "Project", name: "tasks", displayName: "Tasks" },
+                    target: { objectType: "Task", name: "project", displayName: "Project" },
+                    foreignKey: "projectId",
+                    cardinality: "many",
+                },
+            ],
+            actionTypes: [],
+            queryFunctionTypes: [],
+        };
+
+        const layout = layoutSchema(ir);
+        const source = layout.nodes.find((node) => node.objectType.name === "Project");
+        const target = layout.nodes.find((node) => node.objectType.name === "Task");
+        const points = layout.edges[0]!.points;
+        const touchesBoundary = (
+            point: { x: number; y: number },
+            node: NonNullable<typeof source>
+        ) => {
+            const onHorizontalEdge =
+                (point.y === node.y || point.y === node.y + 176) &&
+                point.x >= node.x &&
+                point.x <= node.x + 230;
+            const onVerticalEdge =
+                (point.x === node.x || point.x === node.x + 230) &&
+                point.y >= node.y &&
+                point.y <= node.y + 176;
+            return onHorizontalEdge || onVerticalEdge;
+        };
+
+        expect(source).toBeDefined();
+        expect(target).toBeDefined();
+        expect(touchesBoundary(points[0]!, source!)).toBe(true);
+        expect(touchesBoundary(points.at(-1)!, target!)).toBe(true);
+        expect(points.at(-1)).not.toEqual({
+            x: target!.x + 115,
+            y: target!.y + 88,
+        });
+    });
+
+    it("turns routed points into a rounded SVG path", () => {
+        expect(
+            schemaEdgePath([
+                { x: 0, y: 0 },
+                { x: 20, y: 0 },
+                { x: 20, y: 20 },
+            ])
+        ).toBe("M 0 0 L 10 0 Q 20 0 20 10 L 20 20");
     });
 });
 

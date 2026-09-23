@@ -18,6 +18,7 @@ import {
     type Operation,
     type Task,
 } from "effection";
+import type { ConnectionMonitor } from "@party-stack/connections";
 import { runOutboxLeader, type OutboxLeaderOptions } from "./leaderExecutor.js";
 import { serveOntologyOutbox } from "./outboxService.js";
 import { decodeOutboxEntry, decodeOutboxRequest, encodeOutboxRequest } from "./outboxValues.js";
@@ -47,6 +48,7 @@ export interface CreateOntologyOutboxOptions {
     project?(entry: OntologyOutboxEntry): Promise<OutboxProjection | undefined>;
     failureStrategy?: "pause" | "discard-all";
     maxRetries?: number;
+    connection?: ConnectionMonitor;
 }
 
 function nonNegativeInteger(value: number | undefined, fallback: number, name: string): number {
@@ -130,19 +132,21 @@ export function useOntologyOutbox(
                 unsubscribe(): void;
             };
             connectivityTask?: Task<void>;
+            unsubscribeConnection?: {
+                unsubscribe(): void;
+            };
             leaderTask?: Task<void>;
             leaderRun?: Promise<unknown>;
         } = {};
         let disposing = false;
         let reconciliationVersion = 0;
 
-        const discardProjection = (id: string, error?: Error) => {
-            void projections.discard(id, error);
-        };
-        const deliverResult = (event: OutboxResultEvent) => {
+        const deliverResult = async (
+            event: OutboxResultEvent
+        ) => {
             const completion = completions.get(event.id);
             if (event.type === "completed") {
-                discardProjection(event.id);
+                await projections.discard(event.id);
                 if (completion) {
                     completions.delete(event.id);
                     completion.resolve(event.result);
@@ -151,14 +155,23 @@ export function useOntologyOutbox(
             }
 
             const error = eventError(event);
-            discardProjection(event.id, error);
+            await projections.discard(
+                event.id,
+                error
+            );
             if (completion) {
                 completions.delete(event.id);
                 completion.reject(error);
             }
         };
         try {
-            lifetime.unsubscribeResults = service.events.subscribe("result", deliverResult);
+            lifetime.unsubscribeResults =
+                service.events.subscribe(
+                    "result",
+                    (event) => {
+                        void deliverResult(event);
+                    }
+                );
 
             yield* until(repository.preload());
             if (isCoordinationHost(options.runtime.coordination)) {
@@ -177,6 +190,15 @@ export function useOntologyOutbox(
                 wake.send();
                 void reconcileProjections();
             });
+            lifetime.unsubscribeConnection =
+                options.connection
+                    ? {
+                          unsubscribe:
+                              options.connection.subscribe(() => {
+                                  wake.send();
+                              }),
+                      }
+                    : undefined;
 
             const existing = yield* until(repository.entries());
             yield* until(projections.restore(existing));
@@ -204,6 +226,7 @@ export function useOntologyOutbox(
                     ),
                     retryDelayMs: DEFAULT_RETRY_DELAY_MS,
                     execute: (entry) => options.execute(decodeOutboxEntry(entry)),
+                    connection: options.connection,
                 };
                 lifetime.leaderTask = yield* spawn(function* () {
                     const lifetimeSignal = yield* useAbortSignal();
@@ -317,6 +340,7 @@ export function useOntologyOutbox(
 
             lifetime.unsubscribeResults?.();
             lifetime.unsubscribeCollection?.unsubscribe();
+            lifetime.unsubscribeConnection?.unsubscribe();
             if (lifetime.server) {
                 try {
                     yield* until(lifetime.server.close());
@@ -372,6 +396,9 @@ export function createOntologyOutbox(options: CreateOntologyOutboxOptions): Star
     const collection = createOutboxCollection(options);
     let outbox: OntologyOutbox | undefined;
     const ready = deferred<void>();
+    // Prevent unhandled rejection when cleanup races startup.
+    void ready.promise.catch(() => undefined);
+    let cleanupPromise: Promise<void> | undefined;
     const task = run(function* () {
         try {
             const value = yield* useOntologyOutbox(options, collection);
@@ -406,7 +433,16 @@ export function createOntologyOutbox(options: CreateOntologyOutboxOptions): Star
             return outbox!.retry(id);
         },
         async cleanup() {
-            await task.halt();
+            cleanupPromise ??= (async () => {
+                // Let persistence startup settle before tearing down so
+                // loopback markReady cannot race cleaned-up status.
+                await Promise.allSettled([ready.promise, collection.preload()]);
+                await task.halt().catch(() => undefined);
+                if (collection.status !== "cleaned-up") {
+                    await collection.cleanup().catch(() => undefined);
+                }
+            })();
+            return cleanupPromise;
         },
     };
 }

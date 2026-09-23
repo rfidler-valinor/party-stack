@@ -10,12 +10,12 @@ function expectOk(result: ValidationResult): void {
 function expectErr(result: ValidationResult, count?: number): void {
     expect(result.kind).toBe("err");
     if (result.kind === "err" && count !== undefined) {
-        expect(result.errors).toHaveLength(count);
+        expect(result.value).toHaveLength(count);
     }
 }
 
 function getErrors(result: ValidationResult): string[] {
-    return result.kind === "ok" ? [] : result.errors.map((e) => e.message);
+    return result.kind === "ok" ? [] : result.value.map((issue) => issue.message);
 }
 
 const emptyOntology: OntologyIR = {
@@ -83,9 +83,7 @@ describe("Ontology Validation", () => {
 
             const result = validate(ontology);
             expectErr(result, 1);
-            expect(getErrors(result)).toContain(
-                'Title "nonExistent" does not reference a valid property.'
-            );
+            expect(getErrors(result)).toContain('Title "nonExistent" does not reference a valid property.');
         });
 
         it("should accept a valid title property reference", () => {
@@ -256,6 +254,55 @@ describe("Ontology Validation", () => {
             const result = validate(ontology);
             expectErr(result, 1);
             expect(getErrors(result)).toContain('Target object type "NonExistent" does not exist.');
+        });
+
+        it("should reject a foreign key that exists only on the target", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [
+                    minimalObjectType({
+                        name: "Project",
+                    }),
+                    minimalObjectType({
+                        name: "Issue",
+                        properties: [
+                            {
+                                name: "employeeId",
+                                displayName: "Employee ID",
+                                type: o.string({}),
+                            },
+                            {
+                                name: "projectId",
+                                displayName: "Project ID",
+                                type: o.string({}),
+                            },
+                        ],
+                    }),
+                ],
+                linkTypes: [
+                    {
+                        id: "projectIssues",
+                        source: {
+                            objectType: "Project",
+                            name: "project",
+                            displayName: "Project",
+                        },
+                        target: {
+                            objectType: "Issue",
+                            name: "issues",
+                            displayName: "Issues",
+                        },
+                        foreignKey: "projectId",
+                        cardinality: "many",
+                    },
+                ],
+            };
+
+            const result = validate(ontology);
+            expectErr(result, 1);
+            expect(getErrors(result)).toContain(
+                'Foreign key "projectId" does not exist on source object type "Project" for link "projectIssues".'
+            );
         });
 
         it("should validate links with valid object type references", () => {
@@ -485,7 +532,7 @@ describe("Ontology Validation", () => {
                             constraint: {
                                 size: { min: 10, max: 1 },
                                 content: o.AttachmentContentConstraint.image({
-                                    mediaTypes: ["image/gif" as never],
+                                    mediaTypes: ["image/avif" as never],
                                     dimensions: {
                                         width: { min: -1 },
                                     },
@@ -496,7 +543,7 @@ describe("Ontology Validation", () => {
                 ],
             };
             const errors = getErrors(validate(invalid));
-            expect(errors).toContain('Unsupported image media type: "image/gif".');
+            expect(errors).toContain('Unsupported image media type: "image/avif".');
             expect(errors).toContain("Range min must be less than or equal to max.");
             expect(errors).toContain("Range min must be a finite, non-negative number.");
         });
@@ -533,13 +580,13 @@ describe("Ontology Validation", () => {
                                 name: "__taskId",
                                 displayName: "Task ID",
                                 type: o.optional({ type: o.string({}) }),
-                                defaultValue: o.Expression.functionCall(o.FunctionCallExpression.uuid({})),
+                                defaultValue: o.Expression.uuid({}),
                             },
                             {
                                 name: "__now",
                                 displayName: "Now",
                                 type: o.optional({ type: o.timestamp({}) }),
-                                defaultValue: o.Expression.functionCall(o.FunctionCallExpression.now({})),
+                                defaultValue: o.Expression.now({}),
                             },
                         ],
                         logic: [
@@ -548,20 +595,20 @@ describe("Ontology Validation", () => {
                                 values: [
                                     {
                                         property: ["taskId"],
-                                        value: o.Expression.valueReference({
-                                            path: ["__taskId"],
+                                        value: o.Expression.inputReference({
+                                            name: "__taskId",
                                         }),
                                     },
                                     {
                                         property: ["title"],
-                                        value: o.Expression.valueReference({
-                                            path: ["title"],
+                                        value: o.Expression.inputReference({
+                                            name: "title",
                                         }),
                                     },
                                     {
                                         property: ["updatedAt"],
-                                        value: o.Expression.valueReference({
-                                            path: ["__now"],
+                                        value: o.Expression.inputReference({
+                                            name: "__now",
                                         }),
                                     },
                                 ],
@@ -572,6 +619,80 @@ describe("Ontology Validation", () => {
             };
 
             expectOk(validate(ontology));
+        });
+
+        it("should validate value-reference action parameter defaults", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [minimalObjectType()],
+                actionTypes: [
+                    {
+                        name: "updateEmployee",
+                        displayName: "Update Employee",
+                        parameters: [
+                            {
+                                name: "employee",
+                                displayName: "Employee",
+                                type: o.objectReference({ objectType: "Employee" }),
+                            },
+                            {
+                                name: "name",
+                                displayName: "Name",
+                                type: o.string({}),
+                                defaultValue: o.Expression.getAt({
+                                    source: o.Expression.objectLookup({
+                                        reference: o.Expression.inputReference({
+                                            name: "employee",
+                                        }),
+                                    }),
+                                    path: ["name"],
+                                }),
+                            },
+                        ],
+                        logic: [],
+                    },
+                ],
+            };
+
+            expectOk(validate(ontology));
+        });
+
+        it("should detect incompatible value-reference defaults", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [minimalObjectType()],
+                actionTypes: [
+                    {
+                        name: "updateEmployee",
+                        displayName: "Update Employee",
+                        parameters: [
+                            {
+                                name: "employee",
+                                displayName: "Employee",
+                                type: o.objectReference({ objectType: "Employee" }),
+                            },
+                            {
+                                name: "count",
+                                displayName: "Count",
+                                type: o.integer({}),
+                                defaultValue: o.Expression.getAt({
+                                    source: o.Expression.objectLookup({
+                                        reference: o.Expression.inputReference({
+                                            name: "employee",
+                                        }),
+                                    }),
+                                    path: ["name"],
+                                }),
+                            },
+                        ],
+                        logic: [],
+                    },
+                ],
+            };
+
+            expect(getErrors(validate(ontology))).toContain(
+                'Default value for "count" has an incompatible type.'
+            );
         });
 
         it("should detect invalid action parameter references", () => {
@@ -592,7 +713,7 @@ describe("Ontology Validation", () => {
                         logic: [
                             o.ActionLogicStep.updateObject({
                                 object: {
-                                    path: ["employee", "name"],
+                                    name: "missing",
                                 },
                                 values: [],
                             }),
@@ -604,8 +725,156 @@ describe("Ontology Validation", () => {
             const result = validate(ontology);
             expectErr(result, 1);
             expect(getErrors(result)).toContain(
-                "Action targets must point directly to an object reference parameter."
+                'Unknown action parameter: "missing".'
             );
+        });
+
+        it("validates map expressions with scoped element references", () => {
+            const entryType = o.struct({
+                fields: [
+                    {
+                        name: "code",
+                        displayName: "Code",
+                        type: o.string({}),
+                    },
+                ],
+            });
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [
+                    {
+                        name: "Record",
+                        displayName: "Record",
+                        pluralDisplayName: "Records",
+                        primaryKey: "id",
+                        properties: [
+                            {
+                                name: "id",
+                                displayName: "ID",
+                                type: o.string({}),
+                            },
+                            {
+                                name: "entries",
+                                displayName: "Entries",
+                                type: o.list({
+                                    elementType: o.struct({
+                                        fields: [
+                                            {
+                                                name: "renamedCode",
+                                                displayName: "Renamed code",
+                                                type: o.string({}),
+                                            },
+                                        ],
+                                    }),
+                                }),
+                            },
+                        ],
+                    },
+                ],
+                actionTypes: [
+                    {
+                        name: "createRecord",
+                        displayName: "Create record",
+                        parameters: [
+                            {
+                                name: "entries",
+                                displayName: "Entries",
+                                type: o.list({
+                                    elementType: entryType,
+                                }),
+                            },
+                        ],
+                        logic: [
+                            o.ActionLogicStep.createObject({
+                                objectType: "Record",
+                                values: [
+                                    {
+                                        property: ["entries"],
+                                        value: o.Expression.map({
+                                            source: o.Expression.inputReference({
+                                                name: "entries",
+                                            }),
+                                            binding: "entry",
+                                            body: o.Expression.struct({
+                                                fields: [
+                                                    {
+                                                        name: "renamedCode",
+                                                        value: o.Expression.getAt({
+                                                            source: o.Expression.localReference({
+                                                                name: "entry",
+                                                            }),
+                                                            path: ["code"],
+                                                        }),
+                                                    },
+                                                ],
+                                            }),
+                                        }),
+                                    },
+                                ],
+                            }),
+                        ],
+                    },
+                ],
+            };
+
+            expectOk(validate(ontology));
+        });
+
+        it("rejects invalid map sources and local references", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                objectTypes: [
+                    {
+                        name: "Record",
+                        displayName: "Record",
+                        pluralDisplayName: "Records",
+                        primaryKey: "id",
+                        properties: [
+                            {
+                                name: "id",
+                                displayName: "ID",
+                                type: o.string({}),
+                            },
+                        ],
+                    },
+                ],
+                actionTypes: [
+                    {
+                        name: "createRecord",
+                        displayName: "Create record",
+                        parameters: [
+                            {
+                                name: "title",
+                                displayName: "Title",
+                                type: o.string({}),
+                            },
+                        ],
+                        logic: [
+                            o.ActionLogicStep.createObject({
+                                objectType: "Record",
+                                values: [
+                                    {
+                                        property: ["id"],
+                                        value: o.Expression.map({
+                                            source: o.Expression.inputReference({
+                                                name: "title",
+                                            }),
+                                            binding: "entry",
+                                            body: o.Expression.localReference({
+                                                name: "missing",
+                                            }),
+                                        }),
+                                    },
+                                ],
+                            }),
+                        ],
+                    },
+                ],
+            };
+
+            const errors = getErrors(validate(ontology));
+            expect(errors).toContain("Map expression source must resolve to a list.");
+            expect(errors).toContain('Unknown expression binding: "missing".');
         });
     });
 
@@ -634,7 +903,7 @@ describe("Ontology Validation", () => {
                                 name: "taskId",
                                 displayName: "Task ID",
                                 type: o.string({}),
-                                defaultValue: o.Expression.functionCall(o.FunctionCallExpression.uuid({})),
+                                defaultValue: o.Expression.uuid({}),
                             },
                             {
                                 name: "status",
@@ -649,11 +918,11 @@ describe("Ontology Validation", () => {
                                 values: [
                                     {
                                         property: ["taskId"],
-                                        value: o.Expression.valueReference({ path: ["taskId"] }),
+                                        value: o.Expression.inputReference({ name: "taskId" }),
                                     },
                                     {
                                         property: ["status"],
-                                        value: o.Expression.valueReference({ path: ["status"] }),
+                                        value: o.Expression.inputReference({ name: "status" }),
                                     },
                                 ],
                             }),
@@ -697,7 +966,7 @@ describe("Ontology Validation", () => {
                                 values: [
                                     {
                                         property: ["taskId"],
-                                        value: o.Expression.valueReference({ path: ["taskId"] }),
+                                        value: o.Expression.inputReference({ name: "taskId" }),
                                     },
                                     {
                                         property: ["status"],
@@ -711,6 +980,130 @@ describe("Ontology Validation", () => {
             };
 
             expectOk(validate(ontology));
+        });
+    });
+
+    describe("Context Validation", () => {
+        const userObjectType = {
+            name: "User",
+            displayName: "User",
+            pluralDisplayName: "Users",
+            primaryKey: "id",
+            properties: [{ name: "id", displayName: "ID", type: o.string({}) }],
+        };
+
+        it("validates context.user references in action logic", () => {
+            const ontology: OntologyIR = {
+                ...emptyOntology,
+                contextType: o.struct({
+                    fields: [
+                        {
+                            name: "user",
+                            displayName: "User",
+                            type: o.objectReference({ objectType: "User" }),
+                        },
+                    ],
+                }),
+                objectTypes: [
+                    userObjectType,
+                    {
+                        name: "Task",
+                        displayName: "Task",
+                        pluralDisplayName: "Tasks",
+                        primaryKey: "id",
+                        properties: [
+                            { name: "id", displayName: "ID", type: o.string({}) },
+                            {
+                                name: "createdBy",
+                                displayName: "Created by",
+                                type: o.objectReference({ objectType: "User" }),
+                            },
+                        ],
+                    },
+                ],
+                actionTypes: [
+                    {
+                        name: "createTask",
+                        displayName: "Create task",
+                        parameters: [],
+                        logic: [
+                            o.ActionLogicStep.createObject({
+                                objectType: "Task",
+                                values: [
+                                    {
+                                        property: ["id"],
+                                        value: o.Expression.literal({
+                                            value: "task-1",
+                                        }),
+                                    },
+                                    {
+                                        property: ["createdBy"],
+                                        value: o.Expression.contextReference({
+                                            name: "user",
+                                        }),
+                                    },
+                                ],
+                            }),
+                        ],
+                    },
+                ],
+            };
+
+            expectOk(validate(ontology));
+        });
+
+        it("allows context.user to optionally reference any object type", () => {
+            expectOk(
+                validate({
+                    ...emptyOntology,
+                    objectTypes: [
+                        {
+                            name: "Membership",
+                            displayName: "Membership",
+                            pluralDisplayName: "Memberships",
+                            primaryKey: "id",
+                            properties: [
+                                {
+                                    name: "id",
+                                    displayName: "ID",
+                                    type: o.string({}),
+                                },
+                            ],
+                        },
+                    ],
+                    contextType: o.struct({
+                        fields: [
+                            {
+                                name: "user",
+                                displayName: "User",
+                                type: o.optional({
+                                    type: o.objectReference({
+                                        objectType: "Membership",
+                                    }),
+                                }),
+                            },
+                        ],
+                    }),
+                })
+            );
+        });
+
+        it("rejects a non-reference type for reserved context.user", () => {
+            const result = validate({
+                ...emptyOntology,
+                contextType: o.struct({
+                    fields: [
+                        {
+                            name: "user",
+                            displayName: "User",
+                            type: o.string({}),
+                        },
+                    ],
+                }),
+            });
+
+            expectErr(result, 1);
+            expect(getErrors(result)).toContain('Reserved context field "user" must be an object reference.');
         });
     });
 

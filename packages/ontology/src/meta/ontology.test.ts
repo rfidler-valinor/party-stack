@@ -3,7 +3,7 @@ import canonicalOntology from "../ir/schema.js";
 import metaOntology from "./ontology.js";
 
 describe("meta ontology runtime fields", () => {
-    it("keeps provider identifiers out of portable definitions", () => {
+    it("keeps identifiers runtime-only and preserves presentation metadata", () => {
         const objectType = canonicalOntology.types.find((type) => type.name === "ObjectTypeDef");
         const property = canonicalOntology.types.find((type) => type.name === "PropertyDef");
         const actionType = canonicalOntology.types.find((type) => type.name === "ActionTypeDef");
@@ -39,6 +39,24 @@ describe("meta ontology runtime fields", () => {
         }
         expect(icon.type.value.fields.map(({ name }) => name)).toContain("meta");
         expect(icon.type.value.fields.map(({ name }) => name)).not.toContain("metadata");
+        expect(actionType.type.value.fields.find(({ name }) => name === "meta")?.type).toEqual({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "map",
+                    value: {
+                        keyType: {
+                            kind: "string",
+                            value: {},
+                        },
+                        valueType: {
+                            kind: "unknown",
+                            value: {},
+                        },
+                    },
+                },
+            },
+        });
     });
 
     it("requires IDs while preserving the canonical title field in runtime metadata", () => {

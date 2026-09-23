@@ -1,4 +1,8 @@
-import { runOptimisticAction } from "@party-stack/ontology";
+import {
+    createReadTx,
+    resolveActionParameters,
+    runOptimisticAction,
+} from "@party-stack/ontology";
 import { decode, encode } from "@party-stack/ontology/json";
 import { resolveType } from "@party-stack/ontology/utils";
 import { createTransaction, eq, queryOnce } from "@tanstack/db";
@@ -9,32 +13,25 @@ import type {
     OntologyAttachmentsAdapter,
     OntologyCollectionOptions,
     OntologyIR,
+    OntologyMutatorRegistry,
     OntologyObject,
+    OntologyQueryFunctionRegistry,
     ObjectTypeDef,
 } from "@party-stack/ontology";
-import type { attachment } from "@party-stack/ontology/values";
+import {
+    ensureSQLiteAttachmentSchema,
+    getSQLiteAttachment,
+    markSQLiteAttachmentUploadsComplete,
+    prepareSQLiteAttachments,
+    persistSQLiteAttachmentRows,
+    readSQLiteAttachmentBlob,
+    recordSQLiteAttachmentUploads,
+    type SQLiteAttachmentStorageOptions,
+} from "./attachments.js";
+import type { SQLiteDatabase } from "./database.js";
 import type { Collection, PendingMutation, SyncConfig } from "@tanstack/db";
 
-type BetterSqlite3Database = {
-    exec: (sql: string) => void;
-    prepare: (sql: string) => {
-        all: (...params: unknown[]) => unknown[];
-        get: (...params: unknown[]) => unknown;
-        run: (...params: unknown[]) => unknown;
-    };
-    transaction: (fn: () => void) => () => void;
-};
 type OntologyCollection = Collection<OntologyObject>;
-
-interface AttachmentRow {
-    id: string;
-    bytes: Buffer;
-    type: string;
-    name: string | null;
-    size: number;
-    createdAt: number;
-    updatedAt: number;
-}
 
 interface ObjectRow {
     id: string | number;
@@ -45,10 +42,16 @@ interface SchemaRow {
     value: string;
 }
 
+const DATABASE_ONTOLOGY_KEY =
+    "__party_stack_ontology__";
+
 export interface CreateSQLiteOntologyBackendAdapterOptions {
     ir: OntologyIR;
-    database: BetterSqlite3Database;
+    database: SQLiteDatabase;
     name?: string;
+    attachmentStorage?: SQLiteAttachmentStorageOptions;
+    mutators?: OntologyMutatorRegistry;
+    queryFunctions?: OntologyQueryFunctionRegistry;
 }
 
 function getObjectType(opts: { ir: OntologyIR; objectTypeName: string }): ObjectTypeDef {
@@ -62,9 +65,12 @@ function getObjectType(opts: { ir: OntologyIR; objectTypeName: string }): Object
 function encodeIdentifierPart(value: string): string {
     const encoded = value.replace(
         /[^A-Za-z0-9_]/g,
-        (character) => `_x${character.codePointAt(0)!.toString(16)}_`
+        (character) =>
+            `_x${character.codePointAt(0)!.toString(16)}_`
     );
-    return /^[A-Za-z_]/.test(encoded) ? encoded : `_${encoded}`;
+    return /^[A-Za-z_]/.test(encoded)
+        ? encoded
+        : `_${encoded}`;
 }
 
 function sqlIdentifier(name: string): string {
@@ -74,7 +80,10 @@ function sqlIdentifier(name: string): string {
     return `"${name}"`;
 }
 
-function getObjectTableName(opts: { adapterName: string; objectTypeName: string }): string {
+function getObjectTableName(opts: {
+    adapterName: string;
+    objectTypeName: string;
+}): string {
     return `party_stack_${encodeIdentifierPart(opts.adapterName)}_${encodeIdentifierPart(opts.objectTypeName)}`;
 }
 
@@ -92,7 +101,7 @@ function getObjectTypeSchemaSignature(objectType: ObjectTypeDef): string {
     });
 }
 
-function ensureMetadataTable(database: BetterSqlite3Database): void {
+function ensureMetadataTable(database: SQLiteDatabase): void {
     database.exec(`
         CREATE TABLE IF NOT EXISTS ${sqlIdentifier("party_stack_schema")} (
             key TEXT PRIMARY KEY,
@@ -101,22 +110,35 @@ function ensureMetadataTable(database: BetterSqlite3Database): void {
     `);
 }
 
-function ensureAttachmentsTable(database: BetterSqlite3Database): void {
-    database.exec(`
-        CREATE TABLE IF NOT EXISTS ${sqlIdentifier("party_stack_attachments")} (
-            id TEXT PRIMARY KEY,
-            bytes BLOB NOT NULL,
-            type TEXT NOT NULL,
-            name TEXT,
-            size INTEGER NOT NULL,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+function ensureDatabaseOntology(
+    database: SQLiteDatabase,
+    adapterName: string
+): void {
+    const existing = database
+        .prepare(
+            `SELECT value FROM ${sqlIdentifier("party_stack_schema")}
+             WHERE key = ?`
+        )
+        .get(DATABASE_ONTOLOGY_KEY) as
+        | SchemaRow
+        | undefined;
+    if (existing && existing.value !== adapterName) {
+        throw new Error(
+            `SQLite database already belongs to ontology "${existing.value}"; create a separate database for "${adapterName}".`
         );
-    `);
+    }
+    if (!existing) {
+        database
+            .prepare(
+                `INSERT INTO ${sqlIdentifier("party_stack_schema")}
+                 (key, value) VALUES (?, ?)`
+            )
+            .run(DATABASE_ONTOLOGY_KEY, adapterName);
+    }
 }
 
 function ensureObjectTable(opts: {
-    database: BetterSqlite3Database;
+    database: SQLiteDatabase;
     adapterName: string;
     objectType: ObjectTypeDef;
 }): void {
@@ -135,7 +157,6 @@ function ensureObjectTable(opts: {
             data TEXT NOT NULL
         );
     `);
-
     const columns = database.prepare(`PRAGMA table_info(${sqlIdentifier(tableName)})`).all() as Array<{
         name: string;
         type: string;
@@ -152,7 +173,6 @@ function ensureObjectTable(opts: {
     if (!dataColumn || dataColumn.type.toUpperCase() !== "TEXT" || dataColumn.notnull === 0) {
         throw new Error(`SQLite ontology table "${tableName}" does not have expected data TEXT column.`);
     }
-
     const schemaKey = `object:${adapterName}:${objectType.name}`;
     const signature = getObjectTypeSchemaSignature(objectType);
     const existing = database
@@ -170,9 +190,17 @@ function ensureObjectTable(opts: {
     }
 }
 
-function ensureSchema(opts: { database: BetterSqlite3Database; adapterName: string; ir: OntologyIR }): void {
+function ensureSchema(opts: {
+    database: SQLiteDatabase;
+    adapterName: string;
+    ir: OntologyIR;
+}): void {
     ensureMetadataTable(opts.database);
-    ensureAttachmentsTable(opts.database);
+    ensureDatabaseOntology(
+        opts.database,
+        opts.adapterName
+    );
+    ensureSQLiteAttachmentSchema(opts.database);
     for (const objectType of opts.ir.objectTypes) {
         ensureObjectTable({
             database: opts.database,
@@ -194,8 +222,7 @@ async function loadActionReferenceObjects(opts: {
     for (const step of actionType.logic) {
         if (step.kind !== "updateObject" && step.kind !== "deleteObject") continue;
 
-        const parameterName = step.value.object.path[0];
-        if (!parameterName) continue;
+        const parameterName = step.value.object.name;
 
         const parameter = actionType.parameters.find((candidate) => candidate.name === parameterName);
         if (!parameter) continue;
@@ -258,7 +285,7 @@ function getPrimaryKeyValue(opts: {
 }
 
 function persistObjectMutations(opts: {
-    database: BetterSqlite3Database;
+    database: SQLiteDatabase;
     adapterName: string;
     ir: OntologyIR;
     objectTypeName: string;
@@ -307,57 +334,8 @@ function persistObjectMutations(opts: {
     }
 }
 
-async function prepareAttachmentRows(
-    uploads: Array<{ attachment: attachment; blob: Blob }> = []
-): Promise<AttachmentRow[]> {
-    return Promise.all(
-        uploads.map(async ({ attachment: attachmentValue, blob }) => {
-            const now = Date.now();
-            return {
-                id: attachmentValue.id,
-                bytes: Buffer.from(await blob.arrayBuffer()),
-                type: blob.type || attachmentValue.type || "application/octet-stream",
-                name:
-                    typeof File !== "undefined" && blob instanceof File && blob.name.length > 0
-                        ? blob.name
-                        : null,
-                size: blob.size,
-                createdAt: now,
-                updatedAt: now,
-            };
-        })
-    );
-}
-
-function persistAttachmentRows(database: BetterSqlite3Database, rows: AttachmentRow[]): void {
-    if (rows.length === 0) return;
-
-    const upsert = database.prepare(`
-        INSERT INTO ${sqlIdentifier("party_stack_attachments")} (
-            id,
-            bytes,
-            type,
-            name,
-            size,
-            created_at,
-            updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-            bytes = excluded.bytes,
-            type = excluded.type,
-            name = excluded.name,
-            size = excluded.size,
-            updated_at = excluded.updated_at
-    `);
-
-    for (const row of rows) {
-        upsert.run(row.id, row.bytes, row.type, row.name, row.size, row.createdAt, row.updatedAt);
-    }
-}
-
 function createCollectionOptions(opts: {
-    database: BetterSqlite3Database;
+    database: SQLiteDatabase;
     adapterName: string;
     ir: OntologyIR;
     objectTypeName: string;
@@ -368,11 +346,11 @@ function createCollectionOptions(opts: {
     });
     const tableName = getObjectTableName({
         adapterName: opts.adapterName,
-        objectTypeName: opts.objectTypeName,
+        objectTypeName: objectType.name,
     });
 
     const sync: SyncConfig<OntologyObject, string | number> = {
-        sync: ({ begin, collection, commit, markReady, write }) => {
+        sync: ({ begin, collection, commit, markError, markReady, write }) => {
             const load = () => {
                 const rows = opts.database
                     .prepare(
@@ -403,17 +381,18 @@ function createCollectionOptions(opts: {
                         write({ type: "delete", key });
                     }
                 }
-                commit();
+                return commit();
             };
 
-            load();
-            markReady();
+            const initialLoad = load();
+            if (initialLoad === true) {
+                markReady();
+            } else {
+                void initialLoad.then(markReady, markError);
+            }
 
             return {
-                loadSubset: () => {
-                    load();
-                    return true;
-                },
+                loadSubset: load,
                 cleanup: () => {},
             };
         },
@@ -426,36 +405,36 @@ function createCollectionOptions(opts: {
     };
 }
 
-function createAttachmentsAdapter(database: BetterSqlite3Database): OntologyAttachmentsAdapter {
-    const getAttachmentRow = (id: string) =>
-        database.prepare(`SELECT * FROM ${sqlIdentifier("party_stack_attachments")} WHERE id = ?`).get(id) as
-            | {
-                  id: string;
-                  bytes: Buffer;
-                  type: string;
-                  name: string | null;
-                  size: number;
-                  created_at: number;
-                  updated_at: number;
-              }
-            | undefined;
+function toAttachmentBlobPart(bytes: unknown): ArrayBuffer {
+    if (bytes instanceof ArrayBuffer) {
+        return bytes;
+    }
+    if (ArrayBuffer.isView(bytes)) {
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    }
+    throw new Error("SQLite attachment bytes are not a BLOB.");
+}
+
+function createAttachmentsAdapter(
+    database: SQLiteDatabase,
+    storage?: SQLiteAttachmentStorageOptions
+): OntologyAttachmentsAdapter {
+    const getAttachmentRow = (id: string) => getSQLiteAttachment(database, id);
 
     return {
         generateAttachmentId: () => crypto.randomUUID(),
-        getAttachmentContent: (attachmentValue) => {
+        getAttachmentContent: async (attachmentValue) => {
             const row = getAttachmentRow(attachmentValue.id);
             if (!row) {
                 throw new Error(`Attachment "${attachmentValue.id}" not found.`);
             }
-            return Promise.resolve(
-                new Blob([row.bytes], {
-                    type: row.type,
-                })
-            );
+            return readSQLiteAttachmentBlob({
+                row,
+                storage,
+                inlineBlobPart: toAttachmentBlobPart,
+            });
         },
-        getAttachmentMetadata: (
-            attachmentValue
-        ): Promise<AttachmentMetadata & { name: string }> => {
+        getAttachmentMetadata: (attachmentValue): Promise<AttachmentMetadata & { name: string }> => {
             const row = getAttachmentRow(attachmentValue.id);
             if (!row) {
                 throw new Error(`Attachment "${attachmentValue.id}" not found.`);
@@ -474,11 +453,13 @@ export function createSQLiteOntologyBackendAdapter(
     opts: CreateSQLiteOntologyBackendAdapterOptions
 ): OntologyBackendAdapter {
     const adapterName = opts.name ?? "sqlite";
-    ensureSchema({
-        database: opts.database,
-        adapterName,
-        ir: opts.ir,
-    });
+    opts.database.transaction(() => {
+        ensureSchema({
+            database: opts.database,
+            adapterName,
+            ir: opts.ir,
+        });
+    })();
 
     return {
         name: adapterName,
@@ -490,19 +471,67 @@ export function createSQLiteOntologyBackendAdapter(
                 objectTypeName,
             }),
         applyAction: async (actionTypeName, parameters, live) => {
+            const actionType = opts.ir.actionTypes.find((candidate) => candidate.name === actionTypeName);
+            if (!actionType) {
+                throw new Error(`Unknown action type "${actionTypeName}".`);
+            }
+            if (actionType.logic.length === 0 && !opts.mutators?.[actionTypeName]) {
+                throw new Error(
+                    `SQLite ontology adapter cannot apply non-declarative action type "${actionTypeName}" without a registered mutator.`
+                );
+            }
             const collections = live.objects as Record<string, OntologyCollection>;
+            const resolvedParameters = await resolveActionParameters({
+                ir: opts.ir,
+                actionTypeName,
+                initialParameters: parameters,
+                context: live.context ?? {},
+                tx: createReadTx(collections),
+            });
             await loadActionReferenceObjects({
                 ir: opts.ir,
                 actionTypeName,
-                parameters,
+                parameters: resolvedParameters,
                 collections,
             });
 
             const transaction = createTransaction<OntologyObject>({
                 autoCommit: false,
                 mutationFn: async ({ transaction }) => {
-                    const attachmentRows = await prepareAttachmentRows(live.attachmentUploads);
-                    const persistTransaction = opts.database.transaction(() => {
+                    const prepared = await prepareSQLiteAttachments({
+                        uploads: live.attachmentUploads,
+                        storage: opts.attachmentStorage,
+                    });
+                    const externalRows = prepared.filter((row) => row.storageKey !== null);
+                    if (externalRows.length > 0) {
+                        // Journal intent before the external write. A crash or
+                        // any later failure therefore leaves a discoverable,
+                        // safely collectable key.
+                        opts.database.transaction(() =>
+                            recordSQLiteAttachmentUploads(
+                                opts.database,
+                                externalRows
+                            )
+                        )();
+                        const bytes = opts.attachmentStorage?.external?.bytes;
+                        if (!bytes) {
+                            throw new Error("External SQLite attachment rows require a byte store.");
+                        }
+                        for (const row of externalRows) {
+                            await bytes.write(row.storageKey!, row.blob);
+                        }
+                        // No await occurs between publishing completion and
+                        // the final metadata/object transaction, so a
+                        // collector cannot interleave once this becomes
+                        // collectable.
+                        opts.database.transaction(() =>
+                            markSQLiteAttachmentUploadsComplete(
+                                opts.database,
+                                externalRows
+                            )
+                        )();
+                    }
+                    opts.database.transaction(() => {
                         for (const [objectTypeName, collection] of Object.entries(collections)) {
                             persistObjectMutations({
                                 database: opts.database,
@@ -515,9 +544,11 @@ export function createSQLiteOntologyBackendAdapter(
                                 }),
                             });
                         }
-                        persistAttachmentRows(opts.database, attachmentRows);
-                    });
-                    persistTransaction();
+                        persistSQLiteAttachmentRows(
+                            opts.database,
+                            prepared
+                        );
+                    })();
                 },
             });
 
@@ -525,15 +556,30 @@ export function createSQLiteOntologyBackendAdapter(
                 transaction,
                 ir: opts.ir,
                 actionTypeName,
-                parameters,
+                parameters: resolvedParameters,
                 context: live.context ?? {},
+                idempotencyKey:
+                    live.idempotencyKey ??
+                    crypto.randomUUID(),
                 objects: collections,
+                mutators: opts.mutators,
             });
             await transaction.commit();
         },
-        runQueryFunction: (name) =>
-            Promise.reject(new Error(`SQLite ontology adapter cannot run query function type "${name}".`)),
-        attachments: createAttachmentsAdapter(opts.database),
+        runQueryFunction: async (name, parameters, live) => {
+            const handler = opts.queryFunctions?.[name];
+            if (!handler) {
+                throw new Error(
+                    `SQLite ontology adapter cannot run query function type "${name}" without a registered handler.`
+                );
+            }
+            return await handler({
+                tx: createReadTx(live.objects as Record<string, OntologyCollection>),
+                args: parameters,
+                context: live.context ?? {},
+            });
+        },
+        attachments: createAttachmentsAdapter(opts.database, opts.attachmentStorage),
     };
 }
 
@@ -541,15 +587,15 @@ export type CreateSQLiteOntologyBackendOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
 > = {
     name?: string;
+    attachmentStorage?: SQLiteAttachmentStorageOptions;
+    mutators?: OntologyMutatorRegistry;
+    queryFunctions?: OntologyQueryFunctionRegistry;
 } & (
     | {
-          database: BetterSqlite3Database;
+          database: SQLiteDatabase;
       }
     | {
-          createDatabase: (
-              ir: OntologyIR,
-              context: Context
-          ) => BetterSqlite3Database | Promise<BetterSqlite3Database>;
+          createDatabase: (ir: OntologyIR, context: Context) => SQLiteDatabase | Promise<SQLiteDatabase>;
       }
 );
 
@@ -561,5 +607,18 @@ export function createSQLiteOntologyBackend<
             ir,
             database: "database" in opts ? opts.database : await opts.createDatabase(ir, context),
             name: opts.name,
+            attachmentStorage: opts.attachmentStorage,
+            mutators: opts.mutators,
+            queryFunctions: opts.queryFunctions,
         });
 }
+
+export type { SQLiteDatabase, SQLiteDatabaseProvider, SQLiteStatement } from "./database.js";
+export {
+    collectSQLiteAttachmentOrphans,
+    createSQLiteAttachmentStorageKey,
+    recoverSQLiteAttachmentOrphanClaims,
+    type SQLiteAttachmentBytesStore,
+    type SQLiteAttachmentStorageOptions,
+    type SQLiteExternalAttachmentStorage,
+} from "./attachments.js";

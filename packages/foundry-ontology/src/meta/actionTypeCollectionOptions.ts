@@ -14,6 +14,7 @@ import {
     convertActionTypeLoadSubsetOrderBy,
 } from "./convertActionTypeLoadSubsetOptions.js";
 import { convertFoundryMetaActionType } from "./convertMetaActionType.js";
+import { loadActionTypeOmsMetadata } from "./loadActionTypeOmsMetadata.js";
 import type { LoadSubsetOptions } from "@tanstack/db";
 
 export interface ActionTypeCollectionOpts {
@@ -61,18 +62,56 @@ async function searchActionTypes(
     return results.slice(offset, limit === undefined ? undefined : offset + limit);
 }
 
-async function loadActionTypeFullMetadata(
+async function loadActionTypesFullMetadata(
     client: OntologyClient,
-    actionType: ActionTypeV2
-): Promise<ActionTypeFullMetadata> {
-    if (isNotDeclarativeActionType(actionType)) {
-        return {
-            actionType,
-            fullLogicRules: [],
-        };
+    actionTypes: ActionTypeV2[]
+): Promise<ActionTypeFullMetadata[]> {
+    const declarativeActionTypes = actionTypes.filter(
+        (actionType) =>
+            !isNotDeclarativeActionType(actionType)
+    );
+    const fullMetadataByApiName = new Map<
+        string,
+        ActionTypeFullMetadata
+    >();
+    const fullMetadata = await AsyncIterable.toArray(
+        AsyncIterable.fromBatches(
+            declarativeActionTypes,
+            async (batch) =>
+                (
+                    await ActionTypesFullMetadata.getFullMetadataBatch(
+                        client,
+                        client.ontologyRid,
+                        {
+                            requests: batch.map(
+                                (actionType) => ({
+                                    actionType:
+                                        actionType.apiName,
+                                })
+                            ),
+                        },
+                        { preview: true }
+                    )
+                ).data,
+            100
+        )
+    );
+    for (const metadata of fullMetadata) {
+        fullMetadataByApiName.set(
+            metadata.actionType.apiName,
+            metadata
+        );
     }
 
-    return ActionTypesFullMetadata.get(client, client.ontologyRid, actionType.apiName, { preview: true });
+    return actionTypes.map(
+        (actionType) =>
+            fullMetadataByApiName.get(
+                actionType.apiName
+            ) ?? {
+                actionType,
+                fullLogicRules: [],
+            }
+    );
 }
 
 export function actionTypeCollectionOptions(opts: ActionTypeCollectionOpts): OntologyCollectionOptions {
@@ -82,11 +121,29 @@ export function actionTypeCollectionOptions(opts: ActionTypeCollectionOpts): Ont
         queryKey: ["foundry", "ontology", "actionTypes"],
         syncMode: "on-demand",
         queryFn: async (ctx) => {
-            const actionTypes = await searchActionTypes(opts.client, ctx.meta?.loadSubsetOptions);
-            const actionTypeMetadata = await Promise.all(
-                actionTypes.map((actionType) => loadActionTypeFullMetadata(opts.client, actionType))
+            const actionTypes = await searchActionTypes(
+                opts.client,
+                ctx.meta?.loadSubsetOptions
             );
-            return actionTypeMetadata.map(convertFoundryMetaActionType);
+            const actionTypeMetadata =
+                await loadActionTypesFullMetadata(
+                    opts.client,
+                    actionTypes
+                );
+            const omsMetadata =
+                await loadActionTypeOmsMetadata(
+                    opts.client,
+                    actionTypeMetadata.map(
+                        (metadata) =>
+                            metadata.actionType.rid
+                    )
+                );
+            return actionTypeMetadata.map((metadata) =>
+                convertFoundryMetaActionType(
+                    metadata,
+                    omsMetadata.get(metadata.actionType.rid)
+                )
+            );
         },
     }) as unknown as OntologyCollectionOptions;
 }
