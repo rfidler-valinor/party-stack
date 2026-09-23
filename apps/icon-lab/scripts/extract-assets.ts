@@ -350,7 +350,7 @@ async function main(): Promise<void> {
         const sfSymbols = await buildSfSymbols(concepts);
         await writeFile(
             path.join(archivesDir, "sfsymbols.json"),
-            `${JSON.stringify(sfSymbols.map(({ name }) => name), null, 2)}\n`
+            `${JSON.stringify(sfSymbols.map(({ name }) => name))}\n`
         );
         console.log(`Wrote ${sfSymbols.length} SF Symbol names.`);
         return;
@@ -441,7 +441,7 @@ async function main(): Promise<void> {
     const sfSymbols = await buildSfSymbols(concepts);
     await writeFile(
         path.join(archivesDir, "sfsymbols.json"),
-        `${JSON.stringify(sfSymbols.map(({ name }) => name), null, 2)}\n`
+        `${JSON.stringify(sfSymbols.map(({ name }) => name))}\n`
     );
 
     const archives: CatalogFile["archives"] = {};
