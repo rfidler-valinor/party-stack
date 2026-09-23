@@ -133,6 +133,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
     const [show, setShow] = useState<"all" | "existing" | "generated">("all");
     const [selectedConcept, setSelectedConcept] = useState(draft.mappings[0]?.concept ?? "");
     const [feedback, setFeedback] = useState<MappingFeedback[]>(() => loadMappingFeedback());
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
     const iconById = useMemo(() => new Map(catalog.icons.map((icon) => [icon.id, icon])), [catalog.icons]);
     const iconsByProvider = useMemo(() => {
         const groups = new Map<IconProvider, CatalogIcon[]>();
@@ -187,6 +188,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         ];
         setFeedback(next);
         saveMappingFeedback(next);
+        setSaveStatus("idle");
     }
 
     function removeReplacementFeedback(concept: string, provider: IconProvider) {
@@ -197,6 +199,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         const next = feedback.filter((item) => mappingFeedbackKey(item.concept, item.provider) !== key);
         setFeedback(next);
         saveMappingFeedback(next);
+        setSaveStatus("idle");
     }
 
     function exportFeedback() {
@@ -209,6 +212,23 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         link.download = "icon-mapping-feedback.json";
         link.click();
         URL.revokeObjectURL(url);
+    }
+
+    async function saveFeedbackForAgent() {
+        setSaveStatus("saving");
+        try {
+            const response = await fetch("/__save-mapping-feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(createMappingFeedbackFile(feedback)),
+            });
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
+            setSaveStatus("saved");
+        } catch {
+            setSaveStatus("error");
+        }
     }
 
     return (
@@ -295,14 +315,36 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                 <div className="text-xs font-[var(--font-mono)] text-[var(--muted)]">
                                     min {selected.minScore.toFixed(3)} · mean {selected.meanScore.toFixed(3)}
                                 </div>
-                                <button
-                                    type="button"
-                                    disabled={feedback.length === 0}
-                                    onClick={exportFeedback}
-                                    className="rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                    Export feedback · {feedback.length}
-                                </button>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={feedback.length === 0 || saveStatus === "saving"}
+                                        onClick={saveFeedbackForAgent}
+                                        className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        {saveStatus === "saving"
+                                            ? "Saving…"
+                                            : `Save for agent · ${feedback.length}`}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={feedback.length === 0}
+                                        onClick={exportFeedback}
+                                        className="rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Download JSON
+                                    </button>
+                                    {saveStatus === "saved" && (
+                                        <span className="text-[10px] font-medium text-[var(--good)]">
+                                            Saved in Cloud VM
+                                        </span>
+                                    )}
+                                    {saveStatus === "error" && (
+                                        <span className="text-[10px] font-medium text-[var(--bad)]">
+                                            Save failed
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

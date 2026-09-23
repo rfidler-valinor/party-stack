@@ -44,8 +44,11 @@ monorepo `build` / `lint` / `test` do not run CLIP. `icons:archive` remains an e
 one-off task because it refreshes checked-in provider snapshots.
 
 Mapping review decisions are saved in browser local storage. Approve or reject a
-candidate, enter a replacement icon and optional note, then use **Export feedback** to
+candidate, enter a replacement icon and optional note, then use **Download JSON** to
 download `icon-mapping-feedback.json` for applying to the provider mapping packages.
+When iterating with a Cloud Agent, **Save for agent** writes the same payload to the
+ignored local file `temp/data/icon-mapping-feedback.json`; prompt the agent to
+incorporate it after saving.
 
 ## SF Symbols glyphs
 

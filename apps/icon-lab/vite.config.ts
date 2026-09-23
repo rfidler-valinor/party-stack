@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 
@@ -41,6 +41,37 @@ function generatedDataPlugin(): Plugin {
         name: "icon-lab-generated-data",
         configureServer(server) {
             serveGeneratedData(server);
+            server.middlewares.use("/__save-mapping-feedback", (request, response, next) => {
+                if (request.method !== "POST") {
+                    next();
+                    return;
+                }
+                let body = "";
+                request.setEncoding("utf8");
+                request.on("data", (chunk: string) => {
+                    body += chunk;
+                });
+                request.on("end", async () => {
+                    try {
+                        const parsed = JSON.parse(body) as {
+                            version?: unknown;
+                            feedback?: unknown;
+                        };
+                        if (parsed.version !== 1 || !Array.isArray(parsed.feedback)) {
+                            throw new Error("Invalid mapping feedback file");
+                        }
+                        await writeFile(
+                            path.join(generatedDataDir, "icon-mapping-feedback.json"),
+                            `${JSON.stringify(parsed, null, 2)}\n`
+                        );
+                        response.setHeader("Content-Type", "application/json");
+                        response.end(JSON.stringify({ saved: true }));
+                    } catch (error) {
+                        response.statusCode = 400;
+                        response.end(error instanceof Error ? error.message : "Could not save feedback");
+                    }
+                });
+            });
         },
         configurePreviewServer(server) {
             serveGeneratedData(server);
