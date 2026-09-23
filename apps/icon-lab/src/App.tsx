@@ -49,9 +49,9 @@ export function App() {
             try {
                 const [catalogRes, embeddingsRes, auditRes, draftRes] = await Promise.all([
                     fetch("/data/catalog.json"),
-                    fetch("/data/embeddings-index.json"),
-                    fetch("/data/mapping-audit.json"),
-                    fetch("/data/draft-mappings.json"),
+                    fetch("/generated-data/embeddings-index.json"),
+                    fetch("/generated-data/mapping-audit.json"),
+                    fetch("/generated-data/draft-mappings.json"),
                 ]);
                 if (!catalogRes.ok || !embeddingsRes.ok || !auditRes.ok || !draftRes.ok) {
                     throw new Error(

@@ -19,7 +19,8 @@ Local workshop for building and validating the provider-neutral `@party-stack/ic
 The browser loads one normalized zip per redistributable provider from `public/icon-sets/`.
 There are no thousands of loose SVG files in git. Provider archives and `catalog.json` are
 committed; multimodal embeddings are **not** — they are produced by the Turbo
-`icons:embed` task into `public/data/embeddings.i8` (+ index, draft mappings, and audit).
+`icons:embed` task into the already-ignored `temp/data/` directory. Vite serves those
+files at `/generated-data/` in development and includes them in production bundles.
 
 `icon-sources.json` records the package, source tarball URL, version, homepage, and
 license for every provider. The archive script resolves installed versions so a package
@@ -35,9 +36,14 @@ pnpm --filter @party-stack/icon-lab icons:update          # update sources, then
 pnpm turbo watch build dev --filter @party-stack/icon-lab # embeds first, then http://localhost:5179
 ```
 
-`dev` / `dist` depend on `icons:embed`, so Turbo regenerates embeddings when catalog or
-archives change and restores them from cache otherwise. Provider zips stay committed;
-only the CLIP outputs are generated locally. CI `build` / `lint` / `test` do not run CLIP.
+The generation tasks are declared only in this package's nested `turbo.json`. `dev` /
+`dist` depend on `icons:embed`, so a usable app gets generated data while ordinary
+monorepo `build` / `lint` / `test` do not run CLIP. `icons:archive` remains an explicit
+one-off task because provider zips and the catalog are checked in.
+
+Mapping review decisions are saved in browser local storage. Approve or reject a
+candidate, enter a replacement icon and optional note, then use **Export feedback** to
+download `icon-mapping-feedback.json` for applying to the provider mapping packages.
 
 ## SF Symbols glyphs
 

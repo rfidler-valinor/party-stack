@@ -27,9 +27,10 @@ env.useBrowserCache = false;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const dataDir = path.join(root, "public", "data");
+const sourceDataDir = path.join(root, "public", "data");
+const generatedDataDir = path.join(root, "temp", "data");
 const archivesDir = path.join(root, "public", "icon-sets");
-const tmpDir = path.join(root, ".tmp-embeds");
+const tmpDir = path.join(root, "temp", "embedding-work");
 const MODEL = "Xenova/clip-vit-base-patch32";
 const EMBEDDING_DESCRIPTION = `${MODEL}+16x16-visual-descriptor`;
 const TEXT_BATCH = 128;
@@ -282,12 +283,12 @@ async function localSfAsset(name: string): Promise<string | undefined> {
 }
 
 async function main(): Promise<void> {
-    await mkdir(dataDir, { recursive: true });
+    await mkdir(generatedDataDir, { recursive: true });
     await rm(tmpDir, { recursive: true, force: true });
     await mkdir(tmpDir, { recursive: true });
 
     const catalog = JSON.parse(
-        await readFile(path.join(dataDir, "catalog.json"), "utf8")
+        await readFile(path.join(sourceDataDir, "catalog.json"), "utf8")
     ) as CatalogFile;
     const archiveFiles = new Map<string, ReturnType<typeof unzipSync>>();
     for (const provider of PROVIDERS) {
@@ -399,13 +400,16 @@ async function main(): Promise<void> {
         model: EMBEDDING_DESCRIPTION,
         dims: orderedVectors[0]!.length,
         quantization: "per-vector-symmetric-int8",
-        dataPath: "/data/embeddings.i8",
+        dataPath: "/generated-data/embeddings.i8",
         ids: catalog.icons.map((icon) => icon.id),
         modalities: catalog.icons.map((icon) => modalities.get(icon.id)!),
     };
-    await writeFile(path.join(dataDir, "embeddings.i8"), binary);
-    await writeFile(path.join(dataDir, "embeddings-index.json"), JSON.stringify(embeddingIndex));
-    await rm(path.join(dataDir, "embeddings.json"), { force: true });
+    await writeFile(path.join(generatedDataDir, "embeddings.i8"), binary);
+    await writeFile(
+        path.join(generatedDataDir, "embeddings-index.json"),
+        JSON.stringify(embeddingIndex)
+    );
+    await rm(path.join(generatedDataDir, "embeddings.json"), { force: true });
 
     console.log("Auditing existing package mappings…");
     const mappedByConcept = new Map<string, CatalogIcon[]>();
@@ -446,7 +450,7 @@ async function main(): Promise<void> {
     pairs.sort((a, b) => a.score - b.score);
     conceptScores.sort((a, b) => a.minScore - b.minScore);
     const audit: MappingAuditFile = { generatedAt: new Date().toISOString(), pairs, conceptScores };
-    await writeFile(path.join(dataDir, "mapping-audit.json"), JSON.stringify(audit));
+    await writeFile(path.join(generatedDataDir, "mapping-audit.json"), JSON.stringify(audit));
 
     console.log("Generating Blueprint-anchored universal mapping draft…");
     const iconsByProvider = new Map(
@@ -518,7 +522,7 @@ async function main(): Promise<void> {
         anchorProvider: "blueprint",
         mappings: draftMappings,
     };
-    await writeFile(path.join(dataDir, "draft-mappings.json"), JSON.stringify(draft));
+    await writeFile(path.join(generatedDataDir, "draft-mappings.json"), JSON.stringify(draft));
 
     console.log(
         `Wrote ${catalog.icons.length} vectors (${(binary.length / 1024 / 1024).toFixed(1)} MiB, ${imageCount} multimodal).`
