@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@tanstack/db': 0.8.6
   '@types/node': 24.10.1
 
 importers:
@@ -53,6 +54,9 @@ importers:
       '@party-stack/icons-lucide':
         specifier: workspace:*
         version: link:../../packages/icons-lucide
+      '@party-stack/icons-salesforce-lightning':
+        specifier: workspace:*
+        version: link:../../packages/icons-salesforce-lightning
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
@@ -1315,6 +1319,25 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
 
+  packages/icons-salesforce-lightning:
+    dependencies:
+      '@party-stack/icons':
+        specifier: workspace:^
+        version: link:../icons
+    devDependencies:
+      '@bobbyfidz/universal-build-config':
+        specifier: ^0.1.1
+        version: 0.1.1(eslint@9.28.0(jiti@2.7.0))(typescript@5.8.3)
+      eslint:
+        specifier: ^9.25.0
+        version: 9.28.0(jiti@2.7.0)
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
+
   packages/node-runtime:
     dependencies:
       '@hono/node-server':
@@ -1636,6 +1659,9 @@ importers:
       '@party-stack/errors':
         specifier: workspace:^
         version: link:../errors
+      '@party-stack/icons-salesforce-lightning':
+        specifier: workspace:^
+        version: link:../icons-salesforce-lightning
       '@party-stack/oauth':
         specifier: workspace:^
         version: link:../oauth
@@ -13579,7 +13605,7 @@ snapshots:
       magic-string: 0.30.21
       sirv: 3.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/browser@3.2.4)(jiti@2.7.0)(jsdom@27.2.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1)
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
@@ -19264,7 +19290,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 24.10.1
-      '@vitest/browser': 3.2.4(playwright@1.61.1)(vite@7.2.4(@types/node@24.10.1)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(vitest@3.2.4)
       jsdom: 27.2.0
     transitivePeerDependencies:
       - jiti

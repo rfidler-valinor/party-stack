@@ -12,12 +12,12 @@ import {
 import { buildLucideSvg } from "@lucide/icons/build";
 import { lucideDynamicIconImports } from "@lucide/icons/dynamic";
 import { icons as materialSymbols } from "@iconify-json/material-symbols";
-import { iconNames, type IconName } from "@party-stack/icons";
-import { blueprintIconNames } from "@party-stack/icons-blueprint";
-import { expoSymbolNames } from "@party-stack/icons-expo";
-import { lucideIconNames } from "@party-stack/icons-lucide";
+import { IconNames, type IconName } from "@party-stack/icons";
+import { BlueprintIconNames } from "@party-stack/icons-blueprint";
+import { ExpoSymbolNames } from "@party-stack/icons-expo";
+import { LucideIconNames } from "@party-stack/icons-lucide";
+import { SalesforceLightningIconNames } from "@party-stack/icons-salesforce-lightning";
 import { strToU8, zipSync, type Zippable } from "fflate";
-import { salesforceUtilityIconNames } from "./salesforce-map";
 import type { CatalogFile, CatalogIcon, IconProvider } from "../src/shared/types";
 
 const require = createRequire(import.meta.url);
@@ -145,15 +145,15 @@ function conceptMaps() {
         map.set(name, concepts);
     };
 
-    for (const concept of iconNames) {
-        add(blueprint, blueprintIconNames[concept], concept);
-        add(lucide, lucideIconNames[concept], concept);
-        const materialName = materialNameForAndroid(expoSymbolNames[concept].android);
+    for (const concept of IconNames) {
+        add(blueprint, BlueprintIconNames[concept], concept);
+        add(lucide, LucideIconNames[concept], concept);
+        const materialName = materialNameForAndroid(ExpoSymbolNames[concept].android);
         if (materialName) {
             add(material, materialName, concept);
         }
-        add(salesforce, `utility/${salesforceUtilityIconNames[concept]}`, concept);
-        add(sfsymbols, expoSymbolNames[concept].ios, concept);
+        add(salesforce, SalesforceLightningIconNames[concept], concept);
+        add(sfsymbols, ExpoSymbolNames[concept].ios, concept);
     }
 
     return { blueprint, lucide, material, salesforce, sfsymbols };
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
     const catalog: CatalogFile = {
         generatedAt: new Date().toISOString(),
         providers: ["blueprint", "lucide", "material", "salesforce", "sfsymbols"],
-        concepts: [...iconNames],
+        concepts: [...IconNames],
         icons,
         archives,
     };

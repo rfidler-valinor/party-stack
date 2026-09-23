@@ -38,6 +38,14 @@ describe("convertSalesforceMetaActionType", () => {
             name: "Create_Account",
             displayName: "Create Account",
             description: "Creates an account",
+            icon: {
+                name: undefined,
+                meta: {
+                    salesforce: {
+                        name: "action/create_account",
+                    },
+                },
+            },
             parameters: [
                 {
                     name: "accountName",
