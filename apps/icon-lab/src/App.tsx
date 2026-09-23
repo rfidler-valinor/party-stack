@@ -48,7 +48,7 @@ export function App() {
         (async () => {
             try {
                 const [catalogRes, embeddingsRes, auditRes, draftRes] = await Promise.all([
-                    fetch("/data/catalog.json"),
+                    fetch("/generated-data/catalog.json"),
                     fetch("/generated-data/embeddings-index.json"),
                     fetch("/generated-data/mapping-audit.json"),
                     fetch("/generated-data/draft-mappings.json"),

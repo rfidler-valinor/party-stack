@@ -9,6 +9,7 @@ import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const generatedDataDir = path.join(rootDir, "temp", "data");
 const generatedFiles = [
+    "catalog.json",
     "draft-mappings.json",
     "embeddings-index.json",
     "embeddings.i8",

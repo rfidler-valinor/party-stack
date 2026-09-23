@@ -2,39 +2,35 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { unzipSync } from "fflate";
-import type { CatalogFile } from "./types";
+import { SalesforceLightningIconNames } from "@party-stack/icons-salesforce-lightning";
 
 const appRoot = path.resolve(import.meta.dirname, "../..");
 
 describe("generated full icon catalog", () => {
     it("contains complete provider sets in compact archives", async () => {
-        const catalog = JSON.parse(
-            await readFile(path.join(appRoot, "public/data/catalog.json"), "utf8")
-        ) as CatalogFile;
-
-        expect(catalog.archives.blueprint?.iconCount).toBeGreaterThanOrEqual(700);
-        expect(catalog.archives.lucide?.iconCount).toBeGreaterThanOrEqual(2_000);
-        expect(catalog.archives.material?.iconCount).toBeGreaterThanOrEqual(16_000);
-        expect(catalog.archives.salesforce?.iconCount).toBeGreaterThanOrEqual(1_700);
-        expect(catalog.archives.sfsymbols?.iconCount).toBeGreaterThanOrEqual(9_000);
-
-        for (const provider of ["blueprint", "lucide", "material", "salesforce"] as const) {
+        const minimums = {
+            blueprint: 700,
+            lucide: 2_000,
+            material: 16_000,
+            salesforce: 1_700,
+        } as const;
+        for (const provider of Object.keys(minimums) as Array<keyof typeof minimums>) {
             const zip = unzipSync(
                 new Uint8Array(
                     await readFile(path.join(appRoot, `public/icon-sets/${provider}.zip`))
                 )
             );
-            expect(Object.keys(zip)).toHaveLength(catalog.archives[provider]!.iconCount);
+            expect(Object.keys(zip).length).toBeGreaterThanOrEqual(minimums[provider]);
         }
     });
 
     it("includes the Salesforce plane glyph and maps airplane to it", async () => {
-        const catalog = JSON.parse(
-            await readFile(path.join(appRoot, "public/data/catalog.json"), "utf8")
-        ) as CatalogFile;
-        const plane = catalog.icons.find((icon) => icon.id === "salesforce:utility/plane");
-
-        expect(plane?.concept).toBe("airplane");
-        expect(plane?.asset?.path).toBe("utility/plane.svg");
+        const zip = unzipSync(
+            new Uint8Array(
+                await readFile(path.join(appRoot, "public/icon-sets/salesforce.zip"))
+            )
+        );
+        expect(zip["utility/plane.svg"]).toBeDefined();
+        expect(SalesforceLightningIconNames.airplane).toBe("utility/plane");
     });
 });

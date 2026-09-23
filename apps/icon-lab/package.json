@@ -10,7 +10,8 @@
         "lint": "eslint",
         "test": "vitest run src",
         "icons:archive": "tsx scripts/extract-assets.ts",
-        "icons:extract": "tsx scripts/extract-assets.ts",
+        "icons:catalog": "tsx scripts/extract-assets.ts --catalog-only",
+        "icons:extract": "tsx scripts/extract-assets.ts --catalog-only",
         "icons:embed": "tsx scripts/generate-embeddings.ts",
         "icons:prepare": "tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts",
         "icons:update": "pnpm update --latest @blueprintjs/icons @iconify-json/material-symbols @lucide/icons @salesforce-ux/icons sf-symbols-typescript && tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts"

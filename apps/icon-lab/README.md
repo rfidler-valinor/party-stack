@@ -16,11 +16,12 @@ Local workshop for building and validating the provider-neutral `@party-stack/ic
 
 ## Compact storage
 
-The browser loads one normalized zip per redistributable provider from `public/icon-sets/`.
-There are no thousands of loose SVG files in git. Provider archives and `catalog.json` are
-committed; multimodal embeddings are **not** — they are produced by the Turbo
-`icons:embed` task into the already-ignored `temp/data/` directory. Vite serves those
-files at `/generated-data/` in development and includes them in production bundles.
+The browser loads one normalized snapshot per redistributable provider from
+`public/icon-sets/`. Those compact archives and their source manifest are the only icon
+data committed, so development never depends on mutable upstream URLs. The catalog,
+mapping drafts, audits, and multimodal embeddings are all downstream data generated in
+the already-ignored `temp/data/` directory. Vite serves them at `/generated-data/` in
+development and includes them in production bundles.
 
 `icon-sources.json` records the package, source tarball URL, version, homepage, and
 license for every provider. The archive script resolves installed versions so a package
@@ -30,16 +31,17 @@ update automatically records the new tarball URL.
 
 ```bash
 pnpm install --filter @party-stack/icon-lab
-pnpm turbo icons:archive --filter @party-stack/icon-lab   # rebuild full provider zips
+pnpm turbo icons:archive --filter @party-stack/icon-lab   # explicitly refresh checked-in snapshots
+pnpm turbo icons:catalog --filter @party-stack/icon-lab   # derive catalog in temp/
 pnpm turbo icons:embed --filter @party-stack/icon-lab     # CLIP + draft mappings (cached)
 pnpm --filter @party-stack/icon-lab icons:update          # update sources, then prepare
 pnpm turbo watch build dev --filter @party-stack/icon-lab # embeds first, then http://localhost:5179
 ```
 
 The generation tasks are declared only in this package's nested `turbo.json`. `dev` /
-`dist` depend on `icons:embed`, so a usable app gets generated data while ordinary
+`dist` derive the catalog and embeddings from the committed snapshots, while ordinary
 monorepo `build` / `lint` / `test` do not run CLIP. `icons:archive` remains an explicit
-one-off task because provider zips and the catalog are checked in.
+one-off task because it refreshes checked-in provider snapshots.
 
 Mapping review decisions are saved in browser local storage. Approve or reject a
 candidate, enter a replacement icon and optional note, then use **Export feedback** to

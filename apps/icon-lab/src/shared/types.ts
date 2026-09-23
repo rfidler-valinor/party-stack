@@ -26,7 +26,6 @@ export interface CatalogIcon {
 }
 
 export interface CatalogFile {
-    generatedAt: string;
     providers: IconProvider[];
     concepts: string[];
     icons: CatalogIcon[];

@@ -27,7 +27,6 @@ env.useBrowserCache = false;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const sourceDataDir = path.join(root, "public", "data");
 const generatedDataDir = path.join(root, "temp", "data");
 const archivesDir = path.join(root, "public", "icon-sets");
 const tmpDir = path.join(root, "temp", "embedding-work");
@@ -288,7 +287,7 @@ async function main(): Promise<void> {
     await mkdir(tmpDir, { recursive: true });
 
     const catalog = JSON.parse(
-        await readFile(path.join(sourceDataDir, "catalog.json"), "utf8")
+        await readFile(path.join(generatedDataDir, "catalog.json"), "utf8")
     ) as CatalogFile;
     const archiveFiles = new Map<string, ReturnType<typeof unzipSync>>();
     for (const provider of PROVIDERS) {

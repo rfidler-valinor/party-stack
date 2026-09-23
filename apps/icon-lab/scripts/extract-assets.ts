@@ -25,7 +25,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const publicDir = path.join(root, "public");
 const archivesDir = path.join(publicDir, "icon-sets");
-const dataDir = path.join(publicDir, "data");
+const dataDir = path.join(root, "temp", "data");
+const catalogOnly = process.argv.includes("--catalog-only");
 
 interface Source {
     package: string;
@@ -329,7 +330,7 @@ async function main(): Promise<void> {
     ) as Sources;
 
     const concepts = conceptMaps();
-    console.log("Building complete provider archives…");
+    console.log(catalogOnly ? "Building catalog from provider snapshots…" : "Building provider snapshots…");
     const builds = [
         await buildBlueprint(concepts),
         await buildLucide(concepts),
@@ -343,8 +344,9 @@ async function main(): Promise<void> {
 
     for (const build of builds) {
         const archivePath = path.join(archivesDir, `${build.provider}.zip`);
-        const zipped = zipSync(build.files, { level: 9 });
-        await writeFile(archivePath, zipped);
+        if (!catalogOnly) {
+            await writeFile(archivePath, zipSync(build.files, { level: 9 }));
+        }
         const source = effectiveSources[build.provider];
         archives[build.provider] = {
             path: `/icon-sets/${build.provider}.zip`,
@@ -356,7 +358,7 @@ async function main(): Promise<void> {
         };
         icons.push(...build.icons);
         console.log(
-            `  ${build.provider.padEnd(12)} ${String(build.icons.length).padStart(5)} icons → ${(zipped.length / 1024).toFixed(0)} KiB`
+            `  ${build.provider.padEnd(12)} ${String(build.icons.length).padStart(5)} icons → ${((await stat(archivePath)).size / 1024).toFixed(0)} KiB`
         );
     }
 
@@ -372,21 +374,22 @@ async function main(): Promise<void> {
     };
 
     const catalog: CatalogFile = {
-        generatedAt: new Date().toISOString(),
         providers: ["blueprint", "lucide", "material", "salesforce", "sfsymbols"],
         concepts: [...IconNames],
         icons,
         archives,
     };
     await writeFile(path.join(dataDir, "catalog.json"), JSON.stringify(catalog));
-    await writeFile(
-        path.join(archivesDir, "sources.json"),
-        JSON.stringify(effectiveSources, null, 2)
-    );
-    await writeFile(
-        path.join(root, "icon-sources.json"),
-        `${JSON.stringify(effectiveSources, null, 4)}\n`
-    );
+    if (!catalogOnly) {
+        await writeFile(
+            path.join(archivesDir, "sources.json"),
+            JSON.stringify(effectiveSources, null, 2)
+        );
+        await writeFile(
+            path.join(root, "icon-sources.json"),
+            `${JSON.stringify(effectiveSources, null, 4)}\n`
+        );
+    }
 
     console.log(`  sfsymbols    ${String(sfSymbols.length).padStart(5)} names (glyphs not redistributed)`);
     console.log(`Wrote ${icons.length} catalog entries and ${builds.length} compact archives.`);

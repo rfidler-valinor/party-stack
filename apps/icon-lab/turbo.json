@@ -3,18 +3,33 @@
     "tasks": {
         "icons:archive": {
             "inputs": ["scripts/extract-assets.ts", "icon-sources.json", "package.json"],
-            "outputs": ["public/icon-sets/**", "public/data/catalog.json"]
+            "outputs": ["public/icon-sets/**"]
+        },
+        "icons:catalog": {
+            "inputs": [
+                "scripts/extract-assets.ts",
+                "icon-sources.json",
+                "package.json",
+                "public/icon-sets/**"
+            ],
+            "outputs": ["temp/data/catalog.json"]
         },
         "icons:embed": {
+            "dependsOn": ["icons:catalog"],
             "env": ["SF_SYMBOLS_ASSET_DIR"],
             "inputs": [
                 "scripts/generate-embeddings.ts",
                 "src/shared/math.ts",
                 "src/shared/types.ts",
-                "public/data/catalog.json",
+                "temp/data/catalog.json",
                 "public/icon-sets/**"
             ],
-            "outputs": ["temp/data/**"]
+            "outputs": [
+                "temp/data/draft-mappings.json",
+                "temp/data/embeddings-index.json",
+                "temp/data/embeddings.i8",
+                "temp/data/mapping-audit.json"
+            ]
         },
         "dev": {
             "dependsOn": ["icons:embed"],
