@@ -232,7 +232,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
     }
 
     return (
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
             <aside className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 backdrop-blur">
                 <input
                     value={query}
@@ -288,7 +288,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
             </aside>
 
             {selected && (
-                <section className="space-y-4">
+                <section className="min-w-0 space-y-4">
                     <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 backdrop-blur">
                         <div className="flex flex-wrap items-end justify-between gap-3">
                             <div>
@@ -348,7 +348,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                             </div>
                         </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                             {Object.entries(selected.providers).map(([provider, match]) => {
                                 if (!match) {
                                     return null;
@@ -371,7 +371,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                 return (
                                     <div
                                         key={provider}
-                                        className="rounded-xl border border-[var(--line)] bg-white/70 p-3"
+                                        className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-white/70 p-3"
                                     >
                                         <div className="mb-2 text-[11px] uppercase tracking-wide text-[var(--muted)]">
                                             {PROVIDER_LABEL[provider as IconProvider]}
@@ -390,7 +390,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                             </div>
                                         )}
                                         <div className="mt-3 border-t border-[var(--line)] pt-3">
-                                            <div className="flex gap-1">
+                                            <div className="grid grid-cols-2 gap-1">
                                                 {decisions.map(({ value, label }) => (
                                                     <button
                                                         key={value}
@@ -406,7 +406,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                                                 }
                                                             )
                                                         }
-                                                        className={`rounded-md px-2 py-1 text-[11px] ${
+                                                        className={`w-full min-w-0 rounded-md px-1 py-1 text-[11px] ${
                                                             providerFeedback?.decision === value
                                                                 ? value === "approve"
                                                                     ? "bg-emerald-600 text-white"
@@ -473,7 +473,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
 
                     <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 backdrop-blur">
                         <h3 className="text-sm font-semibold uppercase tracking-wide">Full-set coverage</h3>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                             {catalog.providers.map((provider) => {
                                 const archive = catalog.archives[provider];
                                 return (

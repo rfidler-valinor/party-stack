@@ -54,9 +54,7 @@ export function App() {
                     fetch("/generated-data/draft-mappings.json"),
                 ]);
                 if (!catalogRes.ok || !embeddingsRes.ok || !auditRes.ok || !draftRes.ok) {
-                    throw new Error(
-                        "Missing generated data. Run `pnpm icons:prepare` in apps/icon-lab."
-                    );
+                    throw new Error("Missing generated data. Run `pnpm icons:prepare` in apps/icon-lab.");
                 }
                 const [catalogJson, embeddingsJson, auditJson, draftJson] = await Promise.all([
                     catalogRes.json() as Promise<CatalogFile>,
@@ -74,8 +72,7 @@ export function App() {
                 setDraft(draftJson);
                 setSelectedConcept(catalogJson.concepts[0] ?? null);
                 setNeighborSeed(
-                    catalogJson.icons.find((icon) => icon.concept === catalogJson.concepts[0])?.id ??
-                        null
+                    catalogJson.icons.find((icon) => icon.concept === catalogJson.concepts[0])?.id ?? null
                 );
             } catch (err) {
                 if (!cancelled) {
@@ -175,18 +172,18 @@ export function App() {
     return (
         <div className="min-h-screen">
             <header className="border-b border-[var(--line)] bg-[var(--panel)] backdrop-blur-md">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-4 px-6 py-5">
+                <div className="mx-auto flex max-w-[1600px] flex-wrap items-end justify-between gap-4 px-6 py-5">
                     <div>
-                        <p className="font-[var(--font-mono)] text-xs tracking-[0.18em] text-[var(--muted)] uppercase">
+                        <p className="text-xs font-[var(--font-mono)] uppercase tracking-[0.18em] text-[var(--muted)]">
                             party-stack / apps
                         </p>
                         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Icon Lab</h1>
                         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-                            Multimodal embeddings across Blueprint, Lucide, Material, Salesforce, and
-                            SF Symbols — build and stress-test the universal set.
+                            Multimodal embeddings across Blueprint, Lucide, Material, Salesforce, and SF
+                            Symbols — build and stress-test the universal set.
                         </p>
                     </div>
-                    <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
+                    <div className="text-xs font-[var(--font-mono)] text-[var(--muted)]">
                         <div>{catalog.icons.length} icons indexed</div>
                         <div>
                             {embeddingStore.index.ids.length} embeddings · {embeddingStore.index.dims}d ·{" "}
@@ -194,7 +191,7 @@ export function App() {
                         </div>
                     </div>
                 </div>
-                <nav className="mx-auto flex max-w-7xl gap-1 px-6 pb-3">
+                <nav className="mx-auto flex max-w-[1600px] gap-1 px-6 pb-3">
                     {(
                         [
                             ["draft", `Blueprint draft · ${draft.mappings.length}`],
@@ -220,7 +217,7 @@ export function App() {
                 </nav>
             </header>
 
-            <main className="mx-auto max-w-7xl px-6 py-6">
+            <main className="mx-auto max-w-[1600px] px-6 py-6">
                 {tab === "draft" && <DraftMappingBrowser catalog={catalog} draft={draft} />}
 
                 {tab === "concepts" && (
@@ -252,7 +249,7 @@ export function App() {
                                     >
                                         <span className="font-medium">{row.concept}</span>
                                         <span
-                                            className={`font-[var(--font-mono)] text-[11px] ${
+                                            className={`text-[11px] font-[var(--font-mono)] ${
                                                 selectedConcept === row.concept
                                                     ? "text-white/70"
                                                     : row.minScore < 0.55
@@ -277,15 +274,15 @@ export function App() {
                                             {selectedConcept}
                                         </h2>
                                         <p className="mt-1 text-sm text-[var(--muted)]">
-                                            Side-by-side provider glyphs for this universal concept.
-                                            Scores are CLIP cosine similarity across the mapped set.
+                                            Side-by-side provider glyphs for this universal concept. Scores
+                                            are CLIP cosine similarity across the mapped set.
                                         </p>
                                     </div>
                                     {selectedAudit && (
-                                        <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
+                                        <div className="text-xs font-[var(--font-mono)] text-[var(--muted)]">
                                             min {selectedAudit.minScore.toFixed(3)} · mean{" "}
-                                            {selectedAudit.meanScore.toFixed(3)} ·{" "}
-                                            {selectedAudit.pairCount} pairs
+                                            {selectedAudit.meanScore.toFixed(3)} · {selectedAudit.pairCount}{" "}
+                                            pairs
                                         </div>
                                     )}
                                 </div>
@@ -302,7 +299,7 @@ export function App() {
                                             className="rounded-xl border border-[var(--line)] bg-white/70 p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm"
                                         >
                                             <div className="mb-2 flex items-center justify-between gap-2">
-                                                <span className="text-[11px] tracking-wide text-[var(--muted)] uppercase">
+                                                <span className="text-[11px] uppercase tracking-wide text-[var(--muted)]">
                                                     {PROVIDER_LABEL[icon.provider]}
                                                 </span>
                                                 <span
@@ -311,7 +308,7 @@ export function App() {
                                                 />
                                             </div>
                                             <IconTile icon={icon} size={56} />
-                                            <div className="mt-3 font-[var(--font-mono)] text-xs break-all">
+                                            <div className="mt-3 break-all text-xs font-[var(--font-mono)]">
                                                 {icon.name}
                                             </div>
                                             {icon.textOnly && (
@@ -325,12 +322,12 @@ export function App() {
                             </div>
 
                             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 backdrop-blur">
-                                <h3 className="text-sm font-semibold tracking-wide uppercase">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide">
                                     Pairwise similarities
                                 </h3>
                                 <div className="mt-3 overflow-auto">
                                     <table className="w-full text-left text-sm">
-                                        <thead className="font-[var(--font-mono)] text-[11px] text-[var(--muted)]">
+                                        <thead className="text-[11px] font-[var(--font-mono)] text-[var(--muted)]">
                                             <tr>
                                                 <th className="py-2 pr-3 font-medium">Left</th>
                                                 <th className="py-2 pr-3 font-medium">Right</th>
@@ -430,7 +427,7 @@ export function App() {
                                         <span className="font-[var(--font-mono)]">{score.toFixed(3)}</span>
                                     </div>
                                     <IconTile icon={icon} size={44} />
-                                    <div className="mt-2 font-[var(--font-mono)] text-xs break-all">
+                                    <div className="mt-2 break-all text-xs font-[var(--font-mono)]">
                                         {icon.name}
                                     </div>
                                     <div className="mt-1 text-[11px] text-[var(--muted)]">
