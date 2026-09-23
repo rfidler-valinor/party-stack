@@ -57,8 +57,6 @@ const remoteServer = createRemoteOntologyServer<{ user: string }, IssueTrackerOn
                 "projectId",
                 "issueCreatedAt",
                 "issueDescription",
-                "createdBy",
-                "assignee",
             ],
             Project: [
                 "projectUpdatedAt",
