@@ -18,6 +18,19 @@ function actionType(parameters: Record<string, ActionParameterV2>): ActionTypeFu
     };
 }
 
+function objectParameter(objectType: string, required: boolean): ActionParameterV2 {
+    return {
+        displayName: objectType,
+        dataType: {
+            type: "object",
+            objectTypeApiName: objectType,
+            objectApiName: objectType,
+        },
+        required,
+        typeClasses: [],
+    };
+}
+
 function structListParameter(): ActionParameterV2 {
     return {
         displayName: "Entries",
@@ -390,6 +403,168 @@ describe("convertFoundryMetaActionType parameter validation", () => {
                     ],
                 },
             },
+        ]);
+    });
+});
+
+describe("convertFoundryMetaActionType mutation targets", () => {
+    it("requires an optional object-reference update target", () => {
+        const metadata = actionType({
+            survey: objectParameter("HospitalSurveyDev", false),
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectToModify: "survey",
+                propertyArguments: {},
+                structPropertyArguments: {},
+            } as never,
+        ];
+
+        const result = convertFoundryMetaActionType(metadata);
+
+        expect(result.parameters[0]?.type).toEqual({
+            kind: "objectReference",
+            value: { objectType: "HospitalSurveyDev" },
+        });
+        expect(result.logic[0]).toMatchObject({
+            kind: "updateObject",
+            value: { object: { name: "survey" } },
+        });
+    });
+
+    it("requires an optional object-reference delete target", () => {
+        const metadata = actionType({
+            survey: objectParameter("HospitalSurveyDev", false),
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "deleteObject",
+                objectToDelete: "survey",
+            } as never,
+        ];
+
+        expect(convertFoundryMetaActionType(metadata).parameters[0]?.type).toEqual({
+            kind: "objectReference",
+            value: { objectType: "HospitalSurveyDev" },
+        });
+    });
+
+    it("leaves an already-required mutation target unchanged", () => {
+        const metadata = actionType({
+            survey: objectParameter("HospitalSurveyDev", true),
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectToModify: "survey",
+                propertyArguments: {},
+                structPropertyArguments: {},
+            } as never,
+        ];
+
+        expect(convertFoundryMetaActionType(metadata).parameters[0]?.type).toEqual({
+            kind: "objectReference",
+            value: { objectType: "HospitalSurveyDev" },
+        });
+    });
+
+    it("preserves optional object references that are not mutation targets", () => {
+        const metadata = actionType({
+            survey: objectParameter("HospitalSurveyDev", true),
+            relatedSurvey: objectParameter("HospitalSurveyDev", false),
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectToModify: "survey",
+                propertyArguments: {
+                    relatedSurvey: {
+                        type: "parameterId",
+                        parameterId: "relatedSurvey",
+                    },
+                },
+                structPropertyArguments: {},
+            } as never,
+        ];
+
+        expect(convertFoundryMetaActionType(metadata).parameters[1]?.type).toEqual({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "objectReference",
+                    value: { objectType: "HospitalSurveyDev" },
+                },
+            },
+        });
+    });
+
+    it("preserves optional scalar property parameters", () => {
+        const metadata = actionType({
+            survey: objectParameter("HospitalSurveyDev", true),
+            status: {
+                displayName: "Status",
+                dataType: { type: "string" },
+                required: false,
+                typeClasses: [],
+            },
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectToModify: "survey",
+                propertyArguments: {
+                    status: {
+                        type: "parameterId",
+                        parameterId: "status",
+                    },
+                },
+                structPropertyArguments: {},
+            } as never,
+        ];
+
+        expect(convertFoundryMetaActionType(metadata).parameters[1]?.type).toEqual({
+            kind: "optional",
+            value: {
+                type: {
+                    kind: "string",
+                    value: {},
+                },
+            },
+        });
+    });
+
+    it("normalizes only update and delete targets across multiple rules", () => {
+        const metadata = actionType({
+            surveyToUpdate: objectParameter("HospitalSurveyDev", false),
+            surveyToDelete: objectParameter("HospitalSurveyDev", false),
+            surveyToRead: objectParameter("HospitalSurveyDev", false),
+        });
+        metadata.fullLogicRules = [
+            {
+                type: "modifyObject",
+                objectToModify: "surveyToUpdate",
+                propertyArguments: {
+                    copiedStatus: {
+                        type: "objectParameterPropertyValue",
+                        parameterId: "surveyToRead",
+                        propertyTypeApiName: "status",
+                    },
+                },
+                structPropertyArguments: {},
+            },
+            {
+                type: "deleteObject",
+                objectToDelete: "surveyToDelete",
+            },
+        ] as never;
+
+        const result = convertFoundryMetaActionType(metadata);
+
+        expect(result.parameters.map(({ name, type }) => [name, type.kind])).toEqual([
+            ["surveyToUpdate", "objectReference"],
+            ["surveyToDelete", "objectReference"],
+            ["surveyToRead", "optional"],
         ]);
     });
 });

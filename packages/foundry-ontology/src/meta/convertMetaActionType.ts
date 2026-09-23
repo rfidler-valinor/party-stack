@@ -362,6 +362,27 @@ function collectRuleArguments(rule: ActionLogicRule): Array<LogicRuleArgument | 
     }
 }
 
+function collectMutationTargetParameterNames(rules: ActionLogicRule[]): Set<string> {
+    const parameterNames = new Set<string>();
+    for (const rule of rules) {
+        switch (rule.type) {
+            case "modifyObject":
+                parameterNames.add(rule.objectToModify);
+                break;
+            case "deleteObject":
+                parameterNames.add(rule.objectToDelete);
+                break;
+        }
+    }
+    return parameterNames;
+}
+
+function requireObjectReferenceMutationTarget(type: TypeDef, isMutationTarget: boolean): TypeDef {
+    return isMutationTarget && type.kind === "optional" && type.value.type.kind === "objectReference"
+        ? type.value.type
+        : type;
+}
+
 function createSyntheticParameters(actionType: ActionTypeFullMetadata): {
     parameters: ActionParameterDef[];
     uniqueIdentifierParametersByLinkId: Map<string, string>;
@@ -712,15 +733,19 @@ export function convertFoundryMetaActionType(
     omsMetadata?: ActionTypeOmsMetadata
 ): MetaActionType {
     const syntheticParameters = createSyntheticParameters(actionType);
+    const mutationTargetParameterNames = collectMutationTargetParameterNames(actionType.fullLogicRules);
     const fullLogicRules = actionType.fullLogicRules
         .map((rule) => convertLogicStep(rule, actionType.actionType.parameters, syntheticParameters))
         .filter((rule): rule is NonNullable<typeof rule> => rule !== null);
     const parameters = Object.entries(actionType.actionType.parameters).map(
         ([name, parameter]): ActionParameterDef => {
-            const type = convertActionParameterType(
-                parameter.dataType,
-                parameter.required,
-                parameter.validation
+            const type = requireObjectReferenceMutationTarget(
+                convertActionParameterType(
+                    parameter.dataType,
+                    parameter.required,
+                    parameter.validation
+                ),
+                mutationTargetParameterNames.has(name)
             );
             return {
                 name,
