@@ -1,8 +1,8 @@
-import type { MetaActionType } from "@party-stack/ontology";
 import {
     fromSalesforceLightningIconName,
     getSalesforceActionIconName,
 } from "@party-stack/icons-salesforce-lightning";
+import type { MetaActionType } from "@party-stack/ontology";
 import type {
     SalesforceInvocableActionDescribe,
     SalesforceSObjectDescribe,

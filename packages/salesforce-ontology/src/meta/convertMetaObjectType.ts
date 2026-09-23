@@ -1,8 +1,8 @@
-import type { MetaObjectProperty, MetaObjectType } from "@party-stack/ontology";
 import {
     fromSalesforceLightningIconName,
     getSalesforceObjectIconName,
 } from "@party-stack/icons-salesforce-lightning";
+import type { MetaObjectProperty, MetaObjectType } from "@party-stack/ontology";
 import type { SalesforceFieldDescribe, SalesforceSObjectDescribe } from "@party-stack/salesforce-client";
 import { salesforceObjectTypeId, salesforcePropertyId } from "../utils/ids.js";
 import { convertSalesforceFieldType } from "./convertMetaTypeDef.js";
