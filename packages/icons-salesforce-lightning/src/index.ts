@@ -126,14 +126,14 @@ const UniversalNamesBySalesforceLightning = new Map<SalesforceLightningIconName,
     ])
 );
 
-const StandardObjectIconConcepts = {
+const StandardObjectIconConcepts: Readonly<Record<string, IconName>> = {
     account: "building",
     case: "ticket",
     contact: "person",
     lead: "person",
     opportunity: "award",
     user: "person",
-} as const satisfies Partial<Record<string, IconName>>;
+};
 
 function normalizeSalesforceName(value: string): string {
     return value
