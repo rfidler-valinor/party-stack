@@ -34,15 +34,27 @@ describe("mapping feedback", () => {
 
     it("creates a deterministic export sorted by concept and provider", () => {
         const file = createMappingFeedbackFile(
-            [
-                { ...feedback, concept: "warning" },
-                feedback,
-            ],
+            [{ ...feedback, concept: "warning" }, feedback],
             "2026-09-23T01:00:00.000Z"
         );
 
         expect(file.version).toBe(1);
         expect(file.generatedAt).toBe("2026-09-23T01:00:00.000Z");
         expect(file.feedback.map(({ concept }) => concept)).toEqual(["airplane", "warning"]);
+    });
+
+    it("drops abandoned replacement feedback without a selected icon", () => {
+        expect(
+            loadMappingFeedback({
+                getItem: () =>
+                    JSON.stringify([
+                        {
+                            ...feedback,
+                            decision: "replace",
+                            replacementName: "",
+                        },
+                    ]),
+            })
+        ).toEqual([]);
     });
 });

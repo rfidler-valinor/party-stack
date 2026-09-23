@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { CatalogFile, DraftMappingsFile, IconProvider } from "../shared/types";
+import { useEffect, useMemo, useState } from "react";
+import type { CatalogFile, CatalogIcon, DraftMappingsFile, IconProvider } from "../shared/types";
 import { IconTile } from "./IconTile";
 import {
     createMappingFeedbackFile,
@@ -18,21 +18,143 @@ const PROVIDER_LABEL: Record<IconProvider, string> = {
     sfsymbols: "SF Symbols",
 };
 
-export function DraftMappingBrowser({
-    catalog,
-    draft,
+function ReplacementIconCombobox({
+    icons,
+    selectedName,
+    proxyIcon,
+    onClear,
+    onSelect,
 }: {
-    catalog: CatalogFile;
-    draft: DraftMappingsFile;
+    icons: CatalogIcon[];
+    selectedName?: string;
+    proxyIcon?: CatalogIcon;
+    onClear: () => void;
+    onSelect: (icon: CatalogIcon) => void;
 }) {
+    const [query, setQuery] = useState(selectedName ?? "");
+    const [open, setOpen] = useState(false);
+    const selectedIcon = icons.find((icon) => icon.name === selectedName);
+    const candidates = useMemo(() => {
+        const normalized = query.trim().toLowerCase();
+        return icons
+            .filter(
+                (icon) =>
+                    !normalized ||
+                    icon.name.toLowerCase().includes(normalized) ||
+                    icon.labels.some((label) => label.toLowerCase().includes(normalized))
+            )
+            .slice(0, 12);
+    }, [icons, query]);
+
+    useEffect(() => {
+        setQuery(selectedName ?? "");
+    }, [selectedName]);
+
+    return (
+        <div className="relative mt-2">
+            <div className="flex gap-1">
+                <input
+                    aria-label="Replacement icon"
+                    role="combobox"
+                    aria-expanded={open}
+                    aria-autocomplete="list"
+                    value={query}
+                    onFocus={() => setOpen(true)}
+                    onBlur={() => setOpen(false)}
+                    onChange={(event) => {
+                        const value = event.target.value;
+                        setQuery(value);
+                        setOpen(true);
+                        if (!value.trim() || (selectedName && value !== selectedName)) {
+                            onClear();
+                        }
+                    }}
+                    placeholder="Search replacement icons"
+                    className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
+                />
+                {query && (
+                    <button
+                        type="button"
+                        aria-label="Clear replacement"
+                        onClick={() => {
+                            setQuery("");
+                            onClear();
+                        }}
+                        className="rounded-md bg-slate-100 px-2 text-xs text-slate-600"
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
+            {open && (
+                <div
+                    role="listbox"
+                    className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--line)] bg-white p-1 shadow-xl"
+                >
+                    {candidates.map((candidate) => (
+                        <button
+                            key={candidate.id}
+                            type="button"
+                            role="option"
+                            aria-selected={candidate.name === selectedName}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                setQuery(candidate.name);
+                                setOpen(false);
+                                onSelect(candidate);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-md p-1.5 text-left hover:bg-slate-100"
+                        >
+                            <IconTile icon={candidate} size={24} />
+                            <span className="min-w-0 truncate text-[10px] font-[var(--font-mono)]">
+                                {candidate.name}
+                            </span>
+                        </button>
+                    ))}
+                    {candidates.length === 0 && (
+                        <div className="p-2 text-[11px] text-[var(--muted)]">No matching provider icons</div>
+                    )}
+                </div>
+            )}
+            {selectedIcon && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2">
+                    {selectedIcon.textOnly && proxyIcon ? (
+                        <IconTile icon={proxyIcon} size={28} />
+                    ) : (
+                        <IconTile icon={selectedIcon} size={28} />
+                    )}
+                    <div className="min-w-0">
+                        <div className="truncate text-[10px] font-[var(--font-mono)]">
+                            {selectedIcon.name}
+                        </div>
+                        {selectedIcon.textOnly && proxyIcon && (
+                            <div className="text-[9px] text-[var(--warn)]">Lucide proxy preview</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; draft: DraftMappingsFile }) {
     const [query, setQuery] = useState("");
     const [show, setShow] = useState<"all" | "existing" | "generated">("all");
     const [selectedConcept, setSelectedConcept] = useState(draft.mappings[0]?.concept ?? "");
     const [feedback, setFeedback] = useState<MappingFeedback[]>(() => loadMappingFeedback());
-    const iconById = useMemo(
-        () => new Map(catalog.icons.map((icon) => [icon.id, icon])),
-        [catalog.icons]
-    );
+    const iconById = useMemo(() => new Map(catalog.icons.map((icon) => [icon.id, icon])), [catalog.icons]);
+    const iconsByProvider = useMemo(() => {
+        const groups = new Map<IconProvider, CatalogIcon[]>();
+        for (const provider of catalog.providers) {
+            groups.set(
+                provider,
+                catalog.icons
+                    .filter((icon) => icon.provider === provider)
+                    .sort((left, right) => left.name.localeCompare(right.name))
+            );
+        }
+        return groups;
+    }, [catalog.icons, catalog.providers]);
     const filtered = useMemo(() => {
         const normalized = query.trim().toLowerCase();
         return draft.mappings.filter(
@@ -45,16 +167,9 @@ export function DraftMappingBrowser({
                     ))
         );
     }, [draft.mappings, query, show]);
-    const selected =
-        draft.mappings.find((mapping) => mapping.concept === selectedConcept) ?? filtered[0];
+    const selected = draft.mappings.find((mapping) => mapping.concept === selectedConcept) ?? filtered[0];
     const feedbackByKey = useMemo(
-        () =>
-            new Map(
-                feedback.map((item) => [
-                    mappingFeedbackKey(item.concept, item.provider),
-                    item,
-                ])
-            ),
+        () => new Map(feedback.map((item) => [mappingFeedbackKey(item.concept, item.provider), item])),
         [feedback]
     );
 
@@ -71,19 +186,24 @@ export function DraftMappingBrowser({
             provider,
             currentName,
             decision: update.decision ?? existing?.decision ?? "approve",
-            replacementName:
-                "replacementName" in update
-                    ? update.replacementName
-                    : existing?.replacementName,
+            replacementName: "replacementName" in update ? update.replacementName : existing?.replacementName,
             note: "note" in update ? update.note : existing?.note,
             updatedAt: new Date().toISOString(),
         };
         const next = [
-            ...feedback.filter(
-                (item) => mappingFeedbackKey(item.concept, item.provider) !== key
-            ),
+            ...feedback.filter((item) => mappingFeedbackKey(item.concept, item.provider) !== key),
             nextItem,
         ];
+        setFeedback(next);
+        saveMappingFeedback(next);
+    }
+
+    function removeReplacementFeedback(concept: string, provider: IconProvider) {
+        const key = mappingFeedbackKey(concept, provider);
+        if (feedbackByKey.get(key)?.decision !== "replace") {
+            return;
+        }
+        const next = feedback.filter((item) => mappingFeedbackKey(item.concept, item.provider) !== key);
         setFeedback(next);
         saveMappingFeedback(next);
     }
@@ -139,7 +259,7 @@ export function DraftMappingBrowser({
                         >
                             <span className="truncate font-medium">{mapping.concept}</span>
                             <span
-                                className={`ml-2 font-[var(--font-mono)] text-[10px] ${
+                                className={`ml-2 text-[10px] font-[var(--font-mono)] ${
                                     selected?.blueprintId === mapping.blueprintId
                                         ? "text-white/70"
                                         : mapping.minScore < 0.55
@@ -166,7 +286,7 @@ export function DraftMappingBrowser({
                                         {selected.concept}
                                     </h2>
                                     <span
-                                        className={`rounded-full px-2 py-0.5 text-[10px] tracking-wide uppercase ${
+                                        className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
                                             selected.status === "existing"
                                                 ? "bg-emerald-100 text-emerald-800"
                                                 : "bg-amber-100 text-amber-800"
@@ -181,9 +301,8 @@ export function DraftMappingBrowser({
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="font-[var(--font-mono)] text-xs text-[var(--muted)]">
-                                    min {selected.minScore.toFixed(3)} · mean{" "}
-                                    {selected.meanScore.toFixed(3)}
+                                <div className="text-xs font-[var(--font-mono)] text-[var(--muted)]">
+                                    min {selected.minScore.toFixed(3)} · mean {selected.meanScore.toFixed(3)}
                                 </div>
                                 <button
                                     type="button"
@@ -209,6 +328,10 @@ export function DraftMappingBrowser({
                                 const providerFeedback = feedbackByKey.get(
                                     mappingFeedbackKey(selected.concept, providerName)
                                 );
+                                const proxyIcon =
+                                    providerName === "sfsymbols"
+                                        ? iconById.get(selected.providers.lucide?.id ?? "")
+                                        : undefined;
                                 const decisions: Array<{
                                     value: MappingFeedbackDecision;
                                     label: string;
@@ -221,20 +344,25 @@ export function DraftMappingBrowser({
                                         key={provider}
                                         className="rounded-xl border border-[var(--line)] bg-white/70 p-3"
                                     >
-                                        <div className="mb-2 text-[11px] tracking-wide text-[var(--muted)] uppercase">
+                                        <div className="mb-2 text-[11px] uppercase tracking-wide text-[var(--muted)]">
                                             {PROVIDER_LABEL[provider as IconProvider]}
                                         </div>
-                                        <IconTile icon={icon} size={56} />
-                                        <div className="mt-3 font-[var(--font-mono)] text-xs break-all">
+                                        {icon.textOnly && proxyIcon ? (
+                                            <IconTile icon={proxyIcon} size={56} />
+                                        ) : (
+                                            <IconTile icon={icon} size={56} />
+                                        )}
+                                        <div className="mt-3 break-all text-xs font-[var(--font-mono)]">
                                             {match.name}
                                         </div>
-                                        <div className="mt-1 font-[var(--font-mono)] text-[11px] text-[var(--muted)]">
+                                        <div className="mt-1 text-[11px] font-[var(--font-mono)] text-[var(--muted)]">
                                             anchor score {match.score.toFixed(3)}
                                         </div>
                                         {icon.textOnly && (
                                             <div className="mt-1 text-[10px] text-[var(--warn)]">
-                                                text-only; provide local licensed SF assets for image
-                                                embeddings
+                                                {proxyIcon
+                                                    ? "Lucide proxy preview; Apple glyph is not redistributed"
+                                                    : "text-only; provide local licensed SF assets for the Apple glyph"}
                                             </div>
                                         )}
                                         <div className="mt-3 border-t border-[var(--line)] pt-3">
@@ -250,10 +378,7 @@ export function DraftMappingBrowser({
                                                                 match.name,
                                                                 {
                                                                     decision: value,
-                                                                    replacementName:
-                                                                        value === "approve"
-                                                                            ? undefined
-                                                                            : providerFeedback?.replacementName,
+                                                                    replacementName: undefined,
                                                                 }
                                                             )
                                                         }
@@ -269,27 +394,33 @@ export function DraftMappingBrowser({
                                                     </button>
                                                 ))}
                                             </div>
-                                            <input
-                                                aria-label={`Replacement for ${providerName}`}
-                                                value={providerFeedback?.replacementName ?? ""}
-                                                onChange={(event) =>
+                                            <ReplacementIconCombobox
+                                                icons={iconsByProvider.get(providerName) ?? []}
+                                                selectedName={
+                                                    providerFeedback?.decision === "replace"
+                                                        ? providerFeedback.replacementName
+                                                        : undefined
+                                                }
+                                                proxyIcon={proxyIcon}
+                                                onClear={() =>
+                                                    removeReplacementFeedback(selected.concept, providerName)
+                                                }
+                                                onSelect={(replacement) =>
                                                     updateFeedback(
                                                         selected.concept,
                                                         providerName,
                                                         match.name,
                                                         {
                                                             decision: "replace",
-                                                            replacementName:
-                                                                event.target.value || undefined,
+                                                            replacementName: replacement.name,
                                                         }
                                                     )
                                                 }
-                                                placeholder="Replacement icon name"
-                                                className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
                                             />
                                             <input
                                                 aria-label={`Note for ${providerName}`}
                                                 value={providerFeedback?.note ?? ""}
+                                                disabled={!providerFeedback}
                                                 onChange={(event) =>
                                                     updateFeedback(
                                                         selected.concept,
@@ -298,11 +429,15 @@ export function DraftMappingBrowser({
                                                         { note: event.target.value || undefined }
                                                     )
                                                 }
-                                                placeholder="Optional note"
-                                                className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
+                                                placeholder={
+                                                    providerFeedback
+                                                        ? "Optional note"
+                                                        : "Choose a decision first"
+                                                }
+                                                className="mt-2 w-full rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:bg-slate-100"
                                             />
                                             {providerFeedback && (
-                                                <div className="mt-2 text-[10px] font-medium tracking-wide text-[var(--muted)] uppercase">
+                                                <div className="mt-2 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
                                                     recorded · {providerFeedback.decision}
                                                 </div>
                                             )}
@@ -314,18 +449,14 @@ export function DraftMappingBrowser({
                     </div>
 
                     <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 backdrop-blur">
-                        <h3 className="text-sm font-semibold tracking-wide uppercase">
-                            Full-set coverage
-                        </h3>
+                        <h3 className="text-sm font-semibold uppercase tracking-wide">Full-set coverage</h3>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                             {catalog.providers.map((provider) => {
                                 const archive = catalog.archives[provider];
                                 return (
                                     <div key={provider} className="rounded-lg bg-white/65 p-3">
-                                        <div className="text-xs font-medium">
-                                            {PROVIDER_LABEL[provider]}
-                                        </div>
-                                        <div className="mt-1 font-[var(--font-mono)] text-[11px] text-[var(--muted)]">
+                                        <div className="text-xs font-medium">{PROVIDER_LABEL[provider]}</div>
+                                        <div className="mt-1 text-[11px] font-[var(--font-mono)] text-[var(--muted)]">
                                             {archive?.iconCount.toLocaleString() ?? 0} icons
                                             {archive?.bytes
                                                 ? ` · ${(archive.bytes / 1024).toFixed(0)} KiB zip`

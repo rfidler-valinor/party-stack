@@ -31,7 +31,11 @@ export function loadMappingFeedback(storage: Pick<Storage, "getItem"> = localSto
             return [];
         }
         const parsed = JSON.parse(value) as unknown;
-        return Array.isArray(parsed) ? (parsed as MappingFeedback[]) : [];
+        return Array.isArray(parsed)
+            ? (parsed as MappingFeedback[]).filter(
+                  (item) => item.decision !== "replace" || Boolean(item.replacementName?.trim())
+              )
+            : [];
     } catch {
         return [];
     }
@@ -57,8 +61,7 @@ export function createMappingFeedbackFile(
         generatedAt,
         feedback: [...feedback].sort(
             (left, right) =>
-                left.concept.localeCompare(right.concept) ||
-                left.provider.localeCompare(right.provider)
+                left.concept.localeCompare(right.concept) || left.provider.localeCompare(right.provider)
         ),
     };
 }

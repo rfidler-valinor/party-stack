@@ -1,4 +1,4 @@
-import { unzipSync } from "fflate";
+import { strFromU8, unzipSync } from "fflate";
 import type { CatalogIcon } from "./types";
 
 const archives = new Map<string, Promise<Record<string, Uint8Array>>>();
@@ -34,7 +34,13 @@ export async function getIconAssetUrl(icon: CatalogIcon): Promise<string | undef
         throw new Error(`Missing ${icon.asset.path} in ${icon.asset.archive}`);
     }
     const mime = icon.asset.format === "svg" ? "image/svg+xml" : "image/png";
-    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: mime }));
+    const source =
+        icon.provider === "salesforce" && icon.asset.format === "svg"
+            ? strFromU8(bytes)
+                  .replaceAll('fill="#fff"', 'fill="#16324f"')
+                  .replaceAll('fill="#ffffff"', 'fill="#16324f"')
+            : new Uint8Array(bytes);
+    const url = URL.createObjectURL(new Blob([source], { type: mime }));
     objectUrls.set(icon.id, url);
     return url;
 }
