@@ -6,13 +6,15 @@
             "outputs": ["public/icon-sets/**"]
         },
         "icons:catalog": {
+            "cache": false,
+            "env": ["SF_SYMBOLS_ASSET_DIR"],
             "inputs": [
                 "scripts/extract-assets.ts",
                 "icon-sources.json",
                 "package.json",
                 "public/icon-sets/**"
             ],
-            "outputs": ["temp/data/catalog.json"]
+            "outputs": ["temp/data/catalog.json", "temp/data/sfsymbols.local.zip"]
         },
         "icons:embed": {
             "dependsOn": ["icons:catalog"],
@@ -22,6 +24,7 @@
                 "src/shared/math.ts",
                 "src/shared/types.ts",
                 "temp/data/catalog.json",
+                "temp/data/sfsymbols.local.zip",
                 "public/icon-sets/**"
             ],
             "outputs": [

@@ -5,11 +5,11 @@ Local workshop for building and validating the provider-neutral `@party-stack/ic
 ## What it does
 
 1. **Archives every icon** from:
-   - Blueprint / Foundry (`@blueprintjs/icons`)
-   - Lucide (`@lucide/icons`)
-   - Material Symbols (`@iconify-json/material-symbols`)
-   - Salesforce Lightning action/custom/doctype/standard/utility icons (`@salesforce-ux/icons`)
-   - SF Symbols names (`sf-symbols-typescript`)
+    - Blueprint / Foundry (`@blueprintjs/icons`)
+    - Lucide (`@lucide/icons`)
+    - Material Symbols (`@iconify-json/material-symbols`)
+    - Salesforce Lightning action/custom/doctype/standard/utility icons (`@salesforce-ux/icons`)
+    - SF Symbols names (`sf-symbols-typescript`)
 2. **Embeds** each icon with CLIP text semantics (`Xenova/clip-vit-base-patch32`) plus a normalized 16×16 image descriptor when a glyph exists.
 3. **Drafts a mapping for every Blueprint icon**, keeping existing package mappings fixed and proposing the closest icon from every other provider.
 4. **Audits** existing and generated mappings with pairwise cosine similarity and nearest-neighbor search.
@@ -49,15 +49,21 @@ download `icon-mapping-feedback.json` for applying to the provider mapping packa
 
 ## SF Symbols glyphs
 
-Apple's SF Symbols license does not permit extracting or repackaging glyph images as an
-icon set. A GitHub mirror does not change that license, so only the MIT-licensed symbol
-name catalog is committed here.
+Only the MIT-licensed symbol-name catalog is committed here. Apple glyph exports stay
+local so the repository and built app do not redistribute them.
 
-For internal embedding runs where you have licensed local exports, point the pipeline at
-a directory of `<symbol-name>.png` or `<symbol-name>.svg` files:
+Install the official SF Symbols app on macOS, export local PNG previews with its bundled
+CLI, then point the pipeline at that ignored directory:
 
 ```bash
-SF_SYMBOLS_ASSET_DIR=/path/to/local/sf-symbol-exports pnpm icons:embed
+pnpm icons:sf:export
+SF_SYMBOLS_ASSET_DIR="$PWD/temp/sf-symbols" \
+    pnpm turbo icons:embed --filter @party-stack/icon-lab
 ```
 
-Those assets are consumed transiently and never copied into the repository archives.
+You can also supply your own directory of `<symbol-name>.png` or
+`<symbol-name>.svg` exports.
+
+`icons:catalog` packages matching exports into ignored `temp/data/sfsymbols.local.zip`.
+The lab serves that local archive for previews and `icons:embed` uses the same images for
+visual descriptors. Neither the images nor their derived archive are committed.

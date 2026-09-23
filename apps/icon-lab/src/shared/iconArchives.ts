@@ -7,7 +7,8 @@ const objectUrls = new Map<string, string>();
 async function loadArchive(path: string): Promise<Record<string, Uint8Array>> {
     let pending = archives.get(path);
     if (!pending) {
-        pending = fetch(`/icon-sets/${path}`)
+        const url = path === "sfsymbols.local.zip" ? `/generated-data/${path}` : `/icon-sets/${path}`;
+        pending = fetch(url)
             .then((response) => {
                 if (!response.ok) {
                     throw new Error(`Failed to load ${path}: ${response.status}`);

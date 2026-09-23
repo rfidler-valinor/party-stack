@@ -7,14 +7,15 @@
         "build": "tsc --noEmit",
         "dev": "vite dev",
         "dist": "vite build",
-        "lint": "eslint",
-        "test": "vitest run src",
         "icons:archive": "tsx scripts/extract-assets.ts",
         "icons:catalog": "tsx scripts/extract-assets.ts --catalog-only",
-        "icons:extract": "tsx scripts/extract-assets.ts --catalog-only",
         "icons:embed": "tsx scripts/generate-embeddings.ts",
+        "icons:extract": "tsx scripts/extract-assets.ts --catalog-only",
         "icons:prepare": "tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts",
-        "icons:update": "pnpm update --latest @blueprintjs/icons @iconify-json/material-symbols @lucide/icons @salesforce-ux/icons sf-symbols-typescript && tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts"
+        "icons:sf:export": "tsx scripts/export-sf-symbols.ts",
+        "icons:update": "pnpm update --latest @blueprintjs/icons @iconify-json/material-symbols @lucide/icons @salesforce-ux/icons sf-symbols-typescript && tsx scripts/extract-assets.ts && tsx scripts/generate-embeddings.ts",
+        "lint": "eslint",
+        "test": "vitest run src"
     },
     "dependencies": {
         "@party-stack/icons": "workspace:*",

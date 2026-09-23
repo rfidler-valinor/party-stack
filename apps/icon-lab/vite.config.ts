@@ -14,6 +14,7 @@ const generatedFiles = [
     "embeddings-index.json",
     "embeddings.i8",
     "mapping-audit.json",
+    "sfsymbols.local.zip",
 ] as const;
 
 function generatedDataPlugin(): Plugin {
@@ -46,6 +47,9 @@ function generatedDataPlugin(): Plugin {
         },
         async generateBundle() {
             for (const fileName of generatedFiles) {
+                if (fileName === "sfsymbols.local.zip") {
+                    continue;
+                }
                 this.emitFile({
                     type: "asset",
                     fileName: `generated-data/${fileName}`,

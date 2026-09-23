@@ -21,13 +21,11 @@ const PROVIDER_LABEL: Record<IconProvider, string> = {
 function ReplacementIconCombobox({
     icons,
     selectedName,
-    proxyIcon,
     onClear,
     onSelect,
 }: {
     icons: CatalogIcon[];
     selectedName?: string;
-    proxyIcon?: CatalogIcon;
     onClear: () => void;
     onSelect: (icon: CatalogIcon) => void;
 }) {
@@ -118,18 +116,11 @@ function ReplacementIconCombobox({
             )}
             {selectedIcon && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2">
-                    {selectedIcon.textOnly && proxyIcon ? (
-                        <IconTile icon={proxyIcon} size={28} />
-                    ) : (
-                        <IconTile icon={selectedIcon} size={28} />
-                    )}
+                    <IconTile icon={selectedIcon} size={28} />
                     <div className="min-w-0">
                         <div className="truncate text-[10px] font-[var(--font-mono)]">
                             {selectedIcon.name}
                         </div>
-                        {selectedIcon.textOnly && proxyIcon && (
-                            <div className="text-[9px] text-[var(--warn)]">Lucide proxy preview</div>
-                        )}
                     </div>
                 </div>
             )}
@@ -328,10 +319,6 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                 const providerFeedback = feedbackByKey.get(
                                     mappingFeedbackKey(selected.concept, providerName)
                                 );
-                                const proxyIcon =
-                                    providerName === "sfsymbols"
-                                        ? iconById.get(selected.providers.lucide?.id ?? "")
-                                        : undefined;
                                 const decisions: Array<{
                                     value: MappingFeedbackDecision;
                                     label: string;
@@ -347,11 +334,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                         <div className="mb-2 text-[11px] uppercase tracking-wide text-[var(--muted)]">
                                             {PROVIDER_LABEL[provider as IconProvider]}
                                         </div>
-                                        {icon.textOnly && proxyIcon ? (
-                                            <IconTile icon={proxyIcon} size={56} />
-                                        ) : (
-                                            <IconTile icon={icon} size={56} />
-                                        )}
+                                        <IconTile icon={icon} size={56} />
                                         <div className="mt-3 break-all text-xs font-[var(--font-mono)]">
                                             {match.name}
                                         </div>
@@ -360,9 +343,8 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                         </div>
                                         {icon.textOnly && (
                                             <div className="mt-1 text-[10px] text-[var(--warn)]">
-                                                {proxyIcon
-                                                    ? "Lucide proxy preview; Apple glyph is not redistributed"
-                                                    : "text-only; provide local licensed SF assets for the Apple glyph"}
+                                                local SF Symbol image missing; set SF_SYMBOLS_ASSET_DIR and
+                                                regenerate
                                             </div>
                                         )}
                                         <div className="mt-3 border-t border-[var(--line)] pt-3">
@@ -401,7 +383,6 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                                         ? providerFeedback.replacementName
                                                         : undefined
                                                 }
-                                                proxyIcon={proxyIcon}
                                                 onClear={() =>
                                                     removeReplacementFeedback(selected.concept, providerName)
                                                 }

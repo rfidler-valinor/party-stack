@@ -1,13 +1,8 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
-import {
-    AutoTokenizer,
-    CLIPTextModelWithProjection,
-    env,
-} from "@xenova/transformers";
+import { AutoTokenizer, CLIPTextModelWithProjection, env } from "@xenova/transformers";
 import { strFromU8, unzipSync } from "fflate";
 import sharp from "sharp";
 import type {
@@ -68,11 +63,7 @@ function svgToPng(svg: string, size = 224): Uint8Array {
         .asPng();
 }
 
-async function visualDescriptor(
-    bytes: Uint8Array,
-    format: "svg" | "png",
-    dims: number
-): Promise<number[]> {
+async function visualDescriptor(bytes: Uint8Array, format: "svg" | "png", dims: number): Promise<number[]> {
     const source = format === "svg" ? svgToPng(strFromU8(bytes), 64) : bytes;
     const pixels = await sharp(source)
         .flatten({ background: "#ffffff" })
@@ -95,9 +86,7 @@ async function visualDescriptor(
     if (dims === features.length) {
         return l2Normalize(features);
     }
-    return l2Normalize(
-        Array.from({ length: dims }, (_, index) => features[index % features.length]!)
-    );
+    return l2Normalize(Array.from({ length: dims }, (_, index) => features[index % features.length]!));
 }
 
 function lexicalScore(a: CatalogIcon, b: CatalogIcon): number {
@@ -158,9 +147,7 @@ function lexicalCandidates(
     return [...overlap]
         .map(([icon, intersection]) => ({
             icon,
-            score:
-                intersection /
-                Math.max(1, iconGrams(anchor).size + iconGrams(icon).size - intersection),
+            score: intersection / Math.max(1, iconGrams(anchor).size + iconGrams(icon).size - intersection),
         }))
         .sort((a, b) => b.score - a.score)
         .slice(0, count)
@@ -218,9 +205,7 @@ function bestMatch(
             .at(-1)!
             .replace(/-(?:outline|rounded|sharp)(?:-.+)?$/, "")
             .replaceAll("_", "-");
-    const exact = candidates.filter(
-        (candidate) => canonicalName(candidate) === canonicalName(anchor)
-    );
+    const exact = candidates.filter((candidate) => canonicalName(candidate) === canonicalName(anchor));
     if (exact.length > 0) {
         const icon = exact.sort(
             (left, right) =>
@@ -237,10 +222,9 @@ function bestMatch(
     }
     let best = { icon: candidates[0]!, score: -Infinity };
     const shortlist = new Map(
-        [
-            ...topCandidates(anchor, candidates, textVectors),
-            ...lexicalCandidates(anchor, gramIndex),
-        ].map((icon) => [icon.id, icon])
+        [...topCandidates(anchor, candidates, textVectors), ...lexicalCandidates(anchor, gramIndex)].map(
+            (icon) => [icon.id, icon]
+        )
     );
     for (const icon of shortlist.values()) {
         const semantic = cosineSimilarity(anchorTextVector, textVectors.get(icon.id)!);
@@ -267,20 +251,6 @@ function quantize(vectors: number[][]): Int8Array {
     return output;
 }
 
-async function localSfAsset(name: string): Promise<string | undefined> {
-    const rootDir = process.env.SF_SYMBOLS_ASSET_DIR;
-    if (!rootDir) {
-        return undefined;
-    }
-    for (const extension of ["png", "svg"]) {
-        const candidate = path.join(rootDir, `${name}.${extension}`);
-        if (existsSync(candidate)) {
-            return candidate;
-        }
-    }
-    return undefined;
-}
-
 async function main(): Promise<void> {
     await mkdir(generatedDataDir, { recursive: true });
     await rm(tmpDir, { recursive: true, force: true });
@@ -293,10 +263,11 @@ async function main(): Promise<void> {
     for (const provider of PROVIDERS) {
         const archive = catalog.archives[provider];
         if (archive?.path) {
-            archiveFiles.set(
-                provider,
-                unzipSync(new Uint8Array(await readFile(path.join(archivesDir, `${provider}.zip`))))
-            );
+            const archivePath =
+                provider === "sfsymbols"
+                    ? path.join(generatedDataDir, archive.path)
+                    : path.join(archivesDir, `${provider}.zip`);
+            archiveFiles.set(provider, unzipSync(new Uint8Array(await readFile(archivePath))));
         }
     }
 
@@ -327,13 +298,13 @@ async function main(): Promise<void> {
             modalities.set(icon.id, "text");
         });
         if (start % (TEXT_BATCH * 25) === 0) {
-            console.log(`  text ${Math.min(start + batch.length, catalog.icons.length)}/${catalog.icons.length}`);
+            console.log(
+                `  text ${Math.min(start + batch.length, catalog.icons.length)}/${catalog.icons.length}`
+            );
         }
     }
 
-    const iconsWithAssets = catalog.icons.filter(
-        (icon) => icon.asset || (icon.provider === "sfsymbols" && process.env.SF_SYMBOLS_ASSET_DIR)
-    );
+    const iconsWithAssets = catalog.icons.filter((icon) => icon.asset);
     const textDims = (vectors.values().next().value?.length ?? 768) - VISUAL_DIMS;
     console.log(`Computing visual descriptors for ${iconsWithAssets.length} icons…`);
     let imageCount = 0;
@@ -350,18 +321,6 @@ async function main(): Promise<void> {
                         return {
                             icon,
                             descriptor: await visualDescriptor(bytes, icon.asset.format, VISUAL_DIMS),
-                        };
-                    }
-                    const imagePath = await localSfAsset(icon.name);
-                    if (imagePath) {
-                        const format = imagePath.endsWith(".svg") ? "svg" : "png";
-                        return {
-                            icon,
-                            descriptor: await visualDescriptor(
-                                new Uint8Array(await readFile(imagePath)),
-                                format,
-                                VISUAL_DIMS
-                            ),
                         };
                     }
                 } catch (error) {
@@ -388,7 +347,9 @@ async function main(): Promise<void> {
             imageCount += 1;
         }
         if (start % (IMAGE_BATCH * 25) === 0) {
-            console.log(`  image ${Math.min(start + batch.length, iconsWithAssets.length)}/${iconsWithAssets.length}`);
+            console.log(
+                `  image ${Math.min(start + batch.length, iconsWithAssets.length)}/${iconsWithAssets.length}`
+            );
         }
     }
 
@@ -404,10 +365,7 @@ async function main(): Promise<void> {
         modalities: catalog.icons.map((icon) => modalities.get(icon.id)!),
     };
     await writeFile(path.join(generatedDataDir, "embeddings.i8"), binary);
-    await writeFile(
-        path.join(generatedDataDir, "embeddings-index.json"),
-        JSON.stringify(embeddingIndex)
-    );
+    await writeFile(path.join(generatedDataDir, "embeddings-index.json"), JSON.stringify(embeddingIndex));
     await rm(path.join(generatedDataDir, "embeddings.json"), { force: true });
 
     console.log("Auditing existing package mappings…");
@@ -453,10 +411,7 @@ async function main(): Promise<void> {
 
     console.log("Generating Blueprint-anchored universal mapping draft…");
     const iconsByProvider = new Map(
-        PROVIDERS.map((provider) => [
-            provider,
-            catalog.icons.filter((icon) => icon.provider === provider),
-        ])
+        PROVIDERS.map((provider) => [provider, catalog.icons.filter((icon) => icon.provider === provider)])
     );
     const gramIndexes = new Map(
         PROVIDERS.map((provider) => [provider, buildGramIndex(iconsByProvider.get(provider)!)])
@@ -476,9 +431,7 @@ async function main(): Promise<void> {
             const candidates = iconsByProvider.get(provider)!;
             const forced = anchor.concept
                 ? candidates.find((icon) =>
-                      (icon.concepts ?? (icon.concept ? [icon.concept] : [])).includes(
-                          anchor.concept!
-                      )
+                      (icon.concepts ?? (icon.concept ? [icon.concept] : [])).includes(anchor.concept!)
                   )
                 : undefined;
             const match = forced
@@ -486,13 +439,7 @@ async function main(): Promise<void> {
                       icon: forced,
                       score: cosineSimilarity(vectors.get(anchor.id)!, vectors.get(forced.id)!),
                   }
-                : bestMatch(
-                      anchor,
-                      candidates,
-                      vectors,
-                      textVectors,
-                      gramIndexes.get(provider)!
-                  );
+                : bestMatch(anchor, candidates, vectors, textVectors, gramIndexes.get(provider)!);
             providers[provider] = {
                 id: match.icon.id,
                 name: match.icon.name,
@@ -529,7 +476,9 @@ async function main(): Promise<void> {
     console.log(`Drafted ${draftMappings.length}/${blueprintIcons.length} Blueprint mappings.`);
     console.log("Weakest existing concepts:");
     for (const row of conceptScores.slice(0, 10)) {
-        console.log(`  ${row.concept.padEnd(18)} min=${row.minScore.toFixed(3)} mean=${row.meanScore.toFixed(3)}`);
+        console.log(
+            `  ${row.concept.padEnd(18)} min=${row.minScore.toFixed(3)} mean=${row.meanScore.toFixed(3)}`
+        );
     }
 }
 

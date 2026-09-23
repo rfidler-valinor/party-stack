@@ -279,7 +279,7 @@ async function buildSalesforce(concepts: ReturnType<typeof conceptMaps>): Promis
             asset: { archive: `${provider}.zip`, path: assetPath, format: "svg" },
             labels: [
                 humanize(name),
-                ...((metadata.get(qualifiedName) ?? []).map(humanize)),
+                ...(metadata.get(qualifiedName) ?? []).map(humanize),
                 `salesforce ${category} icon`,
             ],
         });
@@ -291,9 +291,7 @@ async function buildSfSymbols(concepts: ReturnType<typeof conceptMaps>): Promise
     const typesRoot = packageRoot("sf-symbols-typescript");
     const declaration = await readFile(path.join(typesRoot, "dist/index.d.ts"), "utf8");
     const names = [
-        ...new Set(
-            [...declaration.matchAll(/^\s*(?:=|\|)\s*'([^']+)'/gm)].map((match) => match[1]!)
-        ),
+        ...new Set([...declaration.matchAll(/^\s*(?:=|\|)\s*'([^']+)'/gm)].map((match) => match[1]!)),
     ].sort();
 
     return names.map((name) => {
@@ -310,14 +308,74 @@ async function buildSfSymbols(concepts: ReturnType<typeof conceptMaps>): Promise
     });
 }
 
+async function attachLocalSfSymbolAssets(
+    icons: CatalogIcon[]
+): Promise<{ icons: CatalogIcon[]; bytes: number; assetCount: number }> {
+    const archiveName = "sfsymbols.local.zip";
+    const archivePath = path.join(dataDir, archiveName);
+    const assetDir = process.env.SF_SYMBOLS_ASSET_DIR;
+    if (!assetDir) {
+        await rm(archivePath, { force: true });
+        return { icons, bytes: 0, assetCount: 0 };
+    }
+
+    const relativeFiles = await listFilesRecursive(assetDir);
+    const sourceByName = new Map<string, string>();
+    for (const extension of ["png", "svg"] as const) {
+        for (const relative of relativeFiles) {
+            if (path.extname(relative).toLowerCase() !== `.${extension}`) {
+                continue;
+            }
+            const name = path.basename(relative, path.extname(relative));
+            if (!sourceByName.has(name)) {
+                sourceByName.set(name, relative);
+            }
+        }
+    }
+
+    const files: Zippable = {};
+    let assetCount = 0;
+    const withAssets = await Promise.all(
+        icons.map(async (icon): Promise<CatalogIcon> => {
+            const relative = sourceByName.get(icon.name);
+            if (!relative) {
+                return icon;
+            }
+            const extension = path.extname(relative).slice(1).toLowerCase() as "png" | "svg";
+            const assetPath = `${safeName(icon.name)}.${extension}`;
+            files[assetPath] = new Uint8Array(await readFile(path.join(assetDir, relative)));
+            assetCount += 1;
+            return {
+                ...icon,
+                textOnly: undefined,
+                asset: {
+                    archive: archiveName,
+                    path: assetPath,
+                    format: extension,
+                },
+            };
+        })
+    );
+
+    if (assetCount === 0) {
+        throw new Error(
+            `SF_SYMBOLS_ASSET_DIR=${assetDir} contains no PNG/SVG files matching SF Symbol names`
+        );
+    }
+    await writeFile(archivePath, zipSync(files, { level: 6 }));
+    return {
+        icons: withAssets,
+        bytes: (await stat(archivePath)).size,
+        assetCount,
+    };
+}
+
 async function buildCatalogFromSnapshot(
     provider: Exclude<IconProvider, "sfsymbols">,
     concepts: Map<string, IconName[]>
 ): Promise<CatalogIcon[]> {
     const archiveName = `${provider}.zip`;
-    const archive = unzipSync(
-        new Uint8Array(await readFile(path.join(archivesDir, archiveName)))
-    );
+    const archive = unzipSync(new Uint8Array(await readFile(path.join(archivesDir, archiveName))));
     return Object.keys(archive)
         .filter((assetPath) => assetPath.endsWith(".svg"))
         .sort()
@@ -386,16 +444,12 @@ async function main(): Promise<void> {
         const providers = ["blueprint", "lucide", "material", "salesforce"] as const;
         const icons = (
             await Promise.all(
-                providers.map((provider) =>
-                    buildCatalogFromSnapshot(provider, concepts[provider])
-                )
+                providers.map((provider) => buildCatalogFromSnapshot(provider, concepts[provider]))
             )
         ).flat();
-        const sfSymbolNames = await readJson<string[]>(
-            path.join(archivesDir, "sfsymbols.json")
-        );
-        icons.push(
-            ...sfSymbolNames.map((name) => {
+        const sfSymbolNames = await readJson<string[]>(path.join(archivesDir, "sfsymbols.json"));
+        const sfSymbols = await attachLocalSfSymbolAssets(
+            sfSymbolNames.map((name) => {
                 const mappedConcepts = concepts.sfsymbols.get(name);
                 return {
                     id: `sfsymbols:${name}`,
@@ -408,6 +462,7 @@ async function main(): Promise<void> {
                 };
             })
         );
+        icons.push(...sfSymbols.icons);
         const archives: CatalogFile["archives"] = {};
         for (const provider of providers) {
             const source = effectiveSources[provider];
@@ -422,9 +477,9 @@ async function main(): Promise<void> {
         }
         const sfSource = effectiveSources.sfsymbols;
         archives.sfsymbols = {
-            path: "",
+            path: sfSymbols.assetCount > 0 ? "sfsymbols.local.zip" : "",
             iconCount: sfSymbolNames.length,
-            bytes: 0,
+            bytes: sfSymbols.bytes,
             source: sfSource.archiveUrl,
             version: sfSource.version,
             license: sfSource.license,
@@ -436,7 +491,9 @@ async function main(): Promise<void> {
             archives,
         };
         await writeFile(path.join(dataDir, "catalog.json"), JSON.stringify(catalog));
-        console.log(`Wrote ${icons.length} catalog entries from committed snapshots.`);
+        console.log(
+            `Wrote ${icons.length} catalog entries from committed snapshots (${sfSymbols.assetCount} local SF Symbol images).`
+        );
         return;
     }
 
@@ -447,11 +504,12 @@ async function main(): Promise<void> {
         await buildMaterial(concepts),
         await buildSalesforce(concepts),
     ];
-    const sfSymbols = await buildSfSymbols(concepts);
+    const sfSymbolNames = await buildSfSymbols(concepts);
     await writeFile(
         path.join(archivesDir, "sfsymbols.json"),
-        `${JSON.stringify(sfSymbols.map(({ name }) => name))}\n`
+        `${JSON.stringify(sfSymbolNames.map(({ name }) => name))}\n`
     );
+    const sfSymbols = await attachLocalSfSymbolAssets(sfSymbolNames);
 
     const archives: CatalogFile["archives"] = {};
     const icons: CatalogIcon[] = [];
@@ -476,12 +534,12 @@ async function main(): Promise<void> {
         );
     }
 
-    icons.push(...sfSymbols);
+    icons.push(...sfSymbols.icons);
     const sfSource = effectiveSources.sfsymbols;
     archives.sfsymbols = {
-        path: "",
-        iconCount: sfSymbols.length,
-        bytes: 0,
+        path: sfSymbols.assetCount > 0 ? "sfsymbols.local.zip" : "",
+        iconCount: sfSymbolNames.length,
+        bytes: sfSymbols.bytes,
         source: sfSource.archiveUrl,
         version: sfSource.version,
         license: sfSource.license,
@@ -495,17 +553,16 @@ async function main(): Promise<void> {
     };
     await writeFile(path.join(dataDir, "catalog.json"), JSON.stringify(catalog));
     if (!catalogOnly) {
-        await writeFile(
-            path.join(archivesDir, "sources.json"),
-            JSON.stringify(effectiveSources, null, 2)
-        );
+        await writeFile(path.join(archivesDir, "sources.json"), JSON.stringify(effectiveSources, null, 2));
         await writeFile(
             path.join(root, "icon-sources.json"),
             `${JSON.stringify(effectiveSources, null, 4)}\n`
         );
     }
 
-    console.log(`  sfsymbols    ${String(sfSymbols.length).padStart(5)} names (glyphs not redistributed)`);
+    console.log(
+        `  sfsymbols    ${String(sfSymbolNames.length).padStart(5)} names · ${sfSymbols.assetCount} local images (not redistributed)`
+    );
     console.log(`Wrote ${icons.length} catalog entries and ${builds.length} compact archives.`);
 }
 
