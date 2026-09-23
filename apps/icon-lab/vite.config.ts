@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
+import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const generatedDataDir = path.join(rootDir, "temp", "data");
@@ -16,9 +16,7 @@ const generatedFiles = [
 ] as const;
 
 function generatedDataPlugin(): Plugin {
-    function serveGeneratedData(
-        server: Parameters<NonNullable<Plugin["configureServer"]>>[0] | Parameters<NonNullable<Plugin["configurePreviewServer"]>>[0]
-    ) {
+    function serveGeneratedData(server: ViteDevServer | PreviewServer) {
         server.middlewares.use("/generated-data", async (request, response, next) => {
             const fileName = path.basename(request.url?.split("?")[0] ?? "");
             if (!generatedFiles.includes(fileName as (typeof generatedFiles)[number])) {
