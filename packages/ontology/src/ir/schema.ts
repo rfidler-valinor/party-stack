@@ -1,4 +1,4 @@
-import { iconNames } from "@party-stack/icons";
+import { IconNames } from "@party-stack/icons";
 import { o } from "./generated/builders.js";
 import type { OntologyIR } from "./generated/types.js";
 
@@ -9,7 +9,7 @@ export default {
             description: "A renderer-independent icon name from @party-stack/icons.",
             type: o.string({
                 constraint: o.StringConstraint.enum({
-                    options: iconNames.map((value) => ({ value })),
+                    options: IconNames.map((value) => ({ value })),
                 }),
             }),
         },

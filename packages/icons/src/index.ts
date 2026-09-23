@@ -4,7 +4,7 @@
  *
  * Names describe meaning rather than any provider's asset vocabulary.
  */
-export const iconNames = [
+export const IconNames = [
     "activity",
     "add",
     "airplane",
@@ -120,9 +120,9 @@ export const iconNames = [
     "x-circle",
 ] as const;
 
-export type IconName = (typeof iconNames)[number];
+export type IconName = (typeof IconNames)[number];
 
-const iconNameSet: ReadonlySet<string> = new Set(iconNames);
+const iconNameSet: ReadonlySet<string> = new Set(IconNames);
 
 export function isIconName(value: string): value is IconName {
     return iconNameSet.has(value);

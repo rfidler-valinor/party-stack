@@ -3,7 +3,7 @@ import { lucideDynamicIconImports, type LucideIconName } from "@lucide/icons/dyn
 import type { IconName } from "@party-stack/icons";
 import type { LucideBuildParams, LucideIconData } from "@lucide/icons";
 
-export const lucideIconNames = {
+export const LucideIconNames = {
     activity: "activity",
     add: "plus",
     airplane: "plane",
@@ -120,7 +120,7 @@ export const lucideIconNames = {
 } as const satisfies Record<IconName, LucideIconName>;
 
 export function getLucideIconName(name: IconName): LucideIconName {
-    return lucideIconNames[name];
+    return LucideIconNames[name];
 }
 
 export async function loadLucideIcon(name: IconName): Promise<LucideIconData> {

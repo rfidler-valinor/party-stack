@@ -1,7 +1,7 @@
 import { getIconPaths, IconSize, type IconName as BlueprintIconName } from "@blueprintjs/icons";
 import type { Icon, IconName } from "@party-stack/icons";
 
-export const blueprintIconNames = {
+export const BlueprintIconNames = {
     activity: "pulse",
     add: "add",
     airplane: "airplane",
@@ -118,11 +118,11 @@ export const blueprintIconNames = {
 } as const satisfies Record<IconName, BlueprintIconName>;
 
 export function getBlueprintIconName(name: IconName): BlueprintIconName {
-    return blueprintIconNames[name];
+    return BlueprintIconNames[name];
 }
 
 const universalNamesByBlueprint = new Map<BlueprintIconName, IconName>(
-    Object.entries(blueprintIconNames).map(([name, blueprintName]) => [blueprintName, name as IconName])
+    Object.entries(BlueprintIconNames).map(([name, blueprintName]) => [blueprintName, name as IconName])
 );
 
 export interface BlueprintIconMeta extends Record<string, unknown> {

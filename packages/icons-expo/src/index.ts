@@ -6,7 +6,7 @@ export interface ExpoSymbol {
     android: AndroidSymbol;
 }
 
-export const expoSymbolNames = {
+export const ExpoSymbolNames = {
     activity: { ios: "waveform.path.ecg", android: "monitoring" },
     add: { ios: "plus", android: "add" },
     airplane: { ios: "airplane", android: "flight" },
@@ -123,7 +123,7 @@ export const expoSymbolNames = {
 } as const satisfies Record<IconName, ExpoSymbol>;
 
 export function getExpoSymbol(name: IconName): ExpoSymbol {
-    return expoSymbolNames[name];
+    return ExpoSymbolNames[name];
 }
 
 export type { AndroidSymbol, SFSymbol };

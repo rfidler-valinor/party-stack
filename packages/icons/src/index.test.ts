@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { iconNames, isIconName, type Icon } from "./index.js";
+import { IconNames, isIconName, type Icon } from "./index.js";
 
 describe("universal icon vocabulary", () => {
     it("contains shared concepts without provider-specific variants", () => {
-        expect(iconNames.length).toBeGreaterThan(100);
+        expect(IconNames.length).toBeGreaterThan(100);
         expect(isIconName("airplane")).toBe(true);
         expect(isIconName("ticket")).toBe(true);
         expect(isIconName("academic-cap")).toBe(false);
