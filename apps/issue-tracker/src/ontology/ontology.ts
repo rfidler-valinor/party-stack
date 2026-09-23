@@ -319,13 +319,6 @@ export default defineOntology({
                     }),
                 },
                 {
-                    name: "createdBy",
-                    displayName: "Created by",
-                    type: o.optional({
-                        type: o.string({}),
-                    }),
-                },
-                {
                     name: "project",
                     displayName: "Project",
                     type: o.optional({
@@ -785,13 +778,6 @@ export default defineOntology({
                             },
                         },
                         path: ["assignee"],
-                    }),
-                },
-                {
-                    name: "assignee",
-                    displayName: "Assignee",
-                    type: o.optional({
-                        type: o.string({}),
                     }),
                 },
                 {

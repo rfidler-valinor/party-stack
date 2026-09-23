@@ -57,7 +57,6 @@ export type IssueTrackerOntologyContext = {
 export type CreateIssueParameters = {
     completedAt?: v.timestamp | null;
     attachments?: Array<v.attachment<"image/png" | "image/jpeg">> | null;
-    createdBy?: string | null;
     issueLabels?: Array<string> | null;
     project?: string | null;
     description?: string | null;
