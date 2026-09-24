@@ -82,7 +82,7 @@ describe("convertFoundryMetaObjectType", () => {
         ]);
     });
 
-    it("preserves unknown Blueprint icons without inventing a semantic match", () => {
+    it("omits unknown Blueprint icons without inventing a semantic match", () => {
         const source = objectType();
         source.icon = {
             type: "blueprint",
@@ -99,13 +99,7 @@ describe("convertFoundryMetaObjectType", () => {
                 sharedPropertyTypeMapping: {},
             } as ObjectTypeFullMetadata)
         ).toMatchObject({
-            icon: {
-                meta: {
-                    blueprint: {
-                        name: "vendor-only-icon",
-                    },
-                },
-            },
+            icon: undefined,
             color: "#000000",
         });
     });
@@ -149,9 +143,7 @@ describe("convertFoundryMetaObjectType", () => {
                 },
             },
         });
-        expect(
-            result.properties.find((property) => property.name === "departmentCode")?.type
-        ).toEqual({
+        expect(result.properties.find((property) => property.name === "departmentCode")?.type).toEqual({
             kind: "optional",
             value: {
                 type: {
@@ -259,20 +251,12 @@ describe("convertFoundryMetaObjectType", () => {
             implementsInterfaces2: {},
             sharedPropertyTypeMapping: {},
         } as ObjectTypeFullMetadata;
-        (
-            metadata.objectType.properties.id as unknown as Record<
-                string,
-                unknown
-            >
-        ).valueFormatting = {
+        (metadata.objectType.properties.id as unknown as Record<string, unknown>).valueFormatting = {
             type: "knownType",
             knownType: "USER_OR_GROUP_ID",
         };
 
-        const result =
-            convertFoundryMetaObjectType(
-                metadata
-            );
+        const result = convertFoundryMetaObjectType(metadata);
 
         expect(result.properties[0]?.type).toEqual({
             kind: "string",
