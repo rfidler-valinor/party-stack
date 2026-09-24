@@ -1,4 +1,4 @@
-import { getIconPaths, IconSize, type IconName as BlueprintIconName } from "@blueprintjs/icons";
+import type { IconName as BlueprintIconName } from "@blueprintjs/icons";
 import type { Icon, IconName } from "@party-stack/icons";
 
 export const BlueprintIconNames = {
@@ -164,24 +164,4 @@ export function toBlueprintIconName(icon: Icon): string | undefined {
           : undefined;
 }
 
-export interface BlueprintIconSource {
-    paths: string[];
-    viewBox: string;
-}
-
-export function getBlueprintIconSource(
-    name: IconName,
-    size: IconSize = IconSize.LARGE
-): BlueprintIconSource | undefined {
-    const blueprintName = getBlueprintIconName(name);
-    if (!blueprintName) {
-        return undefined;
-    }
-    return {
-        paths: getIconPaths(blueprintName, size),
-        viewBox: `0 0 ${size} ${size}`,
-    };
-}
-
-export { IconSize };
 export type { BlueprintIconName };

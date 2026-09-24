@@ -1,29 +1,22 @@
+import { Icon, type IconProps } from "@blueprintjs/core";
 import type { IconName } from "@party-stack/icons";
-import { getBlueprintIconSource, IconSize } from "./index.js";
-import type { SVGProps } from "react";
+import { BlueprintIconRotations, getBlueprintIconName } from "./index.js";
 
-export interface BlueprintIconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
+export interface BlueprintIconProps extends Omit<IconProps, "icon"> {
     name: IconName;
-    size?: IconSize;
 }
 
-export function BlueprintIcon({ name, size = IconSize.LARGE, ...props }: BlueprintIconProps) {
-    const source = getBlueprintIconSource(name, size);
-    if (!source) {
-        return null;
-    }
+export function BlueprintIcon({ name, style, ...props }: BlueprintIconProps) {
+    const rotation = BlueprintIconRotations[name as keyof typeof BlueprintIconRotations];
+    const transform = [style?.transform, rotation ? `rotate(${rotation}deg)` : undefined]
+        .filter(Boolean)
+        .join(" ");
+
     return (
-        <svg
-            aria-hidden={props["aria-label"] ? undefined : true}
-            fill="currentColor"
-            height={size}
-            viewBox={source.viewBox}
-            width={size}
+        <Icon
+            icon={getBlueprintIconName(name)}
+            style={transform ? { ...style, transform } : style}
             {...props}
-        >
-            {source.paths.map((path) => (
-                <path d={path} key={path} />
-            ))}
-        </svg>
+        />
     );
 }
