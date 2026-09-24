@@ -37,6 +37,10 @@ describe("meta ontology runtime fields", () => {
         if (icon?.type.kind !== "struct") {
             throw new Error("Expected IconDescriptor to be a struct.");
         }
+        expect(icon.type.value.fields.find(({ name }) => name === "name")?.type).toEqual({
+            kind: "ref",
+            value: { name: "IconName" },
+        });
         expect(icon.type.value.fields.map(({ name }) => name)).toContain("meta");
         expect(icon.type.value.fields.map(({ name }) => name)).not.toContain("metadata");
         expect(actionType.type.value.fields.find(({ name }) => name === "meta")?.type).toEqual({

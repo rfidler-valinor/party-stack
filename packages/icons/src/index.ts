@@ -133,7 +133,7 @@ export function isIconName(value: string): value is IconName {
  * namespaced source-provider data for lossless round trips.
  */
 export interface IconDescriptor {
-    name?: IconName;
+    name: IconName;
     meta?: Record<string, unknown>;
 }
 

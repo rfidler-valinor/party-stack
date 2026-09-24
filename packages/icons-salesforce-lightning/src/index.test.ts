@@ -4,7 +4,6 @@ import {
     getSalesforceActionIconName,
     getSalesforceObjectIconName,
     SalesforceLightningIconNames,
-    toSalesforceLightningIconName,
 } from "./index.js";
 
 describe("Salesforce Lightning icon mappings", () => {
@@ -23,19 +22,11 @@ describe("Salesforce Lightning icon mappings", () => {
     });
 
     it("does not guess between concepts sharing a reviewed asset", () => {
-        expect(fromSalesforceLightningIconName("custom/custom57")).toEqual({
-            name: undefined,
-            meta: { salesforce: { name: "custom/custom57" } },
-        });
+        expect(fromSalesforceLightningIconName("custom/custom57")).toBeUndefined();
     });
 
-    it("preserves unknown provider icons for round trips", () => {
-        const icon = fromSalesforceLightningIconName("standard/vendor_object");
-        expect(icon).toEqual({
-            name: undefined,
-            meta: { salesforce: { name: "standard/vendor_object" } },
-        });
-        expect(toSalesforceLightningIconName(icon)).toBe("standard/vendor_object");
+    it("rejects provider icons without a canonical mapping", () => {
+        expect(fromSalesforceLightningIconName("standard/vendor_object")).toBeUndefined();
     });
 
     it("derives conventional standard object and action names", () => {

@@ -137,10 +137,13 @@ export interface BlueprintIconMeta extends Record<string, unknown> {
     };
 }
 
-export function fromBlueprintIconName(name: string): IconDescriptor {
+export function fromBlueprintIconName(name: string): IconDescriptor | undefined {
     const universalNames = universalNamesByBlueprint.get(name as BlueprintIconName);
+    if (universalNames?.length !== 1) {
+        return undefined;
+    }
     return {
-        name: universalNames?.length === 1 ? universalNames[0] : undefined,
+        name: universalNames[0],
         meta: {
             blueprint: { name },
         } satisfies BlueprintIconMeta,

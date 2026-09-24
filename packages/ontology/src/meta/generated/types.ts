@@ -120,8 +120,8 @@ export type IconName =
 
 /** A portable icon descriptor with optional provider meta for lossless round trips. */
 export type IconDescriptor = {
-    /** Optional renderer-independent icon name. */
-    name?: IconName;
+    /** Renderer-independent icon name. */
+    name: IconName;
     /** Namespaced source-provider meta. */
     meta?: Record<string, unknown>;
 };

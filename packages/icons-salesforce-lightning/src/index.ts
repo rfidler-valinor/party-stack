@@ -167,14 +167,18 @@ export interface SalesforceLightningIconMeta extends Record<string, unknown> {
     };
 }
 
-export function fromSalesforceLightningIconName(name: string): IconDescriptor {
+export function fromSalesforceLightningIconName(name: string): IconDescriptor | undefined {
     const typedName = name as SalesforceLightningIconName;
     const standardConcept = name.startsWith("standard/")
         ? StandardObjectIconConcepts[name.slice("standard/".length)]
         : undefined;
     const universalNames = UniversalNamesBySalesforceLightning.get(typedName);
+    const canonicalName = universalNames?.length === 1 ? universalNames[0] : standardConcept;
+    if (!canonicalName) {
+        return undefined;
+    }
     return {
-        name: universalNames?.length === 1 ? universalNames[0] : standardConcept,
+        name: canonicalName,
         meta: {
             salesforce: { name },
         } satisfies SalesforceLightningIconMeta,

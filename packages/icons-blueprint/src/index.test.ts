@@ -11,23 +11,18 @@ describe("Blueprint icon adapter", () => {
         expect(getBlueprintIconName("ticket")).toBeUndefined();
     });
 
-    it("preserves unknown source names for lossless round trips", () => {
-        const icon = fromBlueprintIconName("future-blueprint-icon");
-        expect(icon).toEqual({
-            meta: {
-                blueprint: { name: "future-blueprint-icon" },
-            },
-        });
-        expect(toBlueprintIconName(icon)).toBe("future-blueprint-icon");
+    it("rejects provider icons without a unique canonical mapping", () => {
+        expect(fromBlueprintIconName("future-blueprint-icon")).toBeUndefined();
+        expect(fromBlueprintIconName("notifications")).toBeUndefined();
     });
 
     it("maps known source names to universal concepts", () => {
         const icon = fromBlueprintIconName("issue");
+        expect(icon).toBeDefined();
+        if (!icon) {
+            throw new Error("Expected issue to have a canonical mapping.");
+        }
         expect(icon.name).toBe("alert");
         expect(toBlueprintIconName(icon)).toBe("issue");
-    });
-
-    it("does not guess when a provider asset maps to multiple concepts", () => {
-        expect(fromBlueprintIconName("notifications").name).toBeUndefined();
     });
 });

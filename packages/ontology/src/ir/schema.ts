@@ -21,8 +21,8 @@ export default {
                     {
                         name: "name",
                         displayName: "Name",
-                        type: o.optional({ type: o.ref({ name: "IconName" }) }),
-                        description: "Optional renderer-independent icon name.",
+                        type: o.ref({ name: "IconName" }),
+                        description: "Renderer-independent icon name.",
                     },
                     {
                         name: "meta",
