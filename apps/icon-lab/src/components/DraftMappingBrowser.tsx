@@ -4,9 +4,12 @@ import type { CatalogFile, CatalogIcon, DraftMappingsFile, IconProvider } from "
 import { IconTile } from "./IconTile";
 import {
     createMappingFeedbackFile,
+    loadMappingConfirmations,
     loadMappingFeedback,
     mappingFeedbackKey,
+    saveMappingConfirmations,
     saveMappingFeedback,
+    type MappingFeedbackFile,
     type MappingFeedback,
     type MappingFeedbackDecision,
 } from "../shared/mappingFeedback";
@@ -18,6 +21,17 @@ const PROVIDER_LABEL: Record<IconProvider, string> = {
     salesforce: "Salesforce",
     sfsymbols: "SF Symbols",
 };
+
+async function persistMappingFeedbackFile(file: MappingFeedbackFile): Promise<void> {
+    const response = await fetch("/__save-mapping-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(file),
+    });
+    if (!response.ok) {
+        throw new Error(await response.text());
+    }
+}
 
 function ReplacementIconCombobox({
     icons,
@@ -128,8 +142,10 @@ function ReplacementIconCombobox({
 export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; draft: DraftMappingsFile }) {
     const [query, setQuery] = useState("");
     const [show, setShow] = useState<"all" | "existing" | "generated">("all");
+    const [review, setReview] = useState<"all" | "in-progress" | "confirmed">("all");
     const [selectedConcept, setSelectedConcept] = useState(draft.mappings[0]?.concept ?? "");
     const [feedback, setFeedback] = useState<MappingFeedback[]>(() => loadMappingFeedback());
+    const [confirmedConcepts, setConfirmedConcepts] = useState<string[]>(() => loadMappingConfirmations());
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
     const iconById = useMemo(() => new Map(catalog.icons.map((icon) => [icon.id, icon])), [catalog.icons]);
     const iconsByProvider = useMemo(() => {
@@ -144,23 +160,61 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         }
         return groups;
     }, [catalog.icons, catalog.providers]);
+    const confirmedSet = useMemo(() => new Set(confirmedConcepts), [confirmedConcepts]);
+    const feedbackByKey = useMemo(
+        () => new Map(feedback.map((item) => [mappingFeedbackKey(item.concept, item.provider), item])),
+        [feedback]
+    );
     const filtered = useMemo(() => {
         const normalized = query.trim().toLowerCase();
         return draft.mappings.filter(
             (mapping) =>
                 (show === "all" || mapping.status === show) &&
+                (review === "all" ||
+                    (review === "confirmed"
+                        ? confirmedSet.has(mapping.concept)
+                        : !confirmedSet.has(mapping.concept))) &&
                 (!normalized ||
                     mapping.concept.includes(normalized) ||
                     Object.values(mapping.providers).some((provider) =>
                         provider?.name.toLowerCase().includes(normalized)
                     ))
         );
-    }, [draft.mappings, query, show]);
-    const selected = draft.mappings.find((mapping) => mapping.concept === selectedConcept) ?? filtered[0];
-    const feedbackByKey = useMemo(
-        () => new Map(feedback.map((item) => [mappingFeedbackKey(item.concept, item.provider), item])),
-        [feedback]
-    );
+    }, [confirmedSet, draft.mappings, query, review, show]);
+    const selected = filtered.find((mapping) => mapping.concept === selectedConcept) ?? filtered[0];
+    const selectedProviders = selected
+        ? Object.entries(selected.providers).filter((entry) => Boolean(entry[1]))
+        : [];
+    const selectedAcceptedCount = selectedProviders.filter(([provider]) => {
+        const decision = feedbackByKey.get(
+            mappingFeedbackKey(selected!.concept, provider as IconProvider)
+        )?.decision;
+        return decision === "approve" || decision === "replace";
+    }).length;
+    const selectedConfirmed = selected ? confirmedSet.has(selected.concept) : false;
+    const canConfirm = selectedProviders.length > 0 && selectedAcceptedCount === selectedProviders.length;
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setSaveStatus("saving");
+            persistMappingFeedbackFile(createMappingFeedbackFile(feedback, undefined, confirmedConcepts))
+                .then(() => setSaveStatus("saved"))
+                .catch(() => setSaveStatus("error"));
+        }, 300);
+        return () => window.clearTimeout(timeout);
+    }, [confirmedConcepts, feedback]);
+
+    function updateConfirmedConcepts(next: string[]) {
+        setConfirmedConcepts(next);
+        saveMappingConfirmations(next);
+        setSaveStatus("idle");
+    }
+
+    function unconfirmConcept(concept: string) {
+        if (confirmedSet.has(concept)) {
+            updateConfirmedConcepts(confirmedConcepts.filter((item) => item !== concept));
+        }
+    }
 
     function updateFeedback(
         concept: string,
@@ -179,6 +233,9 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
             note: "note" in update ? update.note : existing?.note,
             updatedAt: new Date().toISOString(),
         };
+        const choiceChanged =
+            nextItem.decision !== existing?.decision ||
+            nextItem.replacementName !== existing?.replacementName;
         const next = [
             ...feedback.filter((item) => mappingFeedbackKey(item.concept, item.provider) !== key),
             nextItem,
@@ -186,6 +243,9 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         setFeedback(next);
         saveMappingFeedback(next);
         setSaveStatus("idle");
+        if (choiceChanged) {
+            unconfirmConcept(concept);
+        }
     }
 
     function removeReplacementFeedback(concept: string, provider: IconProvider) {
@@ -197,12 +257,16 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
         setFeedback(next);
         saveMappingFeedback(next);
         setSaveStatus("idle");
+        unconfirmConcept(concept);
     }
 
     function exportFeedback() {
-        const blob = new Blob([JSON.stringify(createMappingFeedbackFile(feedback), null, 2)], {
-            type: "application/json",
-        });
+        const blob = new Blob(
+            [JSON.stringify(createMappingFeedbackFile(feedback, undefined, confirmedConcepts), null, 2)],
+            {
+                type: "application/json",
+            }
+        );
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -214,14 +278,9 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
     async function saveFeedbackForAgent() {
         setSaveStatus("saving");
         try {
-            const response = await fetch("/__save-mapping-feedback", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(createMappingFeedbackFile(feedback)),
-            });
-            if (!response.ok) {
-                throw new Error(await response.text());
-            }
+            await persistMappingFeedbackFile(
+                createMappingFeedbackFile(feedback, undefined, confirmedConcepts)
+            );
             setSaveStatus("saved");
         } catch {
             setSaveStatus("error");
@@ -253,34 +312,71 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                         </button>
                     ))}
                 </div>
-                <div className="max-h-[68vh] space-y-1 overflow-auto pr-1">
-                    {filtered.map((mapping) => (
+                <div className="mb-3 flex flex-wrap gap-1 border-t border-[var(--line)] pt-3">
+                    {(["all", "in-progress", "confirmed"] as const).map((value) => (
                         <button
-                            key={mapping.blueprintId}
+                            key={value}
                             type="button"
-                            onClick={() => setSelectedConcept(mapping.concept)}
-                            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm ${
-                                selected?.blueprintId === mapping.blueprintId
-                                    ? "bg-[var(--ink)] text-white"
-                                    : "hover:bg-white/80"
+                            onClick={() => setReview(value)}
+                            className={`rounded-md px-2 py-1 text-[11px] ${
+                                review === value
+                                    ? "bg-[var(--accent)] text-white"
+                                    : "bg-white/70 text-[var(--muted)]"
                             }`}
                         >
-                            <span className="truncate font-medium">{mapping.concept}</span>
-                            <span
-                                className={`ml-2 text-[10px] font-[var(--font-mono)] ${
-                                    selected?.blueprintId === mapping.blueprintId
-                                        ? "text-white/70"
-                                        : mapping.minScore < 0.55
-                                          ? "text-[var(--bad)]"
-                                          : mapping.minScore < 0.7
-                                            ? "text-[var(--warn)]"
-                                            : "text-[var(--good)]"
-                                }`}
-                            >
-                                {mapping.minScore.toFixed(2)}
-                            </span>
+                            {value === "all"
+                                ? "all reviews"
+                                : value === "in-progress"
+                                  ? "in progress"
+                                  : "confirmed"}
                         </button>
                     ))}
+                </div>
+                <div className="max-h-[68vh] space-y-1 overflow-auto pr-1">
+                    {filtered.map((mapping) => {
+                        const providers = Object.entries(mapping.providers).filter((entry) =>
+                            Boolean(entry[1])
+                        );
+                        const accepted = providers.filter(([provider]) => {
+                            const decision = feedbackByKey.get(
+                                mappingFeedbackKey(mapping.concept, provider as IconProvider)
+                            )?.decision;
+                            return decision === "approve" || decision === "replace";
+                        }).length;
+                        const confirmed = confirmedSet.has(mapping.concept);
+                        return (
+                            <button
+                                key={mapping.blueprintId}
+                                type="button"
+                                onClick={() => setSelectedConcept(mapping.concept)}
+                                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm ${
+                                    selected?.blueprintId === mapping.blueprintId
+                                        ? "bg-[var(--ink)] text-white"
+                                        : "hover:bg-white/80"
+                                }`}
+                            >
+                                <span className="truncate font-medium">{mapping.concept}</span>
+                                <span
+                                    className={`ml-2 shrink-0 text-[10px] font-[var(--font-mono)] ${
+                                        selected?.blueprintId === mapping.blueprintId
+                                            ? "text-white/70"
+                                            : confirmed
+                                              ? "text-[var(--good)]"
+                                              : accepted > 0
+                                                ? "text-[var(--warn)]"
+                                                : "text-[var(--muted)]"
+                                    }`}
+                                >
+                                    {confirmed ? "✓" : `${accepted}/${providers.length}`}
+                                </span>
+                            </button>
+                        );
+                    })}
+                    {filtered.length === 0 && (
+                        <div className="px-2 py-6 text-center text-xs text-[var(--muted)]">
+                            No mappings in this view
+                        </div>
+                    )}
                 </div>
             </aside>
 
@@ -308,20 +404,39 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                     image/name similarity with lexical overlap.
                                 </p>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col items-end gap-2">
                                 <div className="text-xs font-[var(--font-mono)] text-[var(--muted)]">
-                                    min {selected.minScore.toFixed(3)} · mean {selected.meanScore.toFixed(3)}
+                                    {selectedAcceptedCount}/{selectedProviders.length} accepted · min{" "}
+                                    {selected.minScore.toFixed(3)} · mean {selected.meanScore.toFixed(3)}
                                 </div>
                                 <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={!selectedConfirmed && !canConfirm}
+                                        onClick={() =>
+                                            updateConfirmedConcepts(
+                                                selectedConfirmed
+                                                    ? confirmedConcepts.filter(
+                                                          (item) => item !== selected.concept
+                                                      )
+                                                    : [...confirmedConcepts, selected.concept]
+                                            )
+                                        }
+                                        className={`rounded-lg px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${
+                                            selectedConfirmed
+                                                ? "bg-emerald-600 text-white"
+                                                : "bg-emerald-100 text-emerald-900"
+                                        }`}
+                                    >
+                                        {selectedConfirmed ? "✓ Confirmed" : "Confirm mapping"}
+                                    </button>
                                     <button
                                         type="button"
                                         disabled={feedback.length === 0 || saveStatus === "saving"}
                                         onClick={saveFeedbackForAgent}
                                         className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                                     >
-                                        {saveStatus === "saving"
-                                            ? "Saving…"
-                                            : `Save for agent · ${feedback.length}`}
+                                        {saveStatus === "saving" ? "Saving…" : "Save now"}
                                     </button>
                                     <button
                                         type="button"
@@ -331,16 +446,17 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                     >
                                         Download JSON
                                     </button>
-                                    {saveStatus === "saved" && (
-                                        <span className="text-[10px] font-medium text-[var(--good)]">
-                                            Saved in Cloud VM
-                                        </span>
-                                    )}
-                                    {saveStatus === "error" && (
-                                        <span className="text-[10px] font-medium text-[var(--bad)]">
-                                            Save failed
-                                        </span>
-                                    )}
+                                </div>
+                                <div
+                                    className={`text-[10px] font-medium ${
+                                        saveStatus === "error" ? "text-[var(--bad)]" : "text-[var(--muted)]"
+                                    }`}
+                                >
+                                    {saveStatus === "saving"
+                                        ? "Auto-saving…"
+                                        : saveStatus === "error"
+                                          ? "Auto-save failed · use Save now"
+                                          : `Auto-saved in Cloud VM · ${feedback.length} decisions · ${confirmedConcepts.length} confirmed`}
                                 </div>
                             </div>
                         </div>

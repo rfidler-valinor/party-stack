@@ -43,12 +43,15 @@ The generation tasks are declared only in this package's nested `turbo.json`. `d
 monorepo `build` / `lint` / `test` do not run CLIP. `icons:archive` remains an explicit
 one-off task because it refreshes checked-in provider snapshots.
 
-Mapping review decisions are saved in browser local storage. Approve or reject a
-candidate, enter a replacement icon and optional note, then use **Download JSON** to
-download `icon-mapping-feedback.json` for applying to the provider mapping packages.
-When iterating with a Cloud Agent, **Save for agent** writes the same payload to the
-ignored local file `temp/data/icon-mapping-feedback.json`; prompt the agent to
-incorporate it after saving.
+Mapping review decisions and concept confirmations are saved in browser local storage.
+Resolve each provider with an approval or replacement, then confirm the universal
+mapping. The review can be filtered to all, in-progress, or confirmed concepts.
+
+In Cloud Agent development, every change automatically saves to the ignored local file
+`temp/data/icon-mapping-feedback.json`; **Save now** retries immediately if needed.
+**Download JSON** remains available as a portable backup. Prompt the agent to apply the
+review when ready; the agent updates and commits the typed provider mapping packages,
+not this temporary feedback file.
 
 ## SF Symbols glyphs
 

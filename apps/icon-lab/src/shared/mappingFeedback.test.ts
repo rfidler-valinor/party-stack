@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
     createMappingFeedbackFile,
+    loadMappingConfirmations,
     loadMappingFeedback,
+    MappingConfirmationsStorageKey,
     MappingFeedbackStorageKey,
+    saveMappingConfirmations,
     saveMappingFeedback,
     type MappingFeedback,
 } from "./mappingFeedback";
@@ -41,6 +44,7 @@ describe("mapping feedback", () => {
         expect(file.version).toBe(1);
         expect(file.generatedAt).toBe("2026-09-23T01:00:00.000Z");
         expect(file.feedback.map(({ concept }) => concept)).toEqual(["airplane", "warning"]);
+        expect(file.confirmedConcepts).toEqual([]);
     });
 
     it("drops abandoned replacement feedback without a selected icon", () => {
@@ -56,5 +60,29 @@ describe("mapping feedback", () => {
                     ]),
             })
         ).toEqual([]);
+    });
+
+    it("persists unique sorted concept confirmations", () => {
+        const values = new Map<string, string>();
+        saveMappingConfirmations(["warning", "airplane", "warning"], {
+            setItem: (key, value) => values.set(key, value),
+        });
+
+        expect(
+            loadMappingConfirmations({
+                getItem: (key) => values.get(key) ?? null,
+            })
+        ).toEqual(["airplane", "warning"]);
+        expect(values.has(MappingConfirmationsStorageKey)).toBe(true);
+    });
+
+    it("includes deterministic confirmations in the exported review", () => {
+        const file = createMappingFeedbackFile([feedback], "2026-09-23T01:00:00.000Z", [
+            "warning",
+            "airplane",
+            "warning",
+        ]);
+
+        expect(file.confirmedConcepts).toEqual(["airplane", "warning"]);
     });
 });
