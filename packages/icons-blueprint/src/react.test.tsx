@@ -17,7 +17,9 @@ describe("BlueprintIcon", () => {
     it("passes unsupported mappings to Blueprint as empty icons", () => {
         const element = BlueprintIcon({ name: "ticket" });
 
-        expect(element.type).toBe(Icon);
-        expect(element.props.icon).toBeUndefined();
+        expect(element).toMatchObject({
+            type: Icon,
+            props: { icon: undefined },
+        });
     });
 });
