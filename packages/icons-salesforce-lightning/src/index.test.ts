@@ -10,9 +10,22 @@ import {
 describe("Salesforce Lightning icon mappings", () => {
     it("maps universal names to Lightning utility icons", () => {
         expect(SalesforceLightningIconNames.airplane).toBe("utility/plane");
+        expect(SalesforceLightningIconNames.alarm).toBe("custom/custom25");
         expect(fromSalesforceLightningIconName("utility/plane")).toMatchObject({
             name: "airplane",
             meta: { salesforce: { name: "utility/plane" } },
+        });
+    });
+
+    it("keeps explicit gaps unsupported", () => {
+        expect(SalesforceLightningIconNames.activity).toBeUndefined();
+        expect(SalesforceLightningIconNames.rocket).toBeUndefined();
+    });
+
+    it("does not guess between concepts sharing a reviewed asset", () => {
+        expect(fromSalesforceLightningIconName("custom/custom57")).toEqual({
+            name: undefined,
+            meta: { salesforce: { name: "custom/custom57" } },
         });
     });
 

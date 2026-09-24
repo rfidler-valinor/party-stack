@@ -3,10 +3,10 @@ import type { Icon, IconName } from "@party-stack/icons";
 
 export const BlueprintIconNames = {
     activity: "pulse",
-    add: "add",
+    add: "plus",
     airplane: "airplane",
     alarm: "time",
-    alert: "warning-sign",
+    alert: "issue",
     archive: "archive",
     "arrow-down": "arrow-down",
     "arrow-left": "arrow-left",
@@ -25,7 +25,7 @@ export const BlueprintIconNames = {
     calculator: "calculator",
     calendar: "calendar",
     camera: "camera",
-    "chart-bar": "chart",
+    "chart-bar": "vertical-bar-chart-asc",
     "chart-line": "timeline-line-chart",
     "chart-pie": "pie-chart",
     chat: "chat",
@@ -76,7 +76,7 @@ export const BlueprintIconNames = {
     menu: "menu",
     microphone: "microphone",
     minus: "minus",
-    "minus-circle": "minus",
+    "minus-circle": "remove",
     moon: "moon",
     "more-horizontal": "more",
     "more-vertical": "more",
@@ -88,7 +88,7 @@ export const BlueprintIconNames = {
     phone: "phone",
     pin: "pin",
     play: "play",
-    "play-circle": "play",
+    "play-circle": undefined,
     "plus-circle": "add",
     printer: "print",
     project: "projects",
@@ -100,30 +100,41 @@ export const BlueprintIconNames = {
     settings: "cog",
     share: "share",
     shield: "shield",
-    "shopping-bag": "shopping-cart",
+    "shopping-bag": undefined,
     "shopping-cart": "shopping-cart",
     star: "star",
     stop: "stop",
     sun: "flash",
     tag: "tag",
-    ticket: "issue",
+    ticket: undefined,
     tools: "build",
     upload: "upload",
-    video: "video",
+    video: "mobile-video",
     warning: "warning-sign",
     window: "application",
     wrench: "wrench",
     x: "cross",
     "x-circle": "cross-circle",
-} as const satisfies Record<IconName, BlueprintIconName>;
+} as const satisfies Record<IconName, BlueprintIconName | undefined>;
 
-export function getBlueprintIconName(name: IconName): BlueprintIconName {
+export function getBlueprintIconName(name: IconName): BlueprintIconName | undefined {
     return BlueprintIconNames[name];
 }
 
-const universalNamesByBlueprint = new Map<BlueprintIconName, IconName>(
-    Object.entries(BlueprintIconNames).map(([name, blueprintName]) => [blueprintName, name as IconName])
-);
+/** Transforms needed when Blueprint has no separately oriented asset. */
+export const BlueprintIconRotations = {
+    "more-vertical": 90,
+} as const satisfies Partial<Record<IconName, 90>>;
+
+const universalNamesByBlueprint = new Map<BlueprintIconName, IconName[]>();
+for (const [name, blueprintName] of Object.entries(BlueprintIconNames)) {
+    if (!blueprintName) {
+        continue;
+    }
+    const names = universalNamesByBlueprint.get(blueprintName) ?? [];
+    names.push(name as IconName);
+    universalNamesByBlueprint.set(blueprintName, names);
+}
 
 export interface BlueprintIconMeta extends Record<string, unknown> {
     blueprint: {
@@ -132,8 +143,9 @@ export interface BlueprintIconMeta extends Record<string, unknown> {
 }
 
 export function fromBlueprintIconName(name: string): Icon {
+    const universalNames = universalNamesByBlueprint.get(name as BlueprintIconName);
     return {
-        name: universalNamesByBlueprint.get(name as BlueprintIconName),
+        name: universalNames?.length === 1 ? universalNames[0] : undefined,
         meta: {
             blueprint: { name },
         } satisfies BlueprintIconMeta,
@@ -157,9 +169,16 @@ export interface BlueprintIconSource {
     viewBox: string;
 }
 
-export function getBlueprintIconSource(name: IconName, size: IconSize = IconSize.LARGE): BlueprintIconSource {
+export function getBlueprintIconSource(
+    name: IconName,
+    size: IconSize = IconSize.LARGE
+): BlueprintIconSource | undefined {
+    const blueprintName = getBlueprintIconName(name);
+    if (!blueprintName) {
+        return undefined;
+    }
     return {
-        paths: getIconPaths(getBlueprintIconName(name), size),
+        paths: getIconPaths(blueprintName, size),
         viewBox: `0 0 ${size} ${size}`,
     };
 }

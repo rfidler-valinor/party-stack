@@ -4,19 +4,19 @@ export type SalesforceLightningIconName =
     `${"action" | "custom" | "doctype" | "standard" | "utility"}/${string}`;
 
 export const SalesforceLightningIconNames = {
-    activity: "utility/activity",
+    activity: undefined,
     add: "utility/add",
     airplane: "utility/plane",
-    alarm: "utility/clock",
+    alarm: "custom/custom25",
     alert: "utility/warning",
     archive: "utility/archive",
     "arrow-down": "utility/arrowdown",
-    "arrow-left": "utility/arrowleft",
-    "arrow-right": "utility/arrowright",
+    "arrow-left": "utility/back",
+    "arrow-right": "utility/forward",
     "arrow-up": "utility/arrowup",
     attachment: "utility/attach",
-    award: "utility/reward",
-    bank: "utility/money",
+    award: "utility/ribbon",
+    bank: "custom/custom16",
     barcode: "utility/scan",
     bell: "utility/notification",
     book: "utility/knowledge_base",
@@ -24,12 +24,12 @@ export const SalesforceLightningIconNames = {
     briefcase: "utility/case",
     bug: "utility/bug",
     building: "utility/company",
-    calculator: "utility/currency",
+    calculator: undefined,
     calendar: "utility/event",
     camera: "utility/photo",
-    "chart-bar": "utility/graph",
-    "chart-line": "utility/trending",
-    "chart-pie": "utility/metrics",
+    "chart-bar": "utility/metrics",
+    "chart-line": "utility/line_chart",
+    "chart-pie": "utility/chart",
     chat: "utility/chat",
     check: "utility/check",
     "check-circle": "utility/success",
@@ -37,15 +37,15 @@ export const SalesforceLightningIconNames = {
     "chevron-left": "utility/chevronleft",
     "chevron-right": "utility/chevronright",
     "chevron-up": "utility/chevronup",
-    circle: "utility/record",
-    clipboard: "utility/copy",
+    circle: "utility/circle",
+    clipboard: "utility/copy_to_clipboard",
     clock: "utility/clock",
-    cloud: "utility/cloud",
-    code: "utility/apex",
-    compass: "utility/trail",
+    cloud: undefined,
+    code: "utility/slack_code",
+    compass: "custom/custom64",
     copy: "utility/copy",
-    "credit-card": "utility/moneybag",
-    cube: "utility/cube",
+    "credit-card": "utility/card_details",
+    cube: "custom/custom57",
     database: "utility/database",
     delete: "utility/delete",
     document: "utility/file",
@@ -55,17 +55,17 @@ export const SalesforceLightningIconNames = {
     error: "utility/error",
     eye: "utility/preview",
     "eye-off": "utility/hide",
-    filter: "utility/filter",
+    filter: "utility/filterList",
     flag: "utility/priority",
     folder: "utility/open_folder",
     globe: "utility/world",
     grid: "utility/apps",
-    heart: "utility/favorite",
-    help: "utility/info",
-    history: "utility/skip_back",
+    heart: "utility/heart",
+    help: "utility/help",
+    history: "utility/replay",
     home: "utility/home",
     image: "utility/image",
-    info: "utility/info_alt",
+    info: "utility/info",
     key: "utility/key",
     layers: "utility/layers",
     lightbulb: "utility/light_bulb",
@@ -78,53 +78,56 @@ export const SalesforceLightningIconNames = {
     menu: "utility/rows",
     microphone: "utility/unmuted",
     minus: "utility/dash",
-    "minus-circle": "utility/clear",
-    moon: "utility/away",
+    "minus-circle": "utility/ban",
+    moon: "custom/custom10",
     "more-horizontal": "utility/threedots",
     "more-vertical": "utility/threedots_vertical",
     notification: "utility/notification",
-    package: "utility/product",
+    package: "custom/custom57",
     pause: "utility/pause",
     people: "utility/people",
     person: "utility/user",
     phone: "utility/call",
     pin: "utility/pin",
     play: "utility/play",
-    "play-circle": "utility/play",
-    "plus-circle": "utility/add",
+    "play-circle": undefined,
+    "plus-circle": "utility/new",
     printer: "utility/print",
-    project: "utility/strategy",
+    project: "utility/kanban",
     refresh: "utility/refresh",
-    rocket: "utility/rocket",
+    rocket: undefined,
     save: "utility/save",
     search: "utility/search",
     send: "utility/send",
     settings: "utility/settings",
     share: "utility/share",
     shield: "utility/shield",
-    "shopping-bag": "utility/cart",
+    "shopping-bag": "utility/shopping_bag",
     "shopping-cart": "utility/cart",
     star: "utility/favorite",
     stop: "utility/stop",
-    sun: "utility/dayview",
+    sun: "custom/custom3",
     tag: "utility/price_book_entries",
-    ticket: "utility/case",
-    tools: "utility/settings",
+    ticket: "custom/custom45",
+    tools: "custom/custom19",
     upload: "utility/upload",
     video: "utility/video",
     warning: "utility/warning",
-    window: "utility/desktop",
-    wrench: "utility/settings",
+    window: "utility/tabset",
+    wrench: "custom/custom19",
     x: "utility/close",
     "x-circle": "utility/clear",
-} as const satisfies Record<IconName, SalesforceLightningIconName>;
+} as const satisfies Record<IconName, SalesforceLightningIconName | undefined>;
 
-const UniversalNamesBySalesforceLightning = new Map<SalesforceLightningIconName, IconName>(
-    Object.entries(SalesforceLightningIconNames).map(([name, salesforceName]) => [
-        salesforceName,
-        name as IconName,
-    ])
-);
+const UniversalNamesBySalesforceLightning = new Map<SalesforceLightningIconName, IconName[]>();
+for (const [name, salesforceName] of Object.entries(SalesforceLightningIconNames)) {
+    if (!salesforceName) {
+        continue;
+    }
+    const names = UniversalNamesBySalesforceLightning.get(salesforceName) ?? [];
+    names.push(name as IconName);
+    UniversalNamesBySalesforceLightning.set(salesforceName, names);
+}
 
 const StandardObjectIconConcepts: Readonly<Record<string, IconName>> = {
     account: "building",
@@ -143,7 +146,7 @@ function normalizeSalesforceName(value: string): string {
         .toLowerCase();
 }
 
-export function getSalesforceLightningIconName(name: IconName): SalesforceLightningIconName {
+export function getSalesforceLightningIconName(name: IconName): SalesforceLightningIconName | undefined {
     return SalesforceLightningIconNames[name];
 }
 
@@ -169,8 +172,9 @@ export function fromSalesforceLightningIconName(name: string): Icon {
     const standardConcept = name.startsWith("standard/")
         ? StandardObjectIconConcepts[name.slice("standard/".length)]
         : undefined;
+    const universalNames = UniversalNamesBySalesforceLightning.get(typedName);
     return {
-        name: UniversalNamesBySalesforceLightning.get(typedName) ?? standardConcept,
+        name: universalNames?.length === 1 ? universalNames[0] : standardConcept,
         meta: {
             salesforce: { name },
         } satisfies SalesforceLightningIconMeta,

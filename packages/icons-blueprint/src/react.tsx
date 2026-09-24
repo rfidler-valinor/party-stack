@@ -9,6 +9,9 @@ export interface BlueprintIconProps extends Omit<SVGProps<SVGSVGElement>, "name"
 
 export function BlueprintIcon({ name, size = IconSize.LARGE, ...props }: BlueprintIconProps) {
     const source = getBlueprintIconSource(name, size);
+    if (!source) {
+        return null;
+    }
     return (
         <svg
             aria-hidden={props["aria-label"] ? undefined : true}

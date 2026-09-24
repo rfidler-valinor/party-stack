@@ -14,7 +14,7 @@ import { lucideDynamicIconImports } from "@lucide/icons/dynamic";
 import { icons as materialSymbols } from "@iconify-json/material-symbols";
 import { IconNames, type IconName } from "@party-stack/icons";
 import { BlueprintIconNames } from "@party-stack/icons-blueprint";
-import { ExpoSymbolNames } from "@party-stack/icons-expo";
+import { ExpoSymbolNames, MaterialSymbolArchiveNames } from "@party-stack/icons-expo";
 import { LucideIconNames } from "@party-stack/icons-lucide";
 import { SalesforceLightningIconNames } from "@party-stack/icons-salesforce-lightning";
 import { strToU8, unzipSync, zipSync, type Zippable } from "fflate";
@@ -148,14 +148,25 @@ function conceptMaps() {
     };
 
     for (const concept of IconNames) {
-        add(blueprint, BlueprintIconNames[concept], concept);
+        const blueprintName = BlueprintIconNames[concept];
+        if (blueprintName) {
+            add(blueprint, blueprintName, concept);
+        }
         add(lucide, LucideIconNames[concept], concept);
-        const materialName = materialNameForAndroid(ExpoSymbolNames[concept].android);
+        const materialName =
+            MaterialSymbolArchiveNames[concept as keyof typeof MaterialSymbolArchiveNames] ??
+            materialNameForAndroid(ExpoSymbolNames[concept].android);
         if (materialName) {
             add(material, materialName, concept);
         }
-        add(salesforce, SalesforceLightningIconNames[concept], concept);
-        add(sfsymbols, ExpoSymbolNames[concept].ios, concept);
+        const salesforceName = SalesforceLightningIconNames[concept];
+        if (salesforceName) {
+            add(salesforce, salesforceName, concept);
+        }
+        const sfSymbolName = ExpoSymbolNames[concept].ios;
+        if (sfSymbolName) {
+            add(sfsymbols, sfSymbolName, concept);
+        }
     }
 
     return { blueprint, lucide, material, salesforce, sfsymbols };

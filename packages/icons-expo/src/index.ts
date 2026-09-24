@@ -2,12 +2,12 @@ import type { IconName } from "@party-stack/icons";
 import type { AndroidSymbol, SFSymbol } from "expo-symbols";
 
 export interface ExpoSymbol {
-    ios: SFSymbol;
+    ios?: SFSymbol;
     android: AndroidSymbol;
 }
 
-export const ExpoSymbolNames = {
-    activity: { ios: "waveform.path.ecg", android: "monitoring" },
+export const ExpoSymbolNames: Record<IconName, ExpoSymbol> = {
+    activity: { ios: "waveform.path.ecg", android: "ecg_heart" },
     add: { ios: "plus", android: "add" },
     airplane: { ios: "airplane", android: "flight" },
     alarm: { ios: "alarm", android: "alarm" },
@@ -49,13 +49,13 @@ export const ExpoSymbolNames = {
     copy: { ios: "doc.on.doc", android: "content_copy" },
     "credit-card": { ios: "creditcard", android: "credit_card" },
     cube: { ios: "cube", android: "deployed_code" },
-    database: { ios: "cylinder.split.1x2", android: "database" },
+    database: { ios: "cylinder", android: "database" },
     delete: { ios: "trash", android: "delete" },
     document: { ios: "doc", android: "description" },
     download: { ios: "arrow.down.to.line", android: "download" },
     edit: { ios: "pencil", android: "edit" },
     email: { ios: "envelope", android: "mail" },
-    error: { ios: "xmark.octagon", android: "cancel" },
+    error: { ios: "exclamationmark.octagon", android: "error" },
     eye: { ios: "eye", android: "visibility" },
     "eye-off": { ios: "eye.slash", android: "visibility_off" },
     filter: { ios: "line.3.horizontal.decrease", android: "filter_alt" },
@@ -74,14 +74,14 @@ export const ExpoSymbolNames = {
     lightbulb: { ios: "lightbulb", android: "lightbulb" },
     link: { ios: "link", android: "link" },
     list: { ios: "list.bullet", android: "list" },
-    location: { ios: "mappin", android: "location_on" },
+    location: { ios: "mappin.and.ellipse", android: "location_on" },
     lock: { ios: "lock", android: "lock" },
     "lock-open": { ios: "lock.open", android: "lock_open" },
     map: { ios: "map", android: "map" },
     menu: { ios: "line.3.horizontal", android: "menu" },
     microphone: { ios: "microphone", android: "mic" },
     minus: { ios: "minus", android: "remove" },
-    "minus-circle": { ios: "minus.circle", android: "remove_circle" },
+    "minus-circle": { ios: "minus.circle", android: "do_not_disturb_on" },
     moon: { ios: "moon", android: "dark_mode" },
     "more-horizontal": { ios: "ellipsis", android: "more_horiz" },
     "more-vertical": { ios: "ellipsis", android: "more_vert" },
@@ -91,14 +91,15 @@ export const ExpoSymbolNames = {
     people: { ios: "person.2", android: "group" },
     person: { ios: "person", android: "person" },
     phone: { ios: "phone", android: "call" },
-    pin: { ios: "pin", android: "push_pin" },
+    pin: { ios: "pin", android: "keep" },
     play: { ios: "play", android: "play_arrow" },
     "play-circle": { ios: "play.circle", android: "play_circle" },
     "plus-circle": { ios: "plus.circle", android: "add_circle" },
     printer: { ios: "printer", android: "print" },
     project: { ios: "folder.badge.gearshape", android: "folder_managed" },
     refresh: { ios: "arrow.clockwise", android: "refresh" },
-    rocket: { ios: "paperplane", android: "rocket_launch" },
+    // The supplied SF Symbols snapshot has no rocket; do not substitute paperplane.
+    rocket: { android: "rocket_launch" },
     save: { ios: "square.and.arrow.down", android: "save" },
     search: { ios: "magnifyingglass", android: "search" },
     send: { ios: "paperplane", android: "send" },
@@ -112,7 +113,7 @@ export const ExpoSymbolNames = {
     sun: { ios: "sun.max", android: "light_mode" },
     tag: { ios: "tag", android: "sell" },
     ticket: { ios: "ticket", android: "confirmation_number" },
-    tools: { ios: "hammer", android: "construction" },
+    tools: { ios: "wrench.and.screwdriver", android: "construction" },
     upload: { ios: "arrow.up.to.line", android: "upload" },
     video: { ios: "video", android: "videocam" },
     warning: { ios: "exclamationmark.triangle", android: "warning" },
@@ -120,10 +121,26 @@ export const ExpoSymbolNames = {
     wrench: { ios: "wrench", android: "build" },
     x: { ios: "xmark", android: "close" },
     "x-circle": { ios: "xmark.circle", android: "cancel" },
-} as const satisfies Record<IconName, ExpoSymbol>;
+};
+
+/**
+ * Exact Material Symbols archive variants selected during visual review.
+ * Runtime Expo identifiers remain in `ExpoSymbolNames`.
+ */
+export const MaterialSymbolArchiveNames: Partial<Record<IconName, string>> = {
+    activity: "ecg-heart-outline",
+    error: "error-outline-rounded",
+    "minus-circle": "do-not-disturb-on-outline-rounded",
+    pin: "keep-outline-rounded",
+};
 
 export function getExpoSymbol(name: IconName): ExpoSymbol {
     return ExpoSymbolNames[name];
 }
+
+/** Per-platform transforms needed when a provider has no oriented asset. */
+export const ExpoSymbolRotations = {
+    "more-vertical": { ios: 90 },
+} as const satisfies Partial<Record<IconName, { ios?: 90; android?: 90 }>>;
 
 export type { AndroidSymbol, SFSymbol };
