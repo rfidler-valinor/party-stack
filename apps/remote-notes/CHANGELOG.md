@@ -1,5 +1,12 @@
 # @party-stack/remote-notes
 
+## 0.2.10
+
+### Patch Changes
+
+- Updated dependencies [2a59375]
+    - @party-stack/remote-ontology@0.8.8
+
 ## 0.2.9
 
 ### Patch Changes
