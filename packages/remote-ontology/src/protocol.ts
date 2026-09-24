@@ -32,7 +32,7 @@ export type RemoteOntologyEndpoint =
 
 export type RemoteDescribeRequest = Record<string, never>;
 
-export type RemoteLoadSubsetOptions = Omit<LoadSubsetOptions, "subscription">;
+export type RemoteLoadSubsetOptions = Omit<LoadSubsetOptions, "signal" | "subscription">;
 
 export interface RemoteLoadSubsetRequest {
     objectType: string;
@@ -314,6 +314,10 @@ export function parseRemoteOntologyRequest(
 
 export function serializeLoadSubsetOptions(options: LoadSubsetOptions | undefined): RemoteLoadSubsetOptions {
     if (!options) return {};
-    const { subscription: _subscription, ...serializableOptions } = options;
+    const {
+        signal: _signal,
+        subscription: _subscription,
+        ...serializableOptions
+    } = options;
     return serializableOptions;
 }

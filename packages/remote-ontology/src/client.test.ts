@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
 import { o, type OntologyIR } from "@party-stack/ontology";
+import { createCollection } from "@tanstack/db";
 import {
     createRemoteLiveOntology,
     createRemoteOntologyBackendAdapter,
@@ -285,5 +286,84 @@ describe("createRemoteOntologyBackendAdapter.applyAction", () => {
         finishRefresh();
         await confirmation;
         expect(confirmed).toBe(true);
+    });
+});
+
+describe("createRemoteOntologyBackendAdapter.loadSubset", () => {
+    it("keeps identical abortable requests on independent transports", async () => {
+        const requests: Array<{
+            resolve: (response: {
+                objectType: string;
+                objects: Array<Record<string, unknown>>;
+            }) => void;
+        }> = [];
+        const loadSubset = vi.fn(
+            (
+                _request: unknown,
+                options?: { signal?: AbortSignal }
+            ) =>
+                new Promise<{
+                    objectType: string;
+                    objects: Array<Record<string, unknown>>;
+                }>((resolve, reject) => {
+                    requests.push({ resolve });
+                    const signal = options?.signal;
+                    signal?.addEventListener(
+                        "abort",
+                        () =>
+                            reject(
+                                signal.reason instanceof Error
+                                    ? signal.reason
+                                    : new DOMException("Request aborted.", "AbortError")
+                            ),
+                        { once: true }
+                    );
+                })
+        );
+        const transport: RemoteOntologyTransport = {
+            describe: async () => ({ ir }),
+            loadSubset,
+            applyAction: async () => ({}),
+            validateAction: async () => ({ certain: false }),
+            runQueryFunction: async () => ({ value: undefined }),
+            getAttachmentMetadata: async () => ({}),
+            getAttachmentContent: async () => new Blob(),
+        };
+        const adapter = createRemoteOntologyBackendAdapter({ ir, transport });
+        const collection = createCollection(
+            adapter.getCollectionOptions("Note") as never
+        );
+        collection.startSyncImmediate();
+        const controllerA = new AbortController();
+        const controllerB = new AbortController();
+
+        const requestA = collection._sync.loadSubset({
+            limit: 1,
+            signal: controllerA.signal,
+        });
+        const requestB = collection._sync.loadSubset({
+            limit: 1,
+            signal: controllerB.signal,
+        });
+
+        expect(requestA).not.toBe(requestB);
+        await vi.waitFor(() => expect(loadSubset).toHaveBeenCalledTimes(2));
+        expect(loadSubset.mock.calls[0]?.[1]?.signal).toBe(
+            controllerA.signal
+        );
+        expect(loadSubset.mock.calls[1]?.[1]?.signal).toBe(
+            controllerB.signal
+        );
+
+        controllerA.abort(new DOMException("Request A canceled.", "AbortError"));
+        requests[1]!.resolve({
+            objectType: "Note",
+            objects: [{ id: "note-b" }],
+        });
+
+        await expect(requestA).rejects.toMatchObject({ name: "AbortError" });
+        await expect(requestB).resolves.toBeUndefined();
+        expect(collection.get("note-b")).toMatchObject({ id: "note-b" });
+        await collection.cleanup();
     });
 });
