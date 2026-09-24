@@ -1,3 +1,4 @@
+import { Combobox } from "@base-ui/react/combobox";
 import { useEffect, useMemo, useState } from "react";
 import type { CatalogFile, CatalogIcon, DraftMappingsFile, IconProvider } from "../shared/types";
 import { IconTile } from "./IconTile";
@@ -30,7 +31,6 @@ function ReplacementIconCombobox({
     onSelect: (icon: CatalogIcon) => void;
 }) {
     const [query, setQuery] = useState(selectedName ?? "");
-    const [open, setOpen] = useState(false);
     const selectedIcon = icons.find((icon) => icon.name === selectedName);
     const candidates = useMemo(() => {
         const normalized = query.trim().toLowerCase();
@@ -49,71 +49,68 @@ function ReplacementIconCombobox({
     }, [selectedName]);
 
     return (
-        <div className="relative mt-2">
-            <div className="flex gap-1">
-                <input
-                    aria-label="Replacement icon"
-                    role="combobox"
-                    aria-expanded={open}
-                    aria-autocomplete="list"
-                    value={query}
-                    onFocus={() => setOpen(true)}
-                    onBlur={() => setOpen(false)}
-                    onChange={(event) => {
-                        const value = event.target.value;
-                        setQuery(value);
-                        setOpen(true);
-                        if (!value.trim() || (selectedName && value !== selectedName)) {
-                            onClear();
-                        }
-                    }}
-                    placeholder="Search replacement icons"
-                    className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-2 py-1.5 text-[11px] outline-none focus:border-[var(--accent)]"
-                />
-                {query && (
-                    <button
-                        type="button"
+        <div className="mt-2">
+            <Combobox.Root
+                items={icons}
+                filteredItems={candidates}
+                value={selectedIcon ?? null}
+                inputValue={query}
+                itemToStringLabel={(icon) => icon.name}
+                isItemEqualToValue={(left, right) => left.id === right.id}
+                onInputValueChange={setQuery}
+                onValueChange={(icon) => {
+                    if (icon) {
+                        setQuery(icon.name);
+                        onSelect(icon);
+                    } else {
+                        setQuery("");
+                        onClear();
+                    }
+                }}
+            >
+                <Combobox.InputGroup className="flex w-full min-w-0 overflow-hidden rounded-md border border-[var(--line)] bg-white focus-within:border-[var(--accent)]">
+                    <Combobox.Input
+                        aria-label="Replacement icon"
+                        placeholder="Search replacement icons"
+                        className="min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-[11px] outline-none"
+                    />
+                    <Combobox.Clear
                         aria-label="Clear replacement"
-                        onClick={() => {
-                            setQuery("");
-                            onClear();
-                        }}
-                        className="rounded-md bg-slate-100 px-2 text-xs text-slate-600"
+                        className="flex w-7 shrink-0 items-center justify-center bg-slate-100 text-xs text-slate-600"
                     >
                         ×
-                    </button>
-                )}
-            </div>
-            {open && (
-                <div
-                    role="listbox"
-                    className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-[var(--line)] bg-white p-1 shadow-xl"
-                >
-                    {candidates.map((candidate) => (
-                        <button
-                            key={candidate.id}
-                            type="button"
-                            role="option"
-                            aria-selected={candidate.name === selectedName}
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => {
-                                setQuery(candidate.name);
-                                setOpen(false);
-                                onSelect(candidate);
-                            }}
-                            className="flex w-full items-center gap-2 rounded-md p-1.5 text-left hover:bg-slate-100"
-                        >
-                            <IconTile icon={candidate} size={24} />
-                            <span className="min-w-0 truncate text-[10px] font-[var(--font-mono)]">
-                                {candidate.name}
-                            </span>
-                        </button>
-                    ))}
-                    {candidates.length === 0 && (
-                        <div className="p-2 text-[11px] text-[var(--muted)]">No matching provider icons</div>
-                    )}
-                </div>
-            )}
+                    </Combobox.Clear>
+                    <Combobox.Trigger
+                        aria-label="Open replacement icons"
+                        className="flex w-7 shrink-0 items-center justify-center bg-slate-50 text-xs text-slate-500"
+                    >
+                        ▾
+                    </Combobox.Trigger>
+                </Combobox.InputGroup>
+                <Combobox.Portal>
+                    <Combobox.Positioner align="start" sideOffset={4} className="z-50 outline-none">
+                        <Combobox.Popup className="data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 w-[var(--anchor-width)] min-w-60 max-w-[var(--available-width)] origin-[var(--transform-origin)] rounded-lg border border-[var(--line)] bg-white shadow-xl transition-[transform,opacity] duration-100">
+                            <Combobox.Empty className="p-2 text-[11px] text-[var(--muted)]">
+                                No matching provider icons
+                            </Combobox.Empty>
+                            <Combobox.List className="max-h-[min(20rem,var(--available-height))] overflow-y-auto overscroll-contain p-1 outline-none">
+                                {(candidate: CatalogIcon) => (
+                                    <Combobox.Item
+                                        key={candidate.id}
+                                        value={candidate}
+                                        className="data-highlighted:bg-slate-100 flex cursor-default items-center gap-2 rounded-md p-1.5 text-left outline-none"
+                                    >
+                                        <IconTile icon={candidate} size={24} />
+                                        <span className="min-w-0 truncate text-[10px] font-[var(--font-mono)]">
+                                            {candidate.name}
+                                        </span>
+                                    </Combobox.Item>
+                                )}
+                            </Combobox.List>
+                        </Combobox.Popup>
+                    </Combobox.Positioner>
+                </Combobox.Portal>
+            </Combobox.Root>
             {selectedIcon && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2">
                     <IconTile icon={selectedIcon} size={28} />
@@ -371,7 +368,7 @@ export function DraftMappingBrowser({ catalog, draft }: { catalog: CatalogFile; 
                                 return (
                                     <div
                                         key={provider}
-                                        className="min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-white/70 p-3"
+                                        className="min-w-0 rounded-xl border border-[var(--line)] bg-white/70 p-3"
                                     >
                                         <div className="mb-2 text-[11px] uppercase tracking-wide text-[var(--muted)]">
                                             {PROVIDER_LABEL[provider as IconProvider]}
