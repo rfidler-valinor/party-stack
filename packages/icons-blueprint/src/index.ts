@@ -1,4 +1,4 @@
-import type { Icon, IconName } from "@party-stack/icons";
+import type { IconDescriptor, IconName } from "@party-stack/icons";
 import type { IconName as BlueprintIconName } from "@blueprintjs/icons";
 
 export const BlueprintIconNames = {
@@ -137,7 +137,7 @@ export interface BlueprintIconMeta extends Record<string, unknown> {
     };
 }
 
-export function fromBlueprintIconName(name: string): Icon {
+export function fromBlueprintIconName(name: string): IconDescriptor {
     const universalNames = universalNamesByBlueprint.get(name as BlueprintIconName);
     return {
         name: universalNames?.length === 1 ? universalNames[0] : undefined,
@@ -147,7 +147,7 @@ export function fromBlueprintIconName(name: string): Icon {
     };
 }
 
-export function toBlueprintIconName(icon: Icon): string | undefined {
+export function toBlueprintIconName(icon: IconDescriptor): string | undefined {
     const source = icon.meta?.blueprint;
     return typeof source === "object" &&
         source !== null &&

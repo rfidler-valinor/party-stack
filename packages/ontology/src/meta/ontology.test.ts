@@ -7,7 +7,7 @@ describe("meta ontology runtime fields", () => {
         const objectType = canonicalOntology.types.find((type) => type.name === "ObjectTypeDef");
         const property = canonicalOntology.types.find((type) => type.name === "PropertyDef");
         const actionType = canonicalOntology.types.find((type) => type.name === "ActionTypeDef");
-        const icon = canonicalOntology.types.find((type) => type.name === "Icon");
+        const icon = canonicalOntology.types.find((type) => type.name === "IconDescriptor");
 
         expect(objectType?.type.kind).toBe("struct");
         expect(property?.type.kind).toBe("struct");
@@ -35,7 +35,7 @@ describe("meta ontology runtime fields", () => {
         );
         expect(icon?.type.kind).toBe("struct");
         if (icon?.type.kind !== "struct") {
-            throw new Error("Expected Icon to be a struct.");
+            throw new Error("Expected IconDescriptor to be a struct.");
         }
         expect(icon.type.value.fields.map(({ name }) => name)).toContain("meta");
         expect(icon.type.value.fields.map(({ name }) => name)).not.toContain("metadata");

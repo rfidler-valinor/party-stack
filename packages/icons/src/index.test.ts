@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IconNames, isIconName, type Icon } from "./index.js";
+import { IconNames, isIconName, type IconDescriptor } from "./index.js";
 
 describe("universal icon vocabulary", () => {
     it("contains shared concepts without provider-specific variants", () => {
@@ -10,7 +10,7 @@ describe("universal icon vocabulary", () => {
     });
 
     it("keeps provider data in namespaced meta", () => {
-        const icon: Icon = {
+        const icon: IconDescriptor = {
             name: "airplane",
             meta: { example: { name: "plane" } },
         };

@@ -1,4 +1,4 @@
-import type { Icon, IconName } from "@party-stack/icons";
+import type { IconDescriptor, IconName } from "@party-stack/icons";
 
 export type SalesforceLightningIconName =
     `${"action" | "custom" | "doctype" | "standard" | "utility"}/${string}`;
@@ -167,7 +167,7 @@ export interface SalesforceLightningIconMeta extends Record<string, unknown> {
     };
 }
 
-export function fromSalesforceLightningIconName(name: string): Icon {
+export function fromSalesforceLightningIconName(name: string): IconDescriptor {
     const typedName = name as SalesforceLightningIconName;
     const standardConcept = name.startsWith("standard/")
         ? StandardObjectIconConcepts[name.slice("standard/".length)]
@@ -181,7 +181,7 @@ export function fromSalesforceLightningIconName(name: string): Icon {
     };
 }
 
-export function toSalesforceLightningIconName(icon: Icon): string | undefined {
+export function toSalesforceLightningIconName(icon: IconDescriptor): string | undefined {
     const source = icon.meta?.salesforce;
     return typeof source === "object" &&
         source !== null &&

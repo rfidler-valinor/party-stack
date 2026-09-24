@@ -119,7 +119,7 @@ export type IconName =
     | "x-circle";
 
 /** A portable icon descriptor with optional provider meta for lossless round trips. */
-export type Icon = {
+export type IconDescriptor = {
     /** Optional renderer-independent icon name. */
     name?: IconName;
     /** Namespaced source-provider meta. */
@@ -361,7 +361,7 @@ export type ObjectTypeDef = {
     /** The optional property name used as the human-readable title for an object. */
     title?: string;
     /** Optional portable icon descriptor. */
-    icon?: Icon;
+    icon?: IconDescriptor;
     /** Optional display color independent of the icon. */
     color?: string;
     /** The object type's propertieo. */
@@ -522,7 +522,7 @@ export type ActionTypeDef = {
     /** Human-readable name. */
     displayName: string;
     /** Optional portable icon descriptor. */
-    icon?: Icon;
+    icon?: IconDescriptor;
     /** Optional display color independent of the icon. */
     color?: string;
     /** The action type's parametero. */

@@ -132,7 +132,7 @@ export function isIconName(value: string): value is IconName {
  * Portable icon descriptor. `name` drives rendering while `meta` preserves
  * namespaced source-provider data for lossless round trips.
  */
-export interface Icon {
+export interface IconDescriptor {
     name?: IconName;
     meta?: Record<string, unknown>;
 }

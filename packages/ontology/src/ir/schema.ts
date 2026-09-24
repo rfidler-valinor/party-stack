@@ -14,7 +14,7 @@ export default {
             }),
         },
         {
-            name: "Icon",
+            name: "IconDescriptor",
             description: "A portable icon descriptor with optional provider meta for lossless round trips.",
             type: o.struct({
                 fields: [
@@ -637,7 +637,7 @@ export default {
                     {
                         name: "icon",
                         displayName: "Icon",
-                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        type: o.optional({ type: o.ref({ name: "IconDescriptor" }) }),
                         description: "Optional portable icon descriptor.",
                     },
                     {
@@ -1112,8 +1112,7 @@ export default {
                                 valueType: o.unknown({}),
                             }),
                         }),
-                        description:
-                            "Provider-specific metadata used to execute this action.",
+                        description: "Provider-specific metadata used to execute this action.",
                     },
                     {
                         name: "name",
@@ -1130,7 +1129,7 @@ export default {
                     {
                         name: "icon",
                         displayName: "Icon",
-                        type: o.optional({ type: o.ref({ name: "Icon" }) }),
+                        type: o.optional({ type: o.ref({ name: "IconDescriptor" }) }),
                         description: "Optional portable icon descriptor.",
                     },
                     {
