@@ -42,7 +42,7 @@
         "@party-stack/errors": "workspace:*",
         "@party-stack/node-runtime": "workspace:^",
         "@party-stack/runtime": "workspace:*",
-        "@tanstack/db-sqlite-persistence-core": "0.2.19",
+        "@tanstack/db-sqlite-persistence-core": "0.2.23",
         "change-case": "^5.4.4",
         "commander": "^14.0.2",
         "effection": "^4.0.2",
