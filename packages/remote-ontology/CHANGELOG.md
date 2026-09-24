@@ -1,5 +1,11 @@
 # @party-stack/remote-ontology
 
+## 0.8.8
+
+### Patch Changes
+
+- 2a59375: fix safari multipart issue with opfs
+
 ## 0.8.7
 
 ### Patch Changes
