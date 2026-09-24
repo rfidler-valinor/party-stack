@@ -22,6 +22,11 @@ function actionType(parameters: Record<string, ActionParameterV2>): ActionTypeFu
 function omsIconMetadata(locator: string, color: string): ActionTypeOmsMetadata {
     return {
         actionType: {
+            actionTypeLogic: {
+                validation: {
+                    parameterValidations: {},
+                },
+            },
             metadata: {
                 displayMetadata: {
                     icon: {
