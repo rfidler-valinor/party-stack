@@ -138,9 +138,4 @@ export function getExpoSymbol(name: IconName): ExpoSymbol {
     return ExpoSymbolNames[name];
 }
 
-/** Per-platform transforms needed when a provider has no oriented asset. */
-export const ExpoSymbolRotations = {
-    "more-vertical": { ios: 90 },
-} as const satisfies Partial<Record<IconName, { ios?: 90; android?: 90 }>>;
-
 export type { AndroidSymbol, SFSymbol };

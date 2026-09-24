@@ -1,5 +1,5 @@
-import type { IconName as BlueprintIconName } from "@blueprintjs/icons";
 import type { Icon, IconName } from "@party-stack/icons";
+import type { IconName as BlueprintIconName } from "@blueprintjs/icons";
 
 export const BlueprintIconNames = {
     activity: "pulse",
@@ -120,11 +120,6 @@ export const BlueprintIconNames = {
 export function getBlueprintIconName(name: IconName): BlueprintIconName | undefined {
     return BlueprintIconNames[name];
 }
-
-/** Transforms needed when Blueprint has no separately oriented asset. */
-export const BlueprintIconRotations = {
-    "more-vertical": 90,
-} as const satisfies Partial<Record<IconName, 90>>;
 
 const universalNamesByBlueprint = new Map<BlueprintIconName, IconName[]>();
 for (const [name, blueprintName] of Object.entries(BlueprintIconNames)) {
