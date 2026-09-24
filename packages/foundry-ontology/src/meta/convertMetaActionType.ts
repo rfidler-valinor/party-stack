@@ -751,7 +751,7 @@ export function convertFoundryMetaActionType(
         }
     );
     const defaultsByParameter = convertOmsActionParameterDefaults(omsMetadata, parameters);
-    const foundryIcon = omsMetadata?.actionType.metadata.displayMetadata.icon;
+    const foundryIcon = omsMetadata?.actionType.metadata?.displayMetadata?.icon;
 
     return {
         id: actionType.actionType.rid,
