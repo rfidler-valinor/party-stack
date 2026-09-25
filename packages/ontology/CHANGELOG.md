@@ -1,5 +1,11 @@
 # @party-stack/ontology
 
+## 0.17.0
+
+### Minor Changes
+
+- 0e5e6d3: add non-live backend adapter mode for request-scoped ontology operations
+
 ## 0.16.8
 
 ### Patch Changes
