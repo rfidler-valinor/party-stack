@@ -175,6 +175,44 @@ describe("createRemoteLiveOntology", () => {
 });
 
 describe("createRemoteOntologyBackendAdapter.applyAction", () => {
+    it("returns without refetching invalidated collections when live is false", async () => {
+        const refetch = vi.fn();
+        const adapter = createRemoteOntologyBackendAdapter({
+            ir,
+            live: false,
+            transport: {
+                describe: async () => ({ ir }),
+                loadSubset: async (request) => ({
+                    objectType: request.objectType,
+                    objects: [],
+                }),
+                applyAction: async () => ({
+                    invalidatedObjectTypes: ["Note"],
+                    attachmentIdMappings: [{ localId: "local", remoteId: "remote" }],
+                }),
+                validateAction: async () => ({ certain: false }),
+                runQueryFunction: async () => ({ value: undefined }),
+                getAttachmentMetadata: async () => ({}),
+                getAttachmentContent: async () => new Blob(),
+            },
+        });
+
+        await expect(
+            adapter.applyAction("createNote", { title: "one" }, {
+                objects: {
+                    Note: {
+                        utils: { refetch },
+                    } as never,
+                },
+            })
+        ).resolves.toMatchObject({
+            invalidatedObjectTypes: ["Note"],
+            attachmentIdMappings: [{ localId: "local", remoteId: "remote" }],
+        });
+        expect(adapter.live).toBe(false);
+        expect(refetch).not.toHaveBeenCalled();
+    });
+
     it("resolves successful writes even when subsequent refetches reject or abort", async () => {
         const transport: RemoteOntologyTransport = {
             describe: async () => ({ ir }),

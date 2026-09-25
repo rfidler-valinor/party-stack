@@ -6,6 +6,8 @@ const mockState = vi.hoisted(() => ({
     getEditsHistory: vi.fn(),
     getObject: vi.fn(),
     search: vi.fn(),
+    getObjectSetWatcherManager: vi.fn(),
+    unsubscribe: vi.fn(),
     subscribeCallback: undefined as
         | ((message: { type: string; status?: string; updates?: Array<Record<string, unknown>> }) => void)
         | undefined,
@@ -22,17 +24,7 @@ vi.mock("@osdk/foundry.ontologies", () => ({
 }));
 
 vi.mock("@party-stack/foundry-object-set-watcher", () => ({
-    getObjectSetWatcherManager: () => ({
-        subscribe: (
-            _objectSet: unknown,
-            callback: (message: { type: string; status?: string; updates?: Array<Record<string, unknown>> }) => void
-        ) => {
-            mockState.subscribeCallback = callback;
-            return () => {
-                mockState.subscribeCallback = undefined;
-            };
-        },
-    }),
+    getObjectSetWatcherManager: mockState.getObjectSetWatcherManager,
 }));
 
 import { createFoundryCodec } from "./foundryCodec.js";
@@ -45,6 +37,7 @@ function createSyncHarness(
         decodeObject?: (object: Record<string, unknown>) => Record<string, unknown>;
         decodeEditObject?: (object: Record<string, unknown>) => Record<string, unknown>;
         collectionMetadata?: Map<string, unknown>;
+        live?: boolean;
         fetch?: typeof fetch;
     } = {}
 ) {
@@ -103,6 +96,7 @@ function createSyncHarness(
             "status",
             "priority",
         ],
+        live: opts.live,
         decodeObject: opts.decodeObject,
         decodeEditObject: opts.decodeEditObject,
     });
@@ -178,7 +172,83 @@ describe("objectCollectionOptions", () => {
         mockState.getEditsHistory.mockReset();
         mockState.getObject.mockReset();
         mockState.search.mockReset();
+        mockState.getObjectSetWatcherManager.mockReset();
+        mockState.unsubscribe.mockReset();
         mockState.subscribeCallback = undefined;
+        mockState.getObjectSetWatcherManager.mockReturnValue({
+            subscribe: (
+                _objectSet: unknown,
+                callback: (message: {
+                    type: string;
+                    status?: string;
+                    updates?: Array<Record<string, unknown>>;
+                }) => void
+            ) => {
+                mockState.subscribeCallback = callback;
+                return () => {
+                    mockState.subscribeCallback = undefined;
+                    mockState.unsubscribe();
+                };
+            },
+        });
+    });
+
+    it("constructs and cleans up the object-set watcher by default", () => {
+        const harness = createSyncHarness();
+
+        expect(mockState.getObjectSetWatcherManager).toHaveBeenCalledTimes(1);
+        harness.cleanup();
+        expect(mockState.unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it("loads subsets without constructing an object-set watcher when live is false", async () => {
+        mockState.search.mockResolvedValue({
+            data: [{ employeeId: 1, name: "Ada" }],
+            nextPageToken: undefined,
+        });
+        const harness = createSyncHarness([], { live: false });
+
+        expect(mockState.getObjectSetWatcherManager).not.toHaveBeenCalled();
+        await harness.loadSubset({});
+        expect(harness.syncedData.get(1)).toEqual({
+            employeeId: 1,
+            name: "Ada",
+        });
+
+        harness.cleanup();
+        expect(mockState.unsubscribe).not.toHaveBeenCalled();
+    });
+
+    it("supports bounded edit-history observation without a watcher when live is false", async () => {
+        mockState.getEditsHistory.mockResolvedValue({
+            data: [
+                {
+                    objectPrimaryKey: { employeeId: 2 },
+                    operationId: "op-non-live",
+                    actionTypeRid: "action-1",
+                    userId: "user-1",
+                    timestamp: "2099-03-12T12:00:00.000Z",
+                    edit: {
+                        type: "createEdit",
+                        properties: {
+                            employeeId: 2,
+                            name: "Grace",
+                        },
+                    },
+                },
+            ],
+            nextPageToken: undefined,
+        });
+        const harness = createSyncHarness([], { live: false });
+
+        await expect(harness.utils.awaitOperationId("op-non-live")).resolves.toBeUndefined();
+        expect(mockState.getObjectSetWatcherManager).not.toHaveBeenCalled();
+        expect(harness.syncedData.get(2)).toEqual({
+            employeeId: 2,
+            name: "Grace",
+        });
+
+        harness.cleanup();
     });
 
     it("keeps identical abortable subset loads independent", async () => {

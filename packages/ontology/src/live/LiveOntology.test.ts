@@ -294,6 +294,42 @@ describe("createLiveOntology", () => {
         await coordination.close();
     });
 
+    it("rejects optimistic actions backed by a non-live adapter", async () => {
+        const applyAction = vi.fn<OntologyBackendAdapter["applyAction"]>(() => Promise.resolve());
+        const coordination = new SingleProcessCoordination({
+            scope: "non-live-optimistic",
+        });
+        const ontology = await createLiveOntology({
+            id: "non-live-optimistic",
+            ir: actionIr,
+            backend: () => ({
+                name: "non-live",
+                live: false,
+                getCollectionOptions: () => {
+                    throw new Error("unexpected collection");
+                },
+                applyAction,
+                runQueryFunction: () => Promise.reject(new Error("unexpected query")),
+            }),
+            runtime: () => ({
+                owner: "user",
+                namespace: "non-live-optimistic",
+                blobBytes: new MemoryBlobBytesStore(),
+                coordination,
+            }),
+        });
+
+        await expect(
+            ontology.actions.save!({}, { visibility: "optimistic" })
+        ).rejects.toThrow(
+            'Ontology backend adapter "non-live" is not live and cannot reconcile optimistic actions.'
+        );
+        expect(applyAction).not.toHaveBeenCalled();
+
+        await ontology.cleanup();
+        await coordination.close();
+    });
+
     it("validates an action without applying it", async () => {
         const applyAction = vi.fn(() => Promise.resolve());
         const validateAction = vi.fn(() =>
