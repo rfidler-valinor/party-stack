@@ -62,6 +62,7 @@ export function createFoundryOntologyRoute(options: {
     ontologyId: string;
     ir?: OntologyIR;
     users?: FoundryUsersIntegration | ((userId: string) => FoundryUsersIntegration);
+    live?: boolean;
     persistObjects?: boolean;
     writes?: LiveOntologyWrites;
 }): FoundryOntologyRoute {
@@ -81,6 +82,7 @@ export function createFoundryOntologyRoute(options: {
                             typeof options.users === "function"
                                 ? options.users(connection.userId)
                                 : options.users,
+                        live: options.live,
                     }),
                     persistObjects: options.persistObjects,
                     writes: options.writes,

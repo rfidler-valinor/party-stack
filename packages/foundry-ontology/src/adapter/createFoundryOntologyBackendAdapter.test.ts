@@ -3,6 +3,7 @@ import { Temporal } from "temporal-polyfill";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OntologyClient } from "@party-stack/foundry-client";
 import {
+    createFoundryOntologyBackend,
     createFoundryOntologyBackendAdapter,
     isFoundryNotFoundError,
 } from "./createFoundryOntologyBackendAdapter.js";
@@ -150,6 +151,110 @@ describe("Foundry action execution time overrides", () => {
             "Invalid action execution time: expected a Date or Temporal-like ISO instant."
         );
         expect(ontologyMocks.applyWithOverrides).not.toHaveBeenCalled();
+    });
+});
+
+describe("Foundry live behavior", () => {
+    const ir = {
+        types: [],
+        objectTypes: [
+            {
+                name: "Task",
+                displayName: "Task",
+                pluralDisplayName: "Tasks",
+                primaryKey: "id",
+                properties: [
+                    {
+                        name: "id",
+                        displayName: "ID",
+                        type: o.string({}),
+                    },
+                ],
+            },
+        ],
+        linkTypes: [],
+        actionTypes: [
+            {
+                name: "updateTask",
+                displayName: "Update task",
+                parameters: [],
+                logic: [],
+            },
+        ],
+        queryFunctionTypes: [],
+    };
+
+    beforeEach(() => {
+        ontologyMocks.applyWithOverrides.mockResolvedValue({
+            operationId: "operation-1",
+            validation: { result: "VALID" },
+            edits: {
+                type: "edits",
+                edits: [
+                    {
+                        type: "modifyObject",
+                        objectType: "Task",
+                    },
+                ],
+            },
+        });
+    });
+
+    it("waits for edited collections by default", async () => {
+        const awaitOperationId = vi.fn(() => Promise.resolve());
+        const adapter = createFoundryOntologyBackendAdapter({
+            client: {
+                ontologyRid: "ri.ontology.main.1",
+            } as OntologyClient,
+            ir,
+        });
+
+        expect(adapter.live).toBe(true);
+        await adapter.applyAction("updateTask", {}, {
+            objects: {
+                Task: {
+                    utils: { awaitOperationId },
+                } as never,
+            },
+        });
+
+        expect(awaitOperationId).toHaveBeenCalledWith("operation-1");
+    });
+
+    it("returns after backend acceptance when live is false", async () => {
+        const awaitOperationId = vi.fn(() => Promise.resolve());
+        const adapter = createFoundryOntologyBackendAdapter({
+            client: {
+                ontologyRid: "ri.ontology.main.1",
+            } as OntologyClient,
+            ir,
+            live: false,
+        });
+
+        expect(adapter.live).toBe(false);
+        await adapter.applyAction("updateTask", {}, {
+            objects: {
+                Task: {
+                    utils: { awaitOperationId },
+                } as never,
+            },
+        });
+
+        expect(awaitOperationId).not.toHaveBeenCalled();
+    });
+
+    it("forwards live through the backend provider", async () => {
+        const backend = createFoundryOntologyBackend({
+            client: {
+                ontologyRid: "ri.ontology.main.1",
+            } as OntologyClient,
+            live: false,
+        });
+
+        await expect(backend(ir, {})).resolves.toMatchObject({
+            name: "foundry",
+            live: false,
+        });
     });
 });
 

@@ -195,11 +195,16 @@ function prepareFoundryActionInvocation(options: {
     };
 }
 
-export function createFoundryOntologyBackendAdapter(opts: {
+export interface CreateFoundryOntologyBackendAdapterOptions {
     client: OntologyClient;
     ir: OntologyIR;
     users?: FoundryUsersIntegration;
-}): OntologyBackendAdapter {
+    live?: boolean;
+}
+
+export function createFoundryOntologyBackendAdapter(
+    opts: CreateFoundryOntologyBackendAdapterOptions
+): OntologyBackendAdapter {
     const codec = createFoundryCodec(opts.ir);
     const attachments: OntologyAttachmentsAdapter = {
         generateAttachmentId: (_, { target }) => {
@@ -332,6 +337,7 @@ export function createFoundryOntologyBackendAdapter(opts: {
 
     const adapter: OntologyBackendAdapter = {
         name: "foundry",
+        live: opts.live !== false,
         getCollectionOptions: (objectType: string) => {
             if (opts.users?.objectType === objectType) {
                 return opts.users.getCollectionOptions(opts.client);
@@ -342,6 +348,7 @@ export function createFoundryOntologyBackendAdapter(opts: {
                 objectType,
                 primaryKeyProperty: objectTypeDef.primaryKey,
                 selectedProperties: objectTypeDef.properties.map((property) => property.name),
+                live: opts.live,
                 decodeObject: (object) => codec.decodeObject(objectType, object) as FoundryObject,
                 decodeEditObject: (object) =>
                     codec.decodeEditObject(objectType, object) as FoundryObject,
@@ -536,7 +543,7 @@ export function createFoundryOntologyBackendAdapter(opts: {
             if (result.validation?.result === "INVALID") {
                 throw new NonRetryableError("Invalid Action arguments.");
             }
-            if (context) {
+            if (opts.live !== false && context) {
                 const operationId = getApplyActionOperationId(result);
                 const editedObjectTypes = Array.from(getEditedObjectTypes(result.edits));
                 const targetCollections = editedObjectTypes
@@ -596,6 +603,7 @@ export type CreateFoundryOntologyBackendOptions<
       }
 ) & {
     users?: FoundryUsersIntegration;
+    live?: boolean;
 };
 
 export function createFoundryOntologyBackend<
@@ -606,5 +614,6 @@ export function createFoundryOntologyBackend<
             ir,
             client: "client" in opts ? opts.client : await opts.createClient(ir, context),
             users: opts.users,
+            live: opts.live,
         });
 }
