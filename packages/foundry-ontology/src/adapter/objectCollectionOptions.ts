@@ -193,6 +193,7 @@ async function fetchFoundryObjects(
     opts: LoadSubsetOptions,
     decodeObject: (object: FoundryObject) => FoundryObject = (object) => object
 ): Promise<FoundryObject[]> {
+    opts.signal?.throwIfAborted();
     const offset = Math.max(0, Math.trunc(opts.offset ?? 0));
     const limit = opts.limit === undefined ? undefined : Math.max(0, Math.trunc(opts.limit));
     if (limit === 0) return [];
@@ -212,10 +213,20 @@ async function fetchFoundryObjects(
         }
     }
 
+    const requestClient = opts.signal
+        ? {
+              ...client,
+              fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+                  client.fetch(input, {
+                      ...init,
+                      signal: opts.signal,
+                  }),
+          }
+        : client;
     const results = await AsyncIterable.toArray(
         AsyncIterable.fromPagination(
             (pageSize, pageToken: string | undefined) =>
-                OntologyObjectsV2.search(client, client.ontologyRid, objectType, {
+                OntologyObjectsV2.search(requestClient, client.ontologyRid, objectType, {
                     snapshot: true,
                     where,
                     excludeRid: true,
@@ -231,6 +242,7 @@ async function fetchFoundryObjects(
             limit === undefined ? undefined : offset + limit
         )
     );
+    opts.signal?.throwIfAborted();
 
     return (results as FoundryObject[])
         .slice(offset, limit === undefined ? undefined : offset + limit)
@@ -705,7 +717,7 @@ function createSyncConfig(
                     for (const object of objects) {
                         upsertObject(object);
                     }
-                    const receipt = commit();
+                    const receipt = commit(opts.signal);
                     if (receipt !== true) await receipt;
                 }
             };

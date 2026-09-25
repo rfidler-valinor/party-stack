@@ -38,6 +38,7 @@ function createSyncHarness(
         decodeEditObject?: (object: Record<string, unknown>) => Record<string, unknown>;
         collectionMetadata?: Map<string, unknown>;
         live?: boolean;
+        fetch?: typeof fetch;
     } = {}
 ) {
     const syncedData = new Map(
@@ -83,7 +84,7 @@ function createSyncHarness(
     const { sync: syncConfig, utils } = objectCollectionOptions({
         client: {
             baseUrl: "https://example.com",
-            fetch: vi.fn(),
+            fetch: opts.fetch ?? vi.fn(),
             ontologyRid: "ri.ontology.main",
             tokenProvider: () => Promise.resolve("token"),
         } as never,
@@ -247,6 +248,61 @@ describe("objectCollectionOptions", () => {
             name: "Grace",
         });
 
+        harness.cleanup();
+    });
+
+    it("keeps identical abortable subset loads independent", async () => {
+        const requests: Array<{
+            resolve: (value: unknown) => void;
+            reject: (reason: unknown) => void;
+        }> = [];
+        const fetchImpl = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+            return new Promise((resolve, reject) => {
+                const request = { resolve, reject };
+                requests.push(request);
+                const signal = init?.signal;
+                signal?.addEventListener(
+                    "abort",
+                    () =>
+                        reject(
+                            signal.reason instanceof Error
+                                ? signal.reason
+                                : new DOMException("Request aborted.", "AbortError")
+                        ),
+                    { once: true }
+                );
+            });
+        }) as unknown as typeof fetch;
+        mockState.search.mockImplementation((client: { fetch: typeof fetch }) =>
+            client.fetch("https://example.com/search") as never
+        );
+        const harness = createSyncHarness([], { fetch: fetchImpl });
+        const controllerA = new AbortController();
+        const controllerB = new AbortController();
+
+        const requestA = harness.loadSubset({
+            limit: 1,
+            signal: controllerA.signal,
+        });
+        const requestB = harness.loadSubset({
+            limit: 1,
+            signal: controllerB.signal,
+        });
+
+        expect(requestA).not.toBe(requestB);
+        expect(mockState.search).toHaveBeenCalledTimes(2);
+
+        controllerA.abort(new DOMException("Request A canceled.", "AbortError"));
+        requests[1]!.resolve({
+            data: [{ employeeId: "employee-b", name: "Request B" }],
+            nextPageToken: undefined,
+        });
+
+        await expect(requestA).rejects.toMatchObject({ name: "AbortError" });
+        await expect(requestB).resolves.toBeUndefined();
+        expect(harness.syncedData.get("employee-b")).toMatchObject({
+            name: "Request B",
+        });
         harness.cleanup();
     });
 
