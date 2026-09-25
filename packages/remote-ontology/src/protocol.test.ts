@@ -254,10 +254,11 @@ describe("createHttpRemoteOntologyTransport", () => {
         expect(chromiumArrayBuffer).not.toHaveBeenCalled();
     });
 
-    it("preserves load subset cursor expressions and removes only subscriptions", () => {
+    it("preserves transport-safe load subset options", () => {
         const where = eq(new IR.PropRef(["status"]), "open");
         const whereFrom = gt(new IR.PropRef(["priority"]), 5);
         const whereCurrent = eq(new IR.PropRef(["priority"]), 5);
+        const signal = new AbortController().signal;
         const options = serializeLoadSubsetOptions({
             where,
             cursor: {
@@ -267,6 +268,7 @@ describe("createHttpRemoteOntologyTransport", () => {
             },
             offset: 2,
             limit: 3,
+            signal,
             subscription: {} as never,
         });
         const request = parseRemoteOntologyRequest("load-subset", {
@@ -274,6 +276,7 @@ describe("createHttpRemoteOntologyTransport", () => {
             options,
         });
 
+        expect(options).not.toHaveProperty("signal");
         expect(options).not.toHaveProperty("subscription");
         expect(request.input).toEqual({
             objectType: "Task",
