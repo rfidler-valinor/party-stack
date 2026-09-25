@@ -4,7 +4,7 @@
 
 This document describes both:
 
-1. a tactical `live: false` Foundry adapter mode that can ship independently; and
+1. a tactical `live: false` adapter mode that can ship independently; and
 2. a longer-term split between direct ontology operations, one-shot typed queries,
    and live replicated state.
 
@@ -183,6 +183,21 @@ the adapter returns immediately after backend acceptance, TanStack could drop
 the optimistic layer before authoritative synchronized state replaces it.
 During the transition, confirmed actions are supported and optimistic actions
 with a non-live adapter should be rejected.
+
+### Other adapters
+
+The flag has behavior only where an adapter owns live reconciliation:
+
+- Salesforce `live: false` suppresses CDC subscription and skips post-action
+  record refresh, deletion, and collection invalidation.
+- The remote HTTP adapter has no stream today, but `live: false` skips its
+  post-action query refetch while preserving invalidation metadata and attachment
+  mappings in the returned result.
+- SQLite performs a bounded local database load and commits actions directly
+  into its local TanStack collections and database. It needs no non-live branch.
+- Durable Object delegates to SQLite and likewise needs no branch.
+- Local, Foundry, and Salesforce metadata adapters are read-only and create no
+  object-change stream requiring this flag.
 
 ## Target architecture
 
@@ -627,8 +642,9 @@ without replicated object state.
 
 ## Migration
 
-1. Add Foundry `live?: boolean`, defaulting to true.
-2. Set `live: false` for Foundry adapters used by remote ontology servers.
+1. Add `live?: boolean`, defaulting to true, to adapters with live reconciliation.
+2. Set `live: false` for Foundry, Salesforce, or remote adapters used by remote
+   ontology servers.
 3. Prove non-live collection startup never constructs the watcher.
 4. Add direct adapter `loadSubset` and accepted `applyAction` primitives.
 5. Add typed `OntologyClient` over those primitives.
@@ -637,7 +653,7 @@ without replicated object state.
 8. Move TanStack collection construction into ontology core.
 9. Add centralized pull/stream/checkpoint orchestration.
 10. Move Foundry operation-ID waiting into receipt reconciliation.
-11. Migrate Salesforce, remote, and SQLite adapters.
+11. Migrate Salesforce, remote, and SQLite adapters to backend primitives.
 12. Remove the tactical Foundry `live` branch if the primitive split makes it
     redundant.
 
@@ -650,6 +666,10 @@ without replicated object state.
 - Explicit non-live `awaitOperationId` can perform bounded edit-history catch-up.
 - Live Foundry actions await affected collection operation IDs.
 - Non-live Foundry actions do not invoke collection `awaitOperationId`.
+- Non-live Salesforce collections do not subscribe to CDC and actions do not
+  refresh or invalidate temporary collections.
+- Non-live remote actions preserve result metadata without refetching temporary
+  query collections.
 - Adapter provider and route helpers forward `live`.
 - Optimistic action submission rejects a non-live adapter during the transitional
   remote-server implementation.

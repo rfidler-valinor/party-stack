@@ -26,11 +26,12 @@ export interface OntologyApplyActionClientResult extends OntologyApplyActionResu
 export interface CreateRemoteOntologyBackendAdapterOptions {
     ir: OntologyIR;
     transport: RemoteOntologyTransport;
+    live?: boolean;
 }
 
 export type CreateRemoteOntologyBackendOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
-> =
+> = (
     | {
           transport: RemoteOntologyTransport;
       }
@@ -39,7 +40,10 @@ export type CreateRemoteOntologyBackendOptions<
               ir: OntologyIR,
               context: Context
           ) => RemoteOntologyTransport | Promise<RemoteOntologyTransport>;
-      };
+      }
+) & {
+    live?: boolean;
+};
 
 export interface CreateRemoteLiveOntologyOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
@@ -114,6 +118,7 @@ export function createRemoteOntologyBackendAdapter(
 
     return {
         name: "remote",
+        live: opts.live !== false,
         getCollectionOptions: (objectType: string) => {
             const primaryKey = getObjectTypePrimaryKey(opts.ir, objectType);
 
@@ -153,10 +158,12 @@ export function createRemoteOntologyBackendAdapter(
 
             // A confirmed remote write remains successful even when its
             // best-effort local cache refresh fails or is aborted.
-            await refreshInvalidatedCollections({
-                objectTypes: invalidatedObjectTypes,
-                objects: live.objects,
-            });
+            if (opts.live !== false) {
+                await refreshInvalidatedCollections({
+                    objectTypes: invalidatedObjectTypes,
+                    objects: live.objects,
+                });
+            }
 
             const result: OntologyApplyActionClientResult = {
                 attachmentIdMappings: response.attachmentIdMappings,
@@ -196,6 +203,7 @@ export function createRemoteOntologyBackend<
         createRemoteOntologyBackendAdapter({
             ir,
             transport: "transport" in opts ? opts.transport : await opts.createTransport(ir, context),
+            live: opts.live,
         });
 }
 

@@ -37,4 +37,27 @@ describe("createSalesforceOntologyRoute", () => {
         expect(route.configure !== undefined).toBe(true);
         expect(route.configureMeta !== undefined).toBe(true);
     });
+
+    it("forwards live to configured ontology backends", async () => {
+        const route = createSalesforceOntologyRoute({
+            ontologyId: "salesforce:tasks",
+            ir,
+            live: false,
+        })(backend);
+        const configuration = await route.configure!({
+            connection: {
+                userId: "user-1",
+                state: { status: "active" },
+            },
+            egress: {
+                fetch: globalThis.fetch,
+            },
+            ontologyId: "salesforce:tasks",
+        } as never);
+
+        await expect(configuration.backend(ir, {})).resolves.toMatchObject({
+            name: "salesforce",
+            live: false,
+        });
+    });
 });
