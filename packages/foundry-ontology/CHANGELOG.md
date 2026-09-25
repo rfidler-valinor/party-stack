@@ -1,5 +1,16 @@
 # @party-stack/foundry-ontology
 
+## 0.15.0
+
+### Minor Changes
+
+- 0e5e6d3: add non-live backend adapter mode for request-scoped ontology operations
+
+### Patch Changes
+
+- Updated dependencies [0e5e6d3]
+    - @party-stack/ontology@0.17.0
+
 ## 0.14.15
 
 ### Patch Changes
