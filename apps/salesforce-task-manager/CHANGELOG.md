@@ -1,5 +1,16 @@
 # @party-stack/salesforce-task-manager
 
+## 0.1.13
+
+### Patch Changes
+
+- Updated dependencies [d1a1805]
+    - @party-stack/node-runtime@0.2.7
+    - @party-stack/ontology@0.16.8
+    - @party-stack/ontology-devtools@0.4.16
+    - @party-stack/salesforce-ontology@0.1.13
+    - @party-stack/web-runtime@0.3.7
+
 ## 0.1.12
 
 ### Patch Changes
