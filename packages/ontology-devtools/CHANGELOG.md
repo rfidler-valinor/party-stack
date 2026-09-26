@@ -1,5 +1,20 @@
 # @party-stack/ontology-devtools
 
+## 0.4.17
+
+### Patch Changes
+
+- Updated dependencies [0e5e6d3]
+    - @party-stack/ontology@0.17.0
+
+## 0.4.16
+
+### Patch Changes
+
+- d1a1805: Upgrade the TanStack DB ecosystem, including DB 0.9.2, React DB 0.4.1, query DB collection 1.2.15, and SQLite persistence 0.2.23. Foundry and remote subset loads now propagate cancellation without sharing abortable transports.
+- Updated dependencies [d1a1805]
+    - @party-stack/ontology@0.16.8
+
 ## 0.4.15
 
 ### Patch Changes

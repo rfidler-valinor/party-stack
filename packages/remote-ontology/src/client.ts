@@ -1,7 +1,11 @@
 import { QueryClient } from "@tanstack/query-core";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { QueryCollectionUtils } from "@tanstack/query-db-collection";
-import type { Collection } from "@tanstack/db";
+import {
+    getLoadSubsetDemandKey,
+    type Collection,
+    type LoadSubsetOptions,
+} from "@tanstack/db";
 import { createLiveOntology } from "@party-stack/ontology";
 import type {
     CreateLiveOntologyOpts,
@@ -26,11 +30,12 @@ export interface OntologyApplyActionClientResult extends OntologyApplyActionResu
 export interface CreateRemoteOntologyBackendAdapterOptions {
     ir: OntologyIR;
     transport: RemoteOntologyTransport;
+    live?: boolean;
 }
 
 export type CreateRemoteOntologyBackendOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
-> =
+> = (
     | {
           transport: RemoteOntologyTransport;
       }
@@ -39,7 +44,10 @@ export type CreateRemoteOntologyBackendOptions<
               ir: OntologyIR,
               context: Context
           ) => RemoteOntologyTransport | Promise<RemoteOntologyTransport>;
-      };
+      }
+) & {
+    live?: boolean;
+};
 
 export interface CreateRemoteLiveOntologyOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
@@ -111,24 +119,43 @@ export function createRemoteOntologyBackendAdapter(
     const { transport } = opts;
     const queryClient = new QueryClient();
     const queryKeyPrefix = ["remote-ontology", "remote"];
+    const abortableRequestIds = new WeakMap<AbortSignal, number>();
+    let nextAbortableRequestId = 0;
+    const getQueryKey = (objectType: string, options: LoadSubsetOptions) => {
+        const demandKey = getLoadSubsetDemandKey(options);
+        const key =
+            demandKey === undefined
+                ? [...queryKeyPrefix, objectType]
+                : [...queryKeyPrefix, objectType, demandKey];
+        if (!options.signal) return key;
+
+        let requestId = abortableRequestIds.get(options.signal);
+        if (requestId === undefined) {
+            requestId = nextAbortableRequestId++;
+            abortableRequestIds.set(options.signal, requestId);
+        }
+        return [...key, "abortable", requestId];
+    };
 
     return {
         name: "remote",
+        live: opts.live !== false,
         getCollectionOptions: (objectType: string) => {
             const primaryKey = getObjectTypePrimaryKey(opts.ir, objectType);
 
             return queryCollectionOptions<Record<string, unknown>>({
                 queryClient,
                 getKey: (row) => row[primaryKey] as string | number,
-                queryKey: [...queryKeyPrefix, objectType],
+                queryKey: (options) => getQueryKey(objectType, options),
                 syncMode: "on-demand",
                 queryFn: async (ctx) => {
+                    const loadSubsetOptions = ctx.meta?.loadSubsetOptions;
                     const response = await transport.loadSubset(
                         {
                             objectType,
-                            options: serializeLoadSubsetOptions(ctx.meta?.loadSubsetOptions),
+                            options: serializeLoadSubsetOptions(loadSubsetOptions),
                         },
-                        { signal: ctx.signal }
+                        { signal: loadSubsetOptions?.signal ?? ctx.signal }
                     );
                     return response.objects;
                 },
@@ -153,10 +180,12 @@ export function createRemoteOntologyBackendAdapter(
 
             // A confirmed remote write remains successful even when its
             // best-effort local cache refresh fails or is aborted.
-            await refreshInvalidatedCollections({
-                objectTypes: invalidatedObjectTypes,
-                objects: live.objects,
-            });
+            if (opts.live !== false) {
+                await refreshInvalidatedCollections({
+                    objectTypes: invalidatedObjectTypes,
+                    objects: live.objects,
+                });
+            }
 
             const result: OntologyApplyActionClientResult = {
                 attachmentIdMappings: response.attachmentIdMappings,
@@ -196,6 +225,7 @@ export function createRemoteOntologyBackend<
         createRemoteOntologyBackendAdapter({
             ir,
             transport: "transport" in opts ? opts.transport : await opts.createTransport(ir, context),
+            live: opts.live,
         });
 }
 

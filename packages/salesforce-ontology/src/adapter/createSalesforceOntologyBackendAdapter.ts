@@ -106,6 +106,7 @@ export function createSalesforceOntologyBackendAdapter(opts: {
     client: SalesforceClient;
     ir: OntologyIR;
     subscribeToChangeEvents?: SubscribeToSalesforceChangeEvents;
+    live?: boolean;
 }): OntologyBackendAdapter {
     const codec = createSalesforceCodec(opts.ir);
     const encodeInvocableParameter = (
@@ -133,6 +134,7 @@ export function createSalesforceOntologyBackendAdapter(opts: {
 
     return {
         name: "salesforce",
+        live: opts.live !== false,
         getCollectionOptions: (objectType: string) => {
             const objectTypeDef = opts.ir.objectTypes.find((candidate) => candidate.name === objectType);
             if (!objectTypeDef) {
@@ -144,7 +146,7 @@ export function createSalesforceOntologyBackendAdapter(opts: {
                 primaryKeyProperty: objectTypeDef.primaryKey,
                 selectedProperties: objectTypeDef.properties.map((property) => property.name),
                 subscribeToChangeEvents:
-                    opts.subscribeToChangeEvents,
+                    opts.live === false ? undefined : opts.subscribeToChangeEvents,
                 decodeObject: (object) => codec.decodeObject(objectType, object),
             });
         },
@@ -187,10 +189,12 @@ export function createSalesforceOntologyBackendAdapter(opts: {
                     assertSaveSucceeded(
                         result
                     );
-                    await refreshConfirmedRecord(
-                        collection,
-                        result.id
-                    );
+                    if (opts.live !== false) {
+                        await refreshConfirmedRecord(
+                            collection,
+                            result.id
+                        );
+                    }
                     return;
                 }
                 const recordId =
@@ -222,10 +226,12 @@ export function createSalesforceOntologyBackendAdapter(opts: {
                     assertSaveSucceeded(
                         result
                     );
-                    await refreshConfirmedRecord(
-                        collection,
-                        result.id ?? recordId
-                    );
+                    if (opts.live !== false) {
+                        await refreshConfirmedRecord(
+                            collection,
+                            result.id ?? recordId
+                        );
+                    }
                     return;
                 }
                 assertSaveSucceeded(
@@ -234,7 +240,7 @@ export function createSalesforceOntologyBackendAdapter(opts: {
                         recordId
                     )
                 );
-                if (collection) {
+                if (opts.live !== false && collection) {
                     await collection.utils.deleteByKey(
                         recordId
                     );
@@ -280,9 +286,11 @@ export function createSalesforceOntologyBackendAdapter(opts: {
                 throw new NonRetryableError(message);
             }
 
-            await invalidateEditedCollections(
-                live.objects
-            );
+            if (opts.live !== false) {
+                await invalidateEditedCollections(
+                    live.objects
+                );
+            }
         },
         runQueryFunction: async (
             name,
@@ -354,7 +362,7 @@ export function createSalesforceOntologyBackendAdapter(opts: {
 
 export type CreateSalesforceOntologyBackendOptions<
     Context extends Record<string, unknown> = Record<string, unknown>,
-> =
+> = (
     | {
           client: SalesforceClient;
           subscribeToChangeEvents?: SubscribeToSalesforceChangeEvents;
@@ -362,7 +370,10 @@ export type CreateSalesforceOntologyBackendOptions<
     | {
           createClient: (ir: OntologyIR, context: Context) => SalesforceClient | Promise<SalesforceClient>;
           subscribeToChangeEvents?: SubscribeToSalesforceChangeEvents;
-      };
+      }
+) & {
+    live?: boolean;
+};
 
 export function createSalesforceOntologyBackend<
     Context extends Record<string, unknown> = Record<string, unknown>,
@@ -373,5 +384,6 @@ export function createSalesforceOntologyBackend<
             client: "client" in opts ? opts.client : await opts.createClient(ir, context),
             subscribeToChangeEvents:
                 opts.subscribeToChangeEvents,
+            live: opts.live,
         });
 }

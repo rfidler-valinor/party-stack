@@ -104,6 +104,13 @@ export interface OntologyAttachmentsAdapter {
 
 export interface OntologyBackendAdapter {
     name: string;
+    /**
+     * Whether this adapter participates in long-lived synchronization.
+     *
+     * Defaults to true. Non-live adapters support confirmed request/response
+     * operations but cannot safely back optimistic actions.
+     */
+    live?: boolean;
     getCollectionOptions: (objectType: string) => OntologyCollectionOptions;
     applyAction: (
         name: string,

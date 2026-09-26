@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
 import {
     o,
@@ -12,6 +12,10 @@ import {
 } from "./http.js";
 import { parseRemoteOntologyRequest, serializeLoadSubsetOptions } from "./protocol.js";
 import { createRemoteOntologyServer } from "./server.js";
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
 
 describe("createHttpRemoteOntologyTransport", () => {
     it("serializes and hydrates typed ontology values", async () => {
@@ -153,10 +157,108 @@ describe("createHttpRemoteOntologyTransport", () => {
         expect(requestedLegacyValidation).toBe(false);
     });
 
-    it("preserves load subset cursor expressions and removes only subscriptions", () => {
+    it("copies attachments into memory before building multipart requests in WebKit", async () => {
+        vi.stubGlobal("navigator", {
+            userAgent:
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) " +
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+        });
+        const ir: OntologyIR = {
+            types: [],
+            objectTypes: [],
+            linkTypes: [],
+            actionTypes: [
+                {
+                    name: "uploadDocument",
+                    displayName: "Upload document",
+                    parameters: [
+                        {
+                            name: "file",
+                            displayName: "File",
+                            type: o.attachment({}),
+                        },
+                    ],
+                    logic: [],
+                },
+            ],
+            queryFunctionTypes: [],
+        };
+        const originalFile = new File(["attachment contents"], "evidence.txt", {
+            type: "text/plain",
+        });
+        const arrayBuffer = vi.spyOn(originalFile, "arrayBuffer");
+        const fetchImpl: typeof fetch = async (_input, init) => {
+            const uploadedFile = (init?.body as FormData).get("attachment:local-id");
+            expect(uploadedFile).not.toBe(originalFile);
+            expect(uploadedFile).toBeInstanceOf(File);
+            if (!(uploadedFile instanceof File)) {
+                throw new Error("Expected multipart attachment to be a File.");
+            }
+            expect(uploadedFile.name).toBe("evidence.txt");
+            expect(uploadedFile.type).toBe("text/plain");
+            await expect(uploadedFile.text()).resolves.toBe("attachment contents");
+            return new Response(JSON.stringify({}));
+        };
+        const transport = createHttpRemoteOntologyTransport({
+            url: "https://example.test/remote/",
+            ir,
+            fetch: fetchImpl,
+        });
+
+        await transport.applyAction(
+            {
+                actionType: "uploadDocument",
+                parameters: {
+                    file: { id: "local-id" },
+                },
+            },
+            {
+                attachments: [
+                    {
+                        attachment: { id: "local-id" },
+                        blob: originalFile,
+                    },
+                ],
+            }
+        );
+
+        expect(arrayBuffer).toHaveBeenCalledOnce();
+
+        vi.stubGlobal("navigator", {
+            userAgent:
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        });
+        const chromiumFile = new File(["attachment contents"], "evidence.txt", {
+            type: "text/plain",
+        });
+        const chromiumArrayBuffer = vi.spyOn(chromiumFile, "arrayBuffer");
+
+        await transport.applyAction(
+            {
+                actionType: "uploadDocument",
+                parameters: {
+                    file: { id: "local-id" },
+                },
+            },
+            {
+                attachments: [
+                    {
+                        attachment: { id: "local-id" },
+                        blob: chromiumFile,
+                    },
+                ],
+            }
+        );
+
+        expect(chromiumArrayBuffer).not.toHaveBeenCalled();
+    });
+
+    it("preserves transport-safe load subset options", () => {
         const where = eq(new IR.PropRef(["status"]), "open");
         const whereFrom = gt(new IR.PropRef(["priority"]), 5);
         const whereCurrent = eq(new IR.PropRef(["priority"]), 5);
+        const signal = new AbortController().signal;
         const options = serializeLoadSubsetOptions({
             where,
             cursor: {
@@ -166,6 +268,7 @@ describe("createHttpRemoteOntologyTransport", () => {
             },
             offset: 2,
             limit: 3,
+            signal,
             subscription: {} as never,
         });
         const request = parseRemoteOntologyRequest("load-subset", {
@@ -173,6 +276,7 @@ describe("createHttpRemoteOntologyTransport", () => {
             options,
         });
 
+        expect(options).not.toHaveProperty("signal");
         expect(options).not.toHaveProperty("subscription");
         expect(request.input).toEqual({
             objectType: "Task",

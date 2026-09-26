@@ -1,5 +1,30 @@
 # @party-stack/issue-tracker
 
+## 0.2.17
+
+### Patch Changes
+
+- Updated dependencies [0e5e6d3]
+    - @party-stack/foundry-ontology@0.15.0
+    - @party-stack/ontology@0.17.0
+    - @party-stack/remote-ontology@0.9.0
+    - @party-stack/ontology-devtools@0.4.17
+    - @party-stack/sqlite-ontology@0.6.10
+
+## 0.2.16
+
+### Patch Changes
+
+- Updated dependencies [d1a1805]
+    - @party-stack/better-auth@0.2.7
+    - @party-stack/connections@0.2.7
+    - @party-stack/foundry-ontology@0.14.15
+    - @party-stack/ontology@0.16.8
+    - @party-stack/ontology-devtools@0.4.16
+    - @party-stack/remote-ontology@0.8.9
+    - @party-stack/sqlite-ontology@0.6.9
+    - @party-stack/web-runtime@0.3.7
+
 ## 0.2.15
 
 ### Patch Changes

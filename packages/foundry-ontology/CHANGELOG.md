@@ -1,5 +1,27 @@
 # @party-stack/foundry-ontology
 
+## 0.15.0
+
+### Minor Changes
+
+- 0e5e6d3: add non-live backend adapter mode for request-scoped ontology operations
+
+### Patch Changes
+
+- Updated dependencies [0e5e6d3]
+    - @party-stack/ontology@0.17.0
+
+## 0.14.15
+
+### Patch Changes
+
+- d1a1805: Upgrade the TanStack DB ecosystem, including DB 0.9.2, React DB 0.4.1, query DB collection 1.2.15, and SQLite persistence 0.2.23. Foundry and remote subset loads now propagate cancellation without sharing abortable transports.
+- Updated dependencies [d1a1805]
+    - @party-stack/connections@0.2.7
+    - @party-stack/oauth@0.2.7
+    - @party-stack/ontology@0.16.8
+    - @party-stack/runtime@0.3.7
+
 ## 0.14.14
 
 ### Patch Changes

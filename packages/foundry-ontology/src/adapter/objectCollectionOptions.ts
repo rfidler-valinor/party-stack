@@ -193,6 +193,7 @@ async function fetchFoundryObjects(
     opts: LoadSubsetOptions,
     decodeObject: (object: FoundryObject) => FoundryObject = (object) => object
 ): Promise<FoundryObject[]> {
+    opts.signal?.throwIfAborted();
     const offset = Math.max(0, Math.trunc(opts.offset ?? 0));
     const limit = opts.limit === undefined ? undefined : Math.max(0, Math.trunc(opts.limit));
     if (limit === 0) return [];
@@ -212,10 +213,20 @@ async function fetchFoundryObjects(
         }
     }
 
+    const requestClient = opts.signal
+        ? {
+              ...client,
+              fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+                  client.fetch(input, {
+                      ...init,
+                      signal: opts.signal,
+                  }),
+          }
+        : client;
     const results = await AsyncIterable.toArray(
         AsyncIterable.fromPagination(
             (pageSize, pageToken: string | undefined) =>
-                OntologyObjectsV2.search(client, client.ontologyRid, objectType, {
+                OntologyObjectsV2.search(requestClient, client.ontologyRid, objectType, {
                     snapshot: true,
                     where,
                     excludeRid: true,
@@ -231,6 +242,7 @@ async function fetchFoundryObjects(
             limit === undefined ? undefined : offset + limit
         )
     );
+    opts.signal?.throwIfAborted();
 
     return (results as FoundryObject[])
         .slice(offset, limit === undefined ? undefined : offset + limit)
@@ -243,7 +255,8 @@ function createSyncConfig(
     primaryKeyProperty: string,
     selectedProperties: string[],
     decodeObject: (object: FoundryObject) => FoundryObject = (object) => object,
-    decodeEditObject: (object: FoundryObject) => FoundryObject = decodeObject
+    decodeEditObject: (object: FoundryObject) => FoundryObject = decodeObject,
+    live: boolean = true
 ): { sync: SyncConfig<Record<string, unknown>, string | number>; utils: ObjectCollectionUtils } {
     const seenOperationIds =
         new Store<Set<string>>(new Set<string>());
@@ -704,62 +717,59 @@ function createSyncConfig(
                     for (const object of objects) {
                         upsertObject(object);
                     }
-                    const receipt = commit();
+                    const receipt = commit(opts.signal);
                     if (receipt !== true) await receipt;
                 }
             };
 
             const loadSubsetDedupe = new DeduplicatedLoadSubset({ loadSubset });
-            const objectSetWatcherManager = getObjectSetWatcherManager(client);
-            const unsubscribe = objectSetWatcherManager.subscribe({ type: "base", objectType }, (message) => {
-                switch (message.type) {
-                    case "change": {
-                        if (
-                            editHistoryUnavailable
-                        ) {
-                            if (fullRefreshTask) {
-                                pendingDirectWatcherUpdates.push(...message.updates);
-                            } else {
-                                void applyDirectWatcherUpdates(message.updates).catch(
-                                    (error: unknown) => {
-                                        console.warn(
-                                            `Failed to apply direct Foundry updates for ${objectType}.`,
-                                            error
-                                        );
-                                        requestFullRefresh?.();
-                                    }
-                                );
-                            }
-                        } else {
-                            pendingDirectWatcherUpdates.push(...message.updates);
-                            requestEditHistoryCatchUp?.();
-                        }
-                        break;
-                    }
-                    case "refresh": {
-                        if (
-                            editHistoryUnavailable
-                        ) {
-                            requestFullRefresh?.();
-                        } else {
-                            requestEditHistoryCatchUp?.();
-                        }
-                        break;
-                    }
-                    case "state": {
-                        if (message.status === "open") {
-                            if (
-                                editHistoryUnavailable
-                            ) {
-                                requestFullRefresh?.();
-                            } else {
-                                requestEditHistoryCatchUp?.();
-                            }
-                        }
-                        break;
-                    }
-                }
-            });
+            const unsubscribe = live
+                ? getObjectSetWatcherManager(client).subscribe(
+                      { type: "base", objectType },
+                      (message) => {
+                          switch (message.type) {
+                              case "change": {
+                                  if (editHistoryUnavailable) {
+                                      if (fullRefreshTask) {
+                                          pendingDirectWatcherUpdates.push(...message.updates);
+                                      } else {
+                                          void applyDirectWatcherUpdates(message.updates).catch(
+                                              (error: unknown) => {
+                                                  console.warn(
+                                                      `Failed to apply direct Foundry updates for ${objectType}.`,
+                                                      error
+                                                  );
+                                                  requestFullRefresh?.();
+                                              }
+                                          );
+                                      }
+                                  } else {
+                                      pendingDirectWatcherUpdates.push(...message.updates);
+                                      requestEditHistoryCatchUp?.();
+                                  }
+                                  break;
+                              }
+                              case "refresh": {
+                                  if (editHistoryUnavailable) {
+                                      requestFullRefresh?.();
+                                  } else {
+                                      requestEditHistoryCatchUp?.();
+                                  }
+                                  break;
+                              }
+                              case "state": {
+                                  if (message.status !== "open") break;
+                                  if (editHistoryUnavailable) {
+                                      requestFullRefresh?.();
+                                  } else {
+                                      requestEditHistoryCatchUp?.();
+                                  }
+                                  break;
+                              }
+                          }
+                      }
+                  )
+                : () => {};
 
             // start task here, cleanup can stop it
             // in that task:
@@ -798,6 +808,7 @@ export interface ObjectCollectionOpts {
     objectType: string;
     primaryKeyProperty: string;
     selectedProperties: string[];
+    live?: boolean;
     decodeObject?: (object: Record<string, unknown>) => Record<string, unknown>;
     decodeEditObject?: (object: Record<string, unknown>) => Record<string, unknown>;
 }
@@ -833,6 +844,7 @@ export function objectCollectionOptions(config: any): any {
         objectType,
         primaryKeyProperty,
         selectedProperties,
+        live,
         decodeObject,
         decodeEditObject,
         schema,
@@ -848,7 +860,8 @@ export function objectCollectionOptions(config: any): any {
         primaryKeyProperty,
         selectedProperties,
         decodeObject,
-        decodeEditObject
+        decodeEditObject,
+        live
     );
 
     if (schema === undefined) {

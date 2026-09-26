@@ -169,9 +169,16 @@ describe("createSalesforceOntologyBackendAdapter", () => {
         vi.clearAllMocks();
     });
 
-    function createAdapter() {
+    function createAdapter(options: {
+        live?: boolean;
+        subscribeToChangeEvents?: Parameters<
+            typeof createSalesforceOntologyBackendAdapter
+        >[0]["subscribeToChangeEvents"];
+    } = {}) {
         return createSalesforceOntologyBackendAdapter({
             ir,
+            live: options.live,
+            subscribeToChangeEvents: options.subscribeToChangeEvents,
             client: {
                 instanceUrl: "https://example.my.salesforce.com",
                 apiVersion: "61.0",
@@ -224,6 +231,48 @@ describe("createSalesforceOntologyBackendAdapter", () => {
             { accountName: "Acme" },
         ]);
         expect(invalidate).toHaveBeenCalledOnce();
+    });
+
+    it("does not subscribe or reconcile actions when live is false", async () => {
+        const subscribeToChangeEvents = vi.fn();
+        invokeFlowAction.mockResolvedValue([
+            {
+                isSuccess: true,
+                outputValues: { Flow__InterviewStatus: "Finished" },
+            },
+        ]);
+        const adapter = createAdapter({
+            live: false,
+            subscribeToChangeEvents,
+        });
+        const collectionOptions = adapter.getCollectionOptions("Account");
+        collectionOptions.sync.sync({
+            collection: {
+                has: vi.fn(() => false),
+                get: vi.fn(),
+            },
+            begin: vi.fn(),
+            write: vi.fn(),
+            commit: vi.fn(() => true),
+            markError: vi.fn(),
+            markReady: vi.fn(),
+        } as never);
+
+        await adapter.applyAction(
+            "Create_Account",
+            { accountName: "Acme" },
+            {
+                objects: {
+                    Account: {
+                        utils: { invalidate },
+                    } as never,
+                },
+            }
+        );
+
+        expect(adapter.live).toBe(false);
+        expect(subscribeToChangeEvents).not.toHaveBeenCalled();
+        expect(invalidate).not.toHaveBeenCalled();
     });
 
     it("maps validation failures to NonRetryableError", async () => {
@@ -435,10 +484,12 @@ describe("createSalesforceOntologyBackendAdapter", () => {
                     describeStandardAction: vi.fn(),
                     invokeStandardAction,
                 }) as never,
+            live: false,
         });
 
         const adapter = await provider(ir, {});
         expect(adapter.name).toBe("salesforce");
+        expect(adapter.live).toBe(false);
         expect(adapter.getCollectionOptions("Account").syncMode).toBe("on-demand");
     });
 });

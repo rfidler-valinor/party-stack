@@ -175,6 +175,11 @@ export function createLiveOntologyActions(options: {
     ): Promise<OntologyApplyActionResult | void> => {
         const mode = actionOptions?.mode ?? defaultMode;
         const visibility = actionOptions?.visibility ?? defaultVisibility;
+        if (visibility === "optimistic" && options.backendAdapter.live === false) {
+            throw new Error(
+                `Ontology backend adapter "${options.backendAdapter.name}" is not live and cannot reconcile optimistic actions.`
+            );
+        }
         if (mode === "outbox") {
             const enqueued = await outbox.enqueue<OntologyApplyActionResult | void>(request, { visibility });
             return enqueued.completed;

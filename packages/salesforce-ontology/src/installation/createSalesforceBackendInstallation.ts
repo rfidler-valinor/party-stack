@@ -106,6 +106,7 @@ export function createSalesforceOntologyRoute(options: {
     standardActionTypeNames?: string[];
     standardQueryFunctionTypeNames?: string[];
     crudActionTypes?: readonly SalesforceCrudActionTypeSelection[];
+    live?: boolean;
     persistObjects?: boolean;
     writes?: LiveOntologyWrites;
 }): SalesforceOntologyRoute {
@@ -132,6 +133,7 @@ export function createSalesforceOntologyRoute(options: {
                     ir,
                     backend: createSalesforceOntologyBackend({
                         client,
+                        live: options.live,
                         subscribeToChangeEvents:
                             subscribeToChangeEvents
                                 ? (

@@ -69,6 +69,15 @@ async function postJson<TResponse>(
     return parseRemoteOntologyJson(await response.text()) as TResponse;
 }
 
+function isWebKitRuntime(): boolean {
+    const userAgent = globalThis.navigator?.userAgent;
+    if (!userAgent || !/\bAppleWebKit\//.test(userAgent)) return false;
+
+    // Blink-based browsers retain "AppleWebKit" in their user agent. Keep iOS browser tokens
+    // such as CriOS and EdgiOS because all browsers on iOS use WebKit.
+    return !/\b(?:Android|Chrome|Chromium|EdgA?|OPR)\b/.test(userAgent);
+}
+
 async function postMultipart<TResponse>(
     fetchImpl: typeof fetch,
     url: string,
@@ -79,9 +88,17 @@ async function postMultipart<TResponse>(
     const formData = new FormData();
     formData.append("payload", serializeRemoteOntologyJson(body));
     for (const upload of options?.attachments ?? []) {
+        // Temporary workaround for WebKit regressions that can serialize OPFS-backed files as
+        // an empty multipart body. Remove after https://bugs.webkit.org/show_bug.cgi?id=319985
+        // and https://bugs.webkit.org/show_bug.cgi?id=319396 are fixed in supported Safari versions.
+        const safeBlob = isWebKitRuntime()
+            ? new Blob([await upload.blob.arrayBuffer()], {
+                  type: upload.blob.type,
+              })
+            : upload.blob;
         formData.append(
             `attachment:${upload.attachment.id}`,
-            upload.blob,
+            safeBlob,
             "name" in upload.blob && typeof upload.blob.name === "string"
                 ? upload.blob.name
                 : upload.attachment.id
